@@ -41,7 +41,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.3" // ou la version Compose que tu utilises
+        kotlinCompilerExtensionVersion = "1.5.3"
     }
 }
 
@@ -63,7 +63,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
 
-    // Material3 obligatoire pour MainActivity
+    // Material3
     implementation("androidx.compose.material3:material3:1.2.0")
     implementation("androidx.compose.material:material-icons-extended")
 
@@ -72,7 +72,7 @@ dependencies {
     implementation("androidx.media3:media3-ui:1.2.0")
     implementation("androidx.media3:media3-session:1.2.0")
 
-    // Coil pour charger les logos des chaînes
+    // Coil
     implementation("io.coil-kt:coil-compose:2.5.0")
 
     // Room
