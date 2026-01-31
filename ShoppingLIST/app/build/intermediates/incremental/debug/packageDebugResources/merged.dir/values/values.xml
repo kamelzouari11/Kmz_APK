@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="add_article">Ajouter un article</string>
+    <string name="add_category">Ajouter une catégorie</string>
+    <string name="app_name">Ma Liste</string>
+    <string name="article_name">Nom de l\'article</string>
+    <string name="articles">Articles</string>
+    <string name="bought">Achetés</string>
+    <string name="cancel">Annuler</string>
+    <string name="categories">Catégories</string>
+    <string name="category_name">Nom de la catégorie</string>
+    <string name="confirm">Confirmer</string>
+    <string name="confirm_delete">Confirmer la suppression</string>
+    <string name="delete_article">Supprimer l\'article</string>
+    <string name="delete_article_warning">Êtes-vous sûr de vouloir supprimer cet article ?</string>
+    <string name="delete_category">Supprimer la catégorie</string>
+    <string name="delete_category_warning">Êtes-vous sûr de vouloir supprimer cette catégorie et tous ses articles ?</string>
+    <string name="important">Important</string>
+    <string name="normal">Normal</string>
+    <string name="optional">Optionnel</string>
+    <string name="priority">Priorité</string>
+    <string name="to_buy">À acheter</string>
+    <string name="urgent">Urgent</string>
+    <style name="Theme.ShoppingLIST" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">@android:color/black</item>
+        <item name="android:navigationBarColor">@android:color/black</item>
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
+</resources>

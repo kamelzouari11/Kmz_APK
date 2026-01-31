@@ -1,0 +1,31 @@
+R_DEF: Internal format may change without notice
+local
+drawable ic_launcher_background
+drawable ic_launcher_foreground
+drawable ic_launcher_foreground_image
+mipmap ic_launcher
+mipmap ic_launcher_round
+string add_article
+string add_category
+string app_name
+string article_name
+string articles
+string bought
+string cancel
+string categories
+string category_name
+string confirm
+string confirm_delete
+string delete_article
+string delete_article_warning
+string delete_category
+string delete_category_warning
+string important
+string normal
+string optional
+string priority
+string to_buy
+string urgent
+style Theme.ShoppingLIST
+xml backup_rules
+xml data_extraction_rules

@@ -14,6 +14,7 @@ data class RadioStationEntity(
     val bitrate: Int?
 )
 
+
 @Entity(tableName = "radio_favorite_lists")
 data class RadioFavoriteListEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
