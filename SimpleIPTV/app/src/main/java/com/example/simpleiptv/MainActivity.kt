@@ -1,13 +1,15 @@
 package com.example.simpleiptv
 
 import android.content.ComponentName
-import android.net.Uri
+import android.content.res.Configuration
 import android.os.Bundle
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -22,7 +24,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -30,6 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
@@ -37,6 +39,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
@@ -84,6 +87,10 @@ fun MainScreen(iptvRepository: IptvRepository) {
         var playingChannel by remember { mutableStateOf<ChannelEntity?>(null) }
         var isFullScreenPlayer by remember { mutableStateOf(false) }
         var isLoading by remember { mutableStateOf(false) }
+        var isSearchVisibleOnMobile by remember { mutableStateOf(false) }
+
+        val configuration = LocalConfiguration.current
+        val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
         // Dialog States
         var showProfileManager by remember { mutableStateOf(false) }
@@ -91,6 +98,66 @@ fun MainScreen(iptvRepository: IptvRepository) {
         var showProfileEditDialog by remember { mutableStateOf<ProfileEntity?>(null) }
         var showAddListDialog by remember { mutableStateOf(false) }
         var channelToFavorite by remember { mutableStateOf<ChannelEntity?>(null) }
+        var showRestoreConfirmDialog by remember { mutableStateOf(false) }
+        var backupJsonToRestore by remember { mutableStateOf("") }
+        val focusManager = LocalFocusManager.current
+        var isSearchFocused by remember { mutableStateOf(false) }
+
+        // SAF Launchers for File Access
+        val createDocumentLauncher =
+                rememberLauncherForActivityResult(
+                        contract = ActivityResultContracts.CreateDocument("application/json")
+                ) { uri ->
+                        uri?.let {
+                                scope.launch {
+                                        try {
+                                                val json = iptvRepository.exportDatabaseToJson()
+                                                context.contentResolver.openOutputStream(it)?.use {
+                                                        outputStream ->
+                                                        outputStream.write(json.toByteArray())
+                                                }
+                                                Toast.makeText(
+                                                                context,
+                                                                "Backup saved successfully",
+                                                                Toast.LENGTH_LONG
+                                                        )
+                                                        .show()
+                                        } catch (e: Exception) {
+                                                Toast.makeText(
+                                                                context,
+                                                                "Export Error: ${e.message}",
+                                                                Toast.LENGTH_SHORT
+                                                        )
+                                                        .show()
+                                        }
+                                }
+                        }
+                }
+
+        val openDocumentLauncher =
+                rememberLauncherForActivityResult(
+                        contract = ActivityResultContracts.GetContent()
+                ) { uri ->
+                        uri?.let {
+                                try {
+                                        context.contentResolver.openInputStream(it)?.use {
+                                                inputStream ->
+                                                backupJsonToRestore =
+                                                        inputStream.bufferedReader().use { reader ->
+                                                                reader.readText()
+                                                        }
+                                                showRestoreConfirmDialog = true
+                                        }
+                                } catch (e: Exception) {
+                                        Toast.makeText(
+                                                        context,
+                                                        "Read Error: ${e.message}",
+                                                        Toast.LENGTH_SHORT
+                                                )
+                                                .show()
+                                }
+                        }
+                }
 
         // Media Player
         var exoPlayer by remember { mutableStateOf<Player?>(null) }
@@ -186,17 +253,46 @@ fun MainScreen(iptvRepository: IptvRepository) {
                                 showProfileManager ||
                                 selectedCategoryId != null ||
                                 selectedFavoriteListId != -1 ||
-                                showRecentOnly ||
-                                searchQuery.isNotBlank()
+                                showRecentOnly
         ) {
                 when {
                         isFullScreenPlayer -> isFullScreenPlayer = false
                         showProfileManager -> showProfileManager = false
-                        searchQuery.isNotBlank() -> searchQuery = ""
                         selectedCategoryId != null -> selectedCategoryId = null
                         selectedFavoriteListId != -1 -> selectedFavoriteListId = -1
                         showRecentOnly -> showRecentOnly = false
                 }
+        }
+
+        // Helper for Channel Click
+        val onChannelClick: (ChannelEntity) -> Unit = { channel ->
+                playingChannel = channel
+                isFullScreenPlayer = true
+                exoPlayer?.let { player ->
+                        val profile = profiles.find { p -> p.id == activeProfileId }
+                        if (profile != null) {
+                                val baseUrl =
+                                        if (profile.url.endsWith("/")) profile.url
+                                        else "${profile.url}/"
+                                val streamUrl =
+                                        "${baseUrl}live/${profile.username}/${profile.password}/${channel.stream_id}.ts"
+                                val meta =
+                                        MediaMetadata.Builder()
+                                                .setTitle(channel.name)
+                                                .setArtworkUri(channel.stream_icon?.toUri())
+                                                .build()
+                                val mediaItem =
+                                        MediaItem.Builder()
+                                                .setUri(streamUrl)
+                                                .setMediaMetadata(meta)
+                                                .build()
+                                player.clearMediaItems()
+                                player.setMediaItem(mediaItem)
+                                player.prepare()
+                                player.play()
+                        }
+                }
+                scope.launch { iptvRepository.addToRecents(channel.stream_id, activeProfileId) }
         }
 
         // Main Layout
@@ -219,106 +315,302 @@ fun MainScreen(iptvRepository: IptvRepository) {
                                                                 )
                                                 )
                                 ) {
-                                        Row(
-                                                modifier = Modifier.fillMaxWidth().padding(12.dp),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                        ) {
-                                                Text(
-                                                        "SimpleIPTV",
-                                                        style =
-                                                                MaterialTheme.typography
-                                                                        .headlineMedium,
-                                                        color = MaterialTheme.colorScheme.primary,
-                                                        modifier = Modifier.weight(1f)
-                                                )
+                                        if (isLandscape) {
+                                                Row(
+                                                        modifier =
+                                                                Modifier.fillMaxWidth()
+                                                                        .padding(12.dp),
+                                                        verticalAlignment =
+                                                                Alignment.CenterVertically,
+                                                        horizontalArrangement =
+                                                                Arrangement.spacedBy(8.dp)
+                                                ) {
+                                                        Text(
+                                                                "SimpleIPTV",
+                                                                style =
+                                                                        MaterialTheme.typography
+                                                                                .headlineSmall,
+                                                                color =
+                                                                        MaterialTheme.colorScheme
+                                                                                .primary
+                                                        )
 
-                                                HeaderIconButton(
-                                                        Icons.Default.Person,
-                                                        "Profils",
-                                                        { showProfileManager = true }
-                                                )
-                                                HeaderIconButton(
-                                                        Icons.Default.Refresh,
-                                                        "Actualiser",
-                                                        {
-                                                                scope.launch {
-                                                                        isLoading = true
-                                                                        val profile =
-                                                                                profiles.find {
-                                                                                        it.id ==
-                                                                                                activeProfileId
+                                                        TvInput(
+                                                                value = searchQuery,
+                                                                onValueChange = { query ->
+                                                                        searchQuery = query
+                                                                },
+                                                                label = "Rechercher...",
+                                                                focusManager = focusManager,
+                                                                leadingIcon = Icons.Default.Search,
+                                                                modifier =
+                                                                        Modifier.weight(1f)
+                                                                                .padding(
+                                                                                        horizontal =
+                                                                                                16.dp
+                                                                                )
+                                                                                .onFocusChanged {
+                                                                                        isSearchFocused =
+                                                                                                it.isFocused
                                                                                 }
-                                                                        if (profile != null) {
-                                                                                try {
-                                                                                        iptvRepository
-                                                                                                .refreshDatabase(
-                                                                                                        profile.id,
-                                                                                                        profile.url,
-                                                                                                        profile.username,
-                                                                                                        profile.password
-                                                                                                )
-                                                                                } catch (
-                                                                                        e:
-                                                                                                Exception) {
-                                                                                        Toast.makeText(
-                                                                                                        context,
-                                                                                                        "Erreur: ${e.message}",
-                                                                                                        Toast.LENGTH_SHORT
-                                                                                                )
-                                                                                                .show()
-                                                                                }
+                                                        )
+                                                        if (searchQuery.isNotBlank()) {
+                                                                IconButton(
+                                                                        onClick = {
+                                                                                searchQuery = ""
+                                                                                focusManager
+                                                                                        .clearFocus()
                                                                         }
-                                                                        isLoading = false
-                                                                }
-                                                        }
-                                                )
-                                                HeaderIconButton(
-                                                        Icons.Default.CloudDownload,
-                                                        "Sauvegarder",
-                                                        {
-                                                                scope.launch {
-                                                                        try {
-                                                                                iptvRepository
-                                                                                        .exportDatabaseToJson()
-                                                                                Toast.makeText(
-                                                                                                context,
-                                                                                                "Sauvegardé",
-                                                                                                Toast.LENGTH_SHORT
-                                                                                        )
-                                                                                        .show()
-                                                                        } catch (e: Exception) {
-                                                                                Toast.makeText(
-                                                                                                context,
-                                                                                                "Erreur export",
-                                                                                                Toast.LENGTH_SHORT
-                                                                                        )
-                                                                                        .show()
-                                                                        }
-                                                                }
-                                                        }
-                                                )
-                                                HeaderIconButton(
-                                                        Icons.Default.CloudUpload,
-                                                        "Restaurer",
-                                                        {
-                                                                Toast.makeText(
-                                                                                context,
-                                                                                "Sélectionnez un fichier",
-                                                                                Toast.LENGTH_SHORT
+                                                                ) {
+                                                                        Icon(
+                                                                                Icons.Default.Close,
+                                                                                contentDescription =
+                                                                                        "Effacer",
+                                                                                tint =
+                                                                                        MaterialTheme
+                                                                                                .colorScheme
+                                                                                                .error
                                                                         )
-                                                                        .show()
+                                                                }
                                                         }
-                                                )
-                                                HeaderIconButton(
-                                                        Icons.Default.PowerSettingsNew,
-                                                        "Quitter",
-                                                        {
-                                                                exoPlayer?.stop()
-                                                                (context as? android.app.Activity)
-                                                                        ?.finishAffinity()
+
+                                                        HeaderIconButton(
+                                                                Icons.Default.Person,
+                                                                "Profils",
+                                                                { showProfileManager = true }
+                                                        )
+                                                        HeaderIconButton(
+                                                                Icons.Default.Refresh,
+                                                                "Actualiser",
+                                                                {
+                                                                        scope.launch {
+                                                                                isLoading = true
+                                                                                val profile =
+                                                                                        profiles
+                                                                                                .find {
+                                                                                                        it.id ==
+                                                                                                                activeProfileId
+                                                                                                }
+                                                                                if (profile != null
+                                                                                ) {
+                                                                                        try {
+                                                                                                iptvRepository
+                                                                                                        .refreshDatabase(
+                                                                                                                profile.id,
+                                                                                                                profile.url,
+                                                                                                                profile.username,
+                                                                                                                profile.password
+                                                                                                        )
+                                                                                        } catch (
+                                                                                                e:
+                                                                                                        Exception) {
+                                                                                                Toast.makeText(
+                                                                                                                context,
+                                                                                                                "Erreur: ${e.message}",
+                                                                                                                Toast.LENGTH_SHORT
+                                                                                                        )
+                                                                                                        .show()
+                                                                                        }
+                                                                                }
+                                                                                isLoading = false
+                                                                        }
+                                                                }
+                                                        )
+                                                        HeaderIconButton(
+                                                                Icons.Default.CloudUpload,
+                                                                "Sauvegarder",
+                                                                {
+                                                                        createDocumentLauncher
+                                                                                .launch(
+                                                                                        "simple_iptv_backup.json"
+                                                                                )
+                                                                }
+                                                        )
+                                                        HeaderIconButton(
+                                                                Icons.Default.CloudDownload,
+                                                                "Restaurer",
+                                                                {
+                                                                        openDocumentLauncher.launch(
+                                                                                "application/json"
+                                                                        )
+                                                                }
+                                                        )
+                                                        HeaderIconButton(
+                                                                Icons.Default.PowerSettingsNew,
+                                                                "Quitter",
+                                                                {
+                                                                        exoPlayer?.stop()
+                                                                        (context as?
+                                                                                        android.app.Activity)
+                                                                                ?.finishAffinity()
+                                                                },
+                                                                tintNormal = Color.Red
+                                                        )
+                                                }
+                                        } else {
+                                                Column(modifier = Modifier.padding(12.dp)) {
+                                                        // Row 1: Title + Search Toggle
+                                                        Row(
+                                                                modifier = Modifier.fillMaxWidth(),
+                                                                verticalAlignment =
+                                                                        Alignment.CenterVertically,
+                                                                horizontalArrangement =
+                                                                        Arrangement.SpaceBetween
+                                                        ) {
+                                                                Text(
+                                                                        "SimpleIPTV",
+                                                                        style =
+                                                                                MaterialTheme
+                                                                                        .typography
+                                                                                        .headlineSmall,
+                                                                        color =
+                                                                                MaterialTheme
+                                                                                        .colorScheme
+                                                                                        .primary
+                                                                )
+                                                                HeaderIconButton(
+                                                                        Icons.Default.Search,
+                                                                        "Recherche",
+                                                                        {
+                                                                                isSearchVisibleOnMobile =
+                                                                                        !isSearchVisibleOnMobile
+                                                                        }
+                                                                )
+                                                        }
+                                                        Spacer(Modifier.height(8.dp))
+                                                        // Row 2: Actions (Scrollable)
+                                                        LazyRow(
+                                                                horizontalArrangement =
+                                                                        Arrangement.spacedBy(16.dp),
+                                                                modifier = Modifier.fillMaxWidth()
+                                                        ) {
+                                                                item {
+                                                                        HeaderIconButton(
+                                                                                Icons.Default
+                                                                                        .Person,
+                                                                                "Profils",
+                                                                                {
+                                                                                        showProfileManager =
+                                                                                                true
+                                                                                }
+                                                                        )
+                                                                }
+                                                                item {
+                                                                        HeaderIconButton(
+                                                                                Icons.Default
+                                                                                        .Refresh,
+                                                                                "Actualiser",
+                                                                                {
+                                                                                        scope
+                                                                                                .launch {
+                                                                                                        isLoading =
+                                                                                                                true
+                                                                                                        val profile =
+                                                                                                                profiles
+                                                                                                                        .find {
+                                                                                                                                it.id ==
+                                                                                                                                        activeProfileId
+                                                                                                                        }
+                                                                                                        if (profile !=
+                                                                                                                        null
+                                                                                                        ) {
+                                                                                                                try {
+                                                                                                                        iptvRepository
+                                                                                                                                .refreshDatabase(
+                                                                                                                                        profile.id,
+                                                                                                                                        profile.url,
+                                                                                                                                        profile.username,
+                                                                                                                                        profile.password
+                                                                                                                                )
+                                                                                                                } catch (
+                                                                                                                        e:
+                                                                                                                                Exception) {
+                                                                                                                        Toast.makeText(
+                                                                                                                                        context,
+                                                                                                                                        "Erreur: ${e.message}",
+                                                                                                                                        Toast.LENGTH_SHORT
+                                                                                                                                )
+                                                                                                                                .show()
+                                                                                                                }
+                                                                                                        }
+                                                                                                        isLoading =
+                                                                                                                false
+                                                                                                }
+                                                                                }
+                                                                        )
+                                                                }
+                                                                item {
+                                                                        HeaderIconButton(
+                                                                                Icons.Default
+                                                                                        .CloudUpload,
+                                                                                "Sauvegarder",
+                                                                                {
+                                                                                        createDocumentLauncher
+                                                                                                .launch(
+                                                                                                        "simple_iptv_backup.json"
+                                                                                                )
+                                                                                }
+                                                                        )
+                                                                }
+                                                                item {
+                                                                        HeaderIconButton(
+                                                                                Icons.Default
+                                                                                        .CloudDownload,
+                                                                                "Restaurer",
+                                                                                {
+                                                                                        openDocumentLauncher
+                                                                                                .launch(
+                                                                                                        "application/json"
+                                                                                                )
+                                                                                }
+                                                                        )
+                                                                }
+                                                                item {
+                                                                        HeaderIconButton(
+                                                                                Icons.Default
+                                                                                        .PowerSettingsNew,
+                                                                                "Quitter",
+                                                                                {
+                                                                                        exoPlayer
+                                                                                                ?.stop()
+                                                                                        (context as?
+                                                                                                        android.app.Activity)
+                                                                                                ?.finishAffinity()
+                                                                                },
+                                                                                tintNormal =
+                                                                                        Color.Red
+                                                                        )
+                                                                }
+                                                        }
+                                                }
+                                        }
+                                }
+
+                                if (!isLandscape && isSearchVisibleOnMobile) {
+                                        Card(
+                                                modifier =
+                                                        Modifier.fillMaxWidth()
+                                                                .padding(
+                                                                        horizontal = 8.dp,
+                                                                        vertical = 4.dp
+                                                                ),
+                                                colors =
+                                                        CardDefaults.cardColors(
+                                                                containerColor =
+                                                                        MaterialTheme.colorScheme
+                                                                                .surfaceVariant
+                                                                                .copy(alpha = 0.3f)
+                                                        )
+                                        ) {
+                                                TvInput(
+                                                        value = searchQuery,
+                                                        onValueChange = { query ->
+                                                                searchQuery = query
                                                         },
-                                                        tintNormal = Color.Red
+                                                        label = "Filtrer les chaînes...",
+                                                        focusManager = LocalFocusManager.current,
+                                                        leadingIcon = Icons.Default.Search,
+                                                        modifier = Modifier.padding(4.dp)
                                                 )
                                         }
                                 }
@@ -330,199 +622,291 @@ fun MainScreen(iptvRepository: IptvRepository) {
                                                                 .padding(horizontal = 8.dp)
                                         )
 
-                                Row(modifier = Modifier.weight(1f)) {
-                                        // Sidebar
-                                        LazyColumn(
-                                                modifier =
-                                                        Modifier.weight(0.35f)
-                                                                .fillMaxHeight()
-                                                                .padding(8.dp),
-                                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                                        ) {
-                                                item {
-                                                        SidebarItem(
-                                                                text = "Récents",
-                                                                icon = Icons.Default.History,
-                                                                isSelected = showRecentOnly,
-                                                                onClick = {
-                                                                        showRecentOnly = true
-                                                                        selectedCategoryId = null
-                                                                        selectedFavoriteListId = -1
-                                                                        searchQuery = ""
+                                if (isLandscape) {
+                                        Row(modifier = Modifier.weight(1f)) {
+                                                // Sidebar (Landscape)
+                                                LazyColumn(
+                                                        modifier =
+                                                                Modifier.weight(0.35f)
+                                                                        .fillMaxHeight()
+                                                                        .padding(8.dp),
+                                                        verticalArrangement =
+                                                                Arrangement.spacedBy(4.dp)
+                                                ) {
+                                                        item {
+                                                                SidebarItem(
+                                                                        text = "Récents",
+                                                                        icon =
+                                                                                Icons.Default
+                                                                                        .History,
+                                                                        isSelected = showRecentOnly,
+                                                                        onClick = {
+                                                                                showRecentOnly =
+                                                                                        true
+                                                                                selectedCategoryId =
+                                                                                        null
+                                                                                selectedFavoriteListId =
+                                                                                        -1
+                                                                                searchQuery = ""
+                                                                        }
+                                                                )
+                                                        }
+                                                        item { Spacer(Modifier.height(8.dp)) }
+                                                        item {
+                                                                Row(
+                                                                        verticalAlignment =
+                                                                                Alignment
+                                                                                        .CenterVertically,
+                                                                        modifier =
+                                                                                Modifier.fillMaxWidth()
+                                                                                        .padding(
+                                                                                                8.dp
+                                                                                        )
+                                                                ) {
+                                                                        Text(
+                                                                                "Favoris",
+                                                                                style =
+                                                                                        MaterialTheme
+                                                                                                .typography
+                                                                                                .titleSmall,
+                                                                                color = Color.Gray,
+                                                                                modifier =
+                                                                                        Modifier.weight(
+                                                                                                1f
+                                                                                        )
+                                                                        )
+                                                                        IconButton(
+                                                                                onClick = {
+                                                                                        showAddListDialog =
+                                                                                                true
+                                                                                },
+                                                                                modifier =
+                                                                                        Modifier.size(
+                                                                                                24.dp
+                                                                                        )
+                                                                        ) {
+                                                                                Icon(
+                                                                                        Icons.Default
+                                                                                                .Add,
+                                                                                        null,
+                                                                                        tint =
+                                                                                                MaterialTheme
+                                                                                                        .colorScheme
+                                                                                                        .primary
+                                                                                )
+                                                                        }
                                                                 }
-                                                        )
-                                                }
-                                                item { Spacer(Modifier.height(8.dp)) }
-                                                item {
-                                                        Row(
-                                                                verticalAlignment =
-                                                                        Alignment.CenterVertically,
-                                                                modifier =
-                                                                        Modifier.fillMaxWidth()
-                                                                                .padding(8.dp)
-                                                        ) {
+                                                        }
+                                                        items(favoriteLists) { list ->
+                                                                SidebarItem(
+                                                                        text = list.name,
+                                                                        icon = Icons.Default.Star,
+                                                                        isSelected =
+                                                                                selectedFavoriteListId ==
+                                                                                        list.id,
+                                                                        onClick = {
+                                                                                selectedFavoriteListId =
+                                                                                        list.id
+                                                                                selectedCategoryId =
+                                                                                        null
+                                                                                showRecentOnly =
+                                                                                        false
+                                                                                searchQuery = ""
+                                                                        },
+                                                                        onDelete = {
+                                                                                scope.launch {
+                                                                                        iptvRepository
+                                                                                                .removeFavoriteList(
+                                                                                                        list
+                                                                                                )
+                                                                                }
+                                                                        }
+                                                                )
+                                                        }
+                                                        item { Spacer(Modifier.height(8.dp)) }
+                                                        item {
                                                                 Text(
-                                                                        "Favoris",
+                                                                        "Catégories",
                                                                         style =
                                                                                 MaterialTheme
                                                                                         .typography
                                                                                         .titleSmall,
                                                                         color = Color.Gray,
                                                                         modifier =
-                                                                                Modifier.weight(1f)
+                                                                                Modifier.padding(
+                                                                                        8.dp
+                                                                                )
                                                                 )
-                                                                IconButton(
+                                                        }
+                                                        items(categories) { category ->
+                                                                SidebarItem(
+                                                                        text =
+                                                                                category.category_name,
+                                                                        isSelected =
+                                                                                selectedCategoryId ==
+                                                                                        category.category_id,
+                                                                        onClick = {
+                                                                                selectedCategoryId =
+                                                                                        category.category_id
+                                                                                selectedFavoriteListId =
+                                                                                        -1
+                                                                                showRecentOnly =
+                                                                                        false
+                                                                                searchQuery = ""
+                                                                        }
+                                                                )
+                                                        }
+                                                }
+
+                                                // Channel List (Landscape)
+                                                LazyColumn(
+                                                        modifier =
+                                                                Modifier.weight(0.65f)
+                                                                        .fillMaxHeight()
+                                                                        .padding(8.dp),
+                                                        verticalArrangement =
+                                                                Arrangement.spacedBy(8.dp)
+                                                ) {
+                                                        items(channels) { channel ->
+                                                                ChannelItem(
+                                                                        channel = channel,
+                                                                        isPlaying =
+                                                                                playingChannel
+                                                                                        ?.stream_id ==
+                                                                                        channel.stream_id,
+                                                                        onClick = {
+                                                                                onChannelClick(
+                                                                                        channel
+                                                                                )
+                                                                        },
+                                                                        onFavoriteClick = {
+                                                                                channelToFavorite =
+                                                                                        channel
+                                                                        }
+                                                                )
+                                                        }
+                                                }
+                                        }
+                                } else {
+                                        // PORTRAIT LAYOUT
+                                        Column(modifier = Modifier.weight(1f)) {
+                                                // Horizontal Categories
+                                                LazyRow(
+                                                        modifier =
+                                                                Modifier.fillMaxWidth()
+                                                                        .padding(8.dp),
+                                                        horizontalArrangement =
+                                                                Arrangement.spacedBy(8.dp)
+                                                ) {
+                                                        item {
+                                                                FilterChip(
+                                                                        selected = showRecentOnly,
+                                                                        onClick = {
+                                                                                showRecentOnly =
+                                                                                        true
+                                                                                selectedCategoryId =
+                                                                                        null
+                                                                                selectedFavoriteListId =
+                                                                                        -1
+                                                                                searchQuery = ""
+                                                                        },
+                                                                        label = { Text("Récents") },
+                                                                        leadingIcon = {
+                                                                                Icon(
+                                                                                        Icons.Default
+                                                                                                .History,
+                                                                                        null
+                                                                                )
+                                                                        }
+                                                                )
+                                                        }
+                                                        item {
+                                                                FilterChip(
+                                                                        selected = false,
                                                                         onClick = {
                                                                                 showAddListDialog =
                                                                                         true
                                                                         },
-                                                                        modifier =
-                                                                                Modifier.size(24.dp)
-                                                                ) {
-                                                                        Icon(
-                                                                                Icons.Default.Add,
-                                                                                null,
-                                                                                tint =
-                                                                                        MaterialTheme
-                                                                                                .colorScheme
-                                                                                                .primary
-                                                                        )
-                                                                }
+                                                                        label = {
+                                                                                Icon(
+                                                                                        Icons.Default
+                                                                                                .Add,
+                                                                                        "Ajouter liste"
+                                                                                )
+                                                                        }
+                                                                )
+                                                        }
+                                                        items(favoriteLists) { list ->
+                                                                FilterChip(
+                                                                        selected =
+                                                                                selectedFavoriteListId ==
+                                                                                        list.id,
+                                                                        onClick = {
+                                                                                selectedFavoriteListId =
+                                                                                        list.id
+                                                                                selectedCategoryId =
+                                                                                        null
+                                                                                showRecentOnly =
+                                                                                        false
+                                                                                searchQuery = ""
+                                                                        },
+                                                                        label = { Text(list.name) },
+                                                                        leadingIcon = {
+                                                                                Icon(
+                                                                                        Icons.Default
+                                                                                                .Star,
+                                                                                        null
+                                                                                )
+                                                                        }
+                                                                )
+                                                        }
+                                                        items(categories) { category ->
+                                                                FilterChip(
+                                                                        selected =
+                                                                                selectedCategoryId ==
+                                                                                        category.category_id,
+                                                                        onClick = {
+                                                                                selectedCategoryId =
+                                                                                        category.category_id
+                                                                                selectedFavoriteListId =
+                                                                                        -1
+                                                                                showRecentOnly =
+                                                                                        false
+                                                                                searchQuery = ""
+                                                                        },
+                                                                        label = {
+                                                                                Text(
+                                                                                        category.category_name
+                                                                                )
+                                                                        }
+                                                                )
                                                         }
                                                 }
-                                                items(favoriteLists) { list ->
-                                                        SidebarItem(
-                                                                text = list.name,
-                                                                icon = Icons.Default.Star,
-                                                                isSelected =
-                                                                        selectedFavoriteListId ==
-                                                                                list.id,
-                                                                onClick = {
-                                                                        selectedFavoriteListId =
-                                                                                list.id
-                                                                        selectedCategoryId = null
-                                                                        showRecentOnly = false
-                                                                        searchQuery = ""
-                                                                },
-                                                                onDelete = {
-                                                                        scope.launch {
-                                                                                iptvRepository
-                                                                                        .removeFavoriteList(
-                                                                                                list
-                                                                                        )
+                                                // Full Width Channel List (Portrait)
+                                                LazyColumn(
+                                                        modifier =
+                                                                Modifier.weight(1f).padding(8.dp),
+                                                        verticalArrangement =
+                                                                Arrangement.spacedBy(8.dp)
+                                                ) {
+                                                        items(channels) { channel ->
+                                                                ChannelItem(
+                                                                        channel = channel,
+                                                                        isPlaying =
+                                                                                playingChannel
+                                                                                        ?.stream_id ==
+                                                                                        channel.stream_id,
+                                                                        onClick = {
+                                                                                onChannelClick(
+                                                                                        channel
+                                                                                )
+                                                                        },
+                                                                        onFavoriteClick = {
+                                                                                channelToFavorite =
+                                                                                        channel
                                                                         }
-                                                                }
-                                                        )
-                                                }
-                                                item { Spacer(Modifier.height(8.dp)) }
-                                                item {
-                                                        Text(
-                                                                "Catégories",
-                                                                style =
-                                                                        MaterialTheme.typography
-                                                                                .titleSmall,
-                                                                color = Color.Gray,
-                                                                modifier = Modifier.padding(8.dp)
-                                                        )
-                                                }
-                                                items(categories) { category ->
-                                                        SidebarItem(
-                                                                text = category.category_name,
-                                                                isSelected =
-                                                                        selectedCategoryId ==
-                                                                                category.category_id,
-                                                                onClick = {
-                                                                        selectedCategoryId =
-                                                                                category.category_id
-                                                                        selectedFavoriteListId = -1
-                                                                        showRecentOnly = false
-                                                                        searchQuery = ""
-                                                                }
-                                                        )
-                                                }
-                                        }
-
-                                        // Channel List
-                                        LazyColumn(
-                                                modifier =
-                                                        Modifier.weight(0.65f)
-                                                                .fillMaxHeight()
-                                                                .padding(8.dp),
-                                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                                        ) {
-                                                items(channels) { channel ->
-                                                        ChannelItem(
-                                                                channel = channel,
-                                                                isPlaying =
-                                                                        playingChannel?.stream_id ==
-                                                                                channel.stream_id,
-                                                                onClick = {
-                                                                        playingChannel = channel
-                                                                        isFullScreenPlayer = true
-                                                                        exoPlayer?.let {
-                                                                                val profile =
-                                                                                        profiles
-                                                                                                .find {
-                                                                                                        it.id ==
-                                                                                                                activeProfileId
-                                                                                                }
-                                                                                if (profile != null
-                                                                                ) {
-                                                                                        val baseUrl =
-                                                                                                if (profile.url
-                                                                                                                .endsWith(
-                                                                                                                        "/"
-                                                                                                                )
-                                                                                                )
-                                                                                                        profile.url
-                                                                                                else
-                                                                                                        "${profile.url}/"
-                                                                                        val streamUrl =
-                                                                                                "${baseUrl}live/${profile.username}/${profile.password}/${channel.stream_id}.ts"
-                                                                                        val meta =
-                                                                                                MediaMetadata
-                                                                                                        .Builder()
-                                                                                                        .setTitle(
-                                                                                                                channel.name
-                                                                                                        )
-                                                                                                        .setArtworkUri(
-                                                                                                                channel.stream_icon
-                                                                                                                        ?.let {
-                                                                                                                                Uri.parse(
-                                                                                                                                        it
-                                                                                                                                )
-                                                                                                                        }
-                                                                                                        )
-                                                                                                        .build()
-                                                                                        val mediaItem =
-                                                                                                MediaItem
-                                                                                                        .Builder()
-                                                                                                        .setUri(
-                                                                                                                streamUrl
-                                                                                                        )
-                                                                                                        .setMediaMetadata(
-                                                                                                                meta
-                                                                                                        )
-                                                                                                        .build()
-                                                                                        it.setMediaItem(
-                                                                                                mediaItem
-                                                                                        )
-                                                                                        it.prepare()
-                                                                                        it.play()
-                                                                                }
-                                                                        }
-                                                                        scope.launch {
-                                                                                iptvRepository
-                                                                                        .addToRecents(
-                                                                                                channel.stream_id,
-                                                                                                activeProfileId
-                                                                                        )
-                                                                        }
-                                                                },
-                                                                onFavoriteClick = {
-                                                                        channelToFavorite = channel
-                                                                }
-                                                        )
+                                                                )
+                                                        }
                                                 }
                                         }
                                 }
@@ -593,11 +977,15 @@ fun MainScreen(iptvRepository: IptvRepository) {
                         onDismissRequest = { showAddListDialog = false },
                         title = { Text("Nouvelle Liste") },
                         text = {
-                                OutlinedTextField(
-                                        value = listName,
-                                        onValueChange = { listName = it },
-                                        label = { Text("Nom") }
-                                )
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Text("Créez une nouvelle liste de favoris.")
+                                        TvInput(
+                                                value = listName,
+                                                onValueChange = { text -> listName = text },
+                                                label = "Nom de la liste",
+                                                focusManager = LocalFocusManager.current
+                                        )
+                                }
                         },
                         confirmButton = {
                                 TextButton(
@@ -624,8 +1012,8 @@ fun MainScreen(iptvRepository: IptvRepository) {
                 GenericFavoriteDialog(
                         title = "Ajouter aux favoris",
                         items = favoriteLists,
-                        getName = { it.name },
-                        getId = { it.id },
+                        getName = { profile -> profile.name },
+                        getId = { profile -> profile.id },
                         onDismiss = { channelToFavorite = null },
                         onToggle = { listId ->
                                 scope.launch {
@@ -641,6 +1029,51 @@ fun MainScreen(iptvRepository: IptvRepository) {
                                         channelToFavorite!!.stream_id,
                                         activeProfileId
                                 )
+                        }
+                )
+        }
+
+        if (showRestoreConfirmDialog) {
+                AlertDialog(
+                        onDismissRequest = { showRestoreConfirmDialog = false },
+                        title = { Text("Confirmation de Restauration") },
+                        text = {
+                                Text(
+                                        "Voulez-vous restaurer les données depuis 'simple_iptv_backup.json' ?\n\nATTENTION : Cette action écrasera vos profils et favoris actuels."
+                                )
+                        },
+                        confirmButton = {
+                                Button(
+                                        onClick = {
+                                                scope.launch {
+                                                        try {
+                                                                iptvRepository
+                                                                        .importDatabaseFromJson(
+                                                                                backupJsonToRestore
+                                                                        )
+                                                                showRestoreConfirmDialog = false
+                                                                Toast.makeText(
+                                                                                context,
+                                                                                "Restauration terminée !",
+                                                                                Toast.LENGTH_SHORT
+                                                                        )
+                                                                        .show()
+                                                        } catch (e: Exception) {
+                                                                Toast.makeText(
+                                                                                context,
+                                                                                "Erreur import: ${e.message}",
+                                                                                Toast.LENGTH_SHORT
+                                                                        )
+                                                                        .show()
+                                                        }
+                                                }
+                                        }
+                                ) { Text("Confirmer") }
+                        },
+                        dismissButton = {
+                                TextButton(onClick = { showRestoreConfirmDialog = false }) {
+                                        Text("Annuler")
+                                }
                         }
                 )
         }
@@ -674,7 +1107,7 @@ fun ProfileFormDialog(
                         ) {
                                 TvInput(
                                         value = name,
-                                        onValueChange = { name = it },
+                                        onValueChange = { text -> name = text },
                                         label = "Nom du profil",
                                         focusManager = focusManager
                                 )
@@ -722,19 +1155,19 @@ fun ProfileFormDialog(
 
                                 TvInput(
                                         value = url,
-                                        onValueChange = { url = it },
+                                        onValueChange = { text -> url = text },
                                         label = "URL Serveur",
                                         focusManager = focusManager
                                 )
                                 TvInput(
                                         value = user,
-                                        onValueChange = { user = it },
+                                        onValueChange = { text -> user = text },
                                         label = "Utilisateur",
                                         focusManager = focusManager
                                 )
                                 TvInput(
                                         value = pass,
-                                        onValueChange = { pass = it },
+                                        onValueChange = { text -> pass = text },
                                         label = "Mot de passe",
                                         isPassword = false, // Désactivé pour affichage direct (App
                                         // personnelle)
@@ -778,36 +1211,110 @@ fun TvInput(
         value: String,
         onValueChange: (String) -> Unit,
         label: String,
+        modifier: Modifier = Modifier,
         isPassword: Boolean = false,
-        focusManager: androidx.compose.ui.focus.FocusManager
+        focusManager: androidx.compose.ui.focus.FocusManager,
+        leadingIcon: ImageVector? = null
 ) {
+        var isEditing by remember { mutableStateOf(false) }
         var isFocused by remember { mutableStateOf(false) }
 
         OutlinedTextField(
                 value = value,
                 onValueChange = onValueChange,
                 label = { Text(label) },
+                modifier =
+                        modifier.fillMaxWidth()
+                                .onFocusChanged { state ->
+                                        isFocused = state.isFocused
+                                        if (!state.isFocused) {
+                                                isEditing = false
+                                        }
+                                }
+                                .onKeyEvent { keyEvent ->
+                                        if (keyEvent.type == KeyEventType.KeyDown) {
+                                                when (keyEvent.key) {
+                                                        Key.DirectionCenter,
+                                                        Key.Enter,
+                                                        Key.NumPadEnter,
+                                                        Key.ButtonA -> {
+                                                                isEditing = !isEditing
+                                                                return@onKeyEvent true
+                                                        }
+                                                }
+                                        }
+                                        false
+                                }
+                                .border(
+                                        width = if (isFocused) 3.dp else 1.dp,
+                                        color =
+                                                if (isFocused) {
+                                                        if (isEditing) Color.Green else Color.Yellow
+                                                } else Color.Gray.copy(alpha = 0.5f),
+                                        shape = MaterialTheme.shapes.medium
+                                ),
+                readOnly = !isEditing,
+                enabled = true,
                 visualTransformation =
                         if (isPassword) PasswordVisualTransformation()
                         else androidx.compose.ui.text.input.VisualTransformation.None,
                 keyboardOptions =
                         KeyboardOptions(
-                                imeAction = ImeAction.Next,
+                                imeAction = ImeAction.Done,
                                 keyboardType =
-                                        if (isPassword) KeyboardType.Password else KeyboardType.Text
+                                        if (isPassword) KeyboardType.Password
+                                        else KeyboardType.Text,
+                                autoCorrectEnabled = false
                         ),
                 keyboardActions =
-                        KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
-                modifier =
-                        Modifier.fillMaxWidth()
-                                .onFocusChanged { isFocused = it.isFocused }
-                                .border(
-                                        width = if (isFocused) 3.dp else 1.dp,
-                                        color =
-                                                if (isFocused) Color.Yellow
-                                                else Color.Gray.copy(alpha = 0.5f),
-                                        shape = MaterialTheme.shapes.small
-                                )
+                        KeyboardActions(
+                                onDone = {
+                                        isEditing = false
+                                        focusManager.clearFocus()
+                                },
+                                onSearch = {
+                                        isEditing = false
+                                        focusManager.clearFocus()
+                                },
+                                onGo = {
+                                        isEditing = false
+                                        focusManager.clearFocus()
+                                },
+                                onSend = {
+                                        isEditing = false
+                                        focusManager.clearFocus()
+                                }
+                        ),
+                leadingIcon =
+                        leadingIcon?.let { icon ->
+                                {
+                                        Icon(
+                                                icon,
+                                                null,
+                                                tint =
+                                                        if (isFocused || isEditing) Color.Green
+                                                        else Color.Gray
+                                        )
+                                }
+                        },
+                singleLine = true,
+                colors =
+                        OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color.Transparent,
+                                unfocusedBorderColor = Color.Transparent
+                        ),
+                interactionSource =
+                        remember { MutableInteractionSource() }.also { interactionSource ->
+                                LaunchedEffect(interactionSource) {
+                                        interactionSource.interactions.collect { interaction ->
+                                                if (interaction is
+                                                                androidx.compose.foundation.interaction.PressInteraction.Release
+                                                ) {
+                                                        isEditing = true
+                                                }
+                                        }
+                                }
+                        }
         )
 }
 
@@ -859,17 +1366,6 @@ fun ProfileManagerDialog(
                                                                                 .bodySmall,
                                                                 color = Color.Gray
                                                         )
-                                                        Text(
-                                                                "User: ${profile.username} | Pass: ${profile.password}",
-                                                                style =
-                                                                        MaterialTheme.typography
-                                                                                .bodySmall,
-                                                                color =
-                                                                        MaterialTheme.colorScheme
-                                                                                .primary.copy(
-                                                                                alpha = 0.7f
-                                                                        )
-                                                        )
                                                 }
                                                 IconButton(onClick = { onEdit(profile) }) {
                                                         Icon(
@@ -899,14 +1395,15 @@ fun HeaderIconButton(
         icon: ImageVector,
         desc: String?,
         onClick: () -> Unit,
+        modifier: Modifier = Modifier,
         tintNormal: Color = MaterialTheme.colorScheme.primary
 ) {
         var isFocused by remember { mutableStateOf(false) }
         IconButton(
                 onClick = onClick,
                 modifier =
-                        Modifier.size(40.dp)
-                                .onFocusChanged { isFocused = it.isFocused }
+                        modifier.size(40.dp)
+                                .onFocusChanged { state -> isFocused = state.isFocused }
                                 .border(
                                         if (isFocused) 3.dp else 0.dp,
                                         if (isFocused) Color.Yellow else Color.Transparent,
@@ -928,13 +1425,14 @@ fun SidebarItem(
         icon: ImageVector? = null,
         isSelected: Boolean,
         onClick: () -> Unit,
+        modifier: Modifier = Modifier,
         onDelete: (() -> Unit)? = null
 ) {
         var isFocused by remember { mutableStateOf(false) }
         Card(
                 modifier =
-                        Modifier.fillMaxWidth()
-                                .onFocusChanged { isFocused = it.isFocused }
+                        modifier.fillMaxWidth()
+                                .onFocusChanged { state -> isFocused = state.isFocused }
                                 .clickable { onClick() },
                 border =
                         if (isFocused) BorderStroke(3.dp, Color.Yellow)
@@ -983,15 +1481,16 @@ fun ChannelItem(
         channel: ChannelEntity,
         isPlaying: Boolean,
         onClick: () -> Unit,
-        onFavoriteClick: () -> Unit
+        onFavoriteClick: () -> Unit,
+        modifier: Modifier = Modifier
 ) {
         var isFocused by remember { mutableStateOf(false) }
         var isFavFocused by remember { mutableStateOf(false) }
         Card(
                 modifier =
-                        Modifier.fillMaxWidth()
+                        modifier.fillMaxWidth()
                                 .padding(4.dp)
-                                .onFocusChanged { isFocused = it.isFocused }
+                                .onFocusChanged { state -> isFocused = state.isFocused }
                                 .clickable { onClick() },
                 border =
                         when {
@@ -1147,7 +1646,7 @@ fun VideoPlayerView(exoPlayer: Player, channelName: String, onBack: () -> Unit) 
                 delay(500)
                 try {
                         playPauseFocusRequester.requestFocus()
-                } catch (e: Exception) {}
+                } catch (_: Exception) {}
         }
         Box(
                 modifier =

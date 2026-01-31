@@ -1,4 +1,3 @@
 <resources>
-
     <style name="Theme.SimpleIPTV" parent="Theme.AppCompat.DayNight.NoActionBar" />
 </resources>
