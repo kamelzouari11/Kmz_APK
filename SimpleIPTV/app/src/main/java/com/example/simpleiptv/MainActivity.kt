@@ -1,9 +1,16 @@
 package com.example.simpleiptv
 
 import android.content.ComponentName
+import android.content.Context
 import android.content.res.Configuration
 import android.os.Bundle
+import android.text.InputType
+import android.view.Gravity
+import android.view.KeyEvent
 import android.view.WindowManager
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
+import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -12,11 +19,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
@@ -24,8 +29,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -34,9 +37,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.net.toUri
@@ -45,7 +45,6 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
-import androidx.media3.ui.PlayerView
 import coil.compose.AsyncImage
 import com.example.simpleiptv.data.IptvRepository
 import com.example.simpleiptv.data.api.XtreamClient
@@ -53,7 +52,6 @@ import com.example.simpleiptv.data.local.AppDatabase
 import com.example.simpleiptv.data.local.entities.*
 import com.example.simpleiptv.ui.theme.SimpleIPTVTheme
 import com.google.common.util.concurrent.MoreExecutors
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -197,9 +195,15 @@ fun MainScreen(iptvRepository: IptvRepository) {
 
         LaunchedEffect(activeProfileId) {
                 if (activeProfileId != -1) {
-                        iptvRepository.getCategories(activeProfileId).collect { categories = it }
-                        iptvRepository.getFavoriteLists(activeProfileId).collect {
-                                favoriteLists = it
+                        launch {
+                                iptvRepository.getCategories(activeProfileId).collect {
+                                        categories = it
+                                }
+                        }
+                        launch {
+                                iptvRepository.getFavoriteLists(activeProfileId).collect {
+                                        favoriteLists = it
+                                }
                         }
                 }
         }
@@ -298,9 +302,20 @@ fun MainScreen(iptvRepository: IptvRepository) {
         // Main Layout
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                 if (isFullScreenPlayer && playingChannel != null && exoPlayer != null) {
-                        VideoPlayerView(exoPlayer!!, playingChannel!!.name) {
-                                isFullScreenPlayer = false
-                        }
+                        VideoPlayerView(
+                                exoPlayer = exoPlayer!!,
+                                channelName = playingChannel!!.name,
+                                currentChannels = channels,
+                                categories = categories,
+                                onChannelSelected = { onChannelClick(it) },
+                                onCategorySelected = {
+                                        selectedCategoryId = it.category_id
+                                        selectedFavoriteListId = -1
+                                        showRecentOnly = false
+                                        searchQuery = ""
+                                },
+                                onBack = { isFullScreenPlayer = false }
+                        )
                 } else {
                         Column(modifier = Modifier.fillMaxSize()) {
                                 // Header
@@ -904,7 +919,9 @@ fun MainScreen(iptvRepository: IptvRepository) {
                                                                         onFavoriteClick = {
                                                                                 channelToFavorite =
                                                                                         channel
-                                                                        }
+                                                                        },
+                                                                        debugInfo =
+                                                                                "Profile: $activeProfileId, Lists: ${favoriteLists.size}"
                                                                 )
                                                         }
                                                 }
@@ -988,22 +1005,50 @@ fun MainScreen(iptvRepository: IptvRepository) {
                                 }
                         },
                         confirmButton = {
+                                var isAddFocused by remember { mutableStateOf(false) }
                                 TextButton(
+                                        modifier =
+                                                Modifier.focusable()
+                                                        .onFocusChanged {
+                                                                isAddFocused = it.isFocused
+                                                        }
+                                                        .border(
+                                                                if (isAddFocused) 2.dp else 0.dp,
+                                                                if (isAddFocused) Color.Yellow
+                                                                else Color.Transparent,
+                                                                MaterialTheme.shapes.small
+                                                        ),
                                         onClick = {
-                                                scope.launch {
-                                                        iptvRepository.addFavoriteList(
-                                                                listName,
-                                                                activeProfileId
-                                                        )
-                                                        showAddListDialog = false
+                                                if (listName.isBlank()) {
+                                                        Toast.makeText(
+                                                                        context,
+                                                                        "Nom vide!",
+                                                                        Toast.LENGTH_SHORT
+                                                                )
+                                                                .show()
+                                                } else {
+                                                        scope.launch {
+                                                                Toast.makeText(
+                                                                                context,
+                                                                                "Ajout: '$listName' (id: $activeProfileId)",
+                                                                                Toast.LENGTH_SHORT
+                                                                        )
+                                                                        .show()
+                                                                iptvRepository.addFavoriteList(
+                                                                        listName,
+                                                                        activeProfileId
+                                                                )
+                                                                showAddListDialog = false
+                                                        }
                                                 }
                                         }
                                 ) { Text("Ajouter") }
                         },
                         dismissButton = {
-                                TextButton(onClick = { showAddListDialog = false }) {
-                                        Text("Annuler")
-                                }
+                                TextButton(
+                                        modifier = Modifier.focusable(),
+                                        onClick = { showAddListDialog = false }
+                                ) { Text("Annuler") }
                         }
                 )
         }
@@ -1216,105 +1261,109 @@ fun TvInput(
         focusManager: androidx.compose.ui.focus.FocusManager,
         leadingIcon: ImageVector? = null
 ) {
-        var isEditing by remember { mutableStateOf(false) }
-        var isFocused by remember { mutableStateOf(false) }
+        val context = LocalContext.current
 
-        OutlinedTextField(
-                value = value,
-                onValueChange = onValueChange,
-                label = { Text(label) },
+        AndroidView(
                 modifier =
                         modifier.fillMaxWidth()
-                                .onFocusChanged { state ->
-                                        isFocused = state.isFocused
-                                        if (!state.isFocused) {
-                                                isEditing = false
+                                .height(60.dp)
+                                .background(
+                                        color =
+                                                MaterialTheme.colorScheme.surfaceVariant.copy(
+                                                        alpha = 0.3f
+                                                ),
+                                        shape = MaterialTheme.shapes.medium
+                                )
+                                .border(
+                                        width = 1.dp,
+                                        color = Color.Gray.copy(alpha = 0.5f),
+                                        shape = MaterialTheme.shapes.medium
+                                ),
+                factory = { ctx ->
+                        EditText(ctx).apply {
+                                // 1. Setup Basic Properties
+                                setHint(label)
+                                setSingleLine(true)
+                                setTextColor(android.graphics.Color.WHITE)
+                                setHintTextColor(android.graphics.Color.GRAY)
+                                setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                                setPadding(32, 16, 32, 16)
+                                setGravity(Gravity.CENTER_VERTICAL)
+
+                                // 2. Input Type Setup
+                                inputType =
+                                        if (isPassword) {
+                                                InputType.TYPE_CLASS_TEXT or
+                                                        InputType.TYPE_TEXT_VARIATION_PASSWORD
+                                        } else {
+                                                InputType.TYPE_CLASS_TEXT
                                         }
-                                }
-                                .onKeyEvent { keyEvent ->
-                                        if (keyEvent.type == KeyEventType.KeyDown) {
-                                                when (keyEvent.key) {
-                                                        Key.DirectionCenter,
-                                                        Key.Enter,
-                                                        Key.NumPadEnter,
-                                                        Key.ButtonA -> {
-                                                                isEditing = !isEditing
-                                                                return@onKeyEvent true
-                                                        }
-                                                }
+                                imeOptions = EditorInfo.IME_ACTION_DONE
+
+                                // 3. ESSENTIAL: Prevent keyboard on simple focus
+                                showSoftInputOnFocus = false
+
+                                // 4. Listen for OK / ENTER to force keyboard
+                                setOnKeyListener { v, keyCode, event ->
+                                        if (event.action == KeyEvent.ACTION_UP &&
+                                                        (keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+                                                                keyCode == KeyEvent.KEYCODE_ENTER ||
+                                                                keyCode ==
+                                                                        KeyEvent.KEYCODE_NUMPAD_ENTER)
+                                        ) {
+
+                                                // Explicitly request focus
+                                                v.requestFocus()
+
+                                                // Force Validation
+                                                val imm =
+                                                        ctx.getSystemService(
+                                                                Context.INPUT_METHOD_SERVICE
+                                                        ) as
+                                                                InputMethodManager
+                                                imm.showSoftInput(v, InputMethodManager.SHOW_FORCED)
+                                                return@setOnKeyListener true
                                         }
                                         false
                                 }
-                                .border(
-                                        width = if (isFocused) 3.dp else 1.dp,
-                                        color =
-                                                if (isFocused) {
-                                                        if (isEditing) Color.Green else Color.Yellow
-                                                } else Color.Gray.copy(alpha = 0.5f),
-                                        shape = MaterialTheme.shapes.medium
-                                ),
-                readOnly = !isEditing,
-                enabled = true,
-                visualTransformation =
-                        if (isPassword) PasswordVisualTransformation()
-                        else androidx.compose.ui.text.input.VisualTransformation.None,
-                keyboardOptions =
-                        KeyboardOptions(
-                                imeAction = ImeAction.Done,
-                                keyboardType =
-                                        if (isPassword) KeyboardType.Password
-                                        else KeyboardType.Text,
-                                autoCorrectEnabled = false
-                        ),
-                keyboardActions =
-                        KeyboardActions(
-                                onDone = {
-                                        isEditing = false
-                                        focusManager.clearFocus()
-                                },
-                                onSearch = {
-                                        isEditing = false
-                                        focusManager.clearFocus()
-                                },
-                                onGo = {
-                                        isEditing = false
-                                        focusManager.clearFocus()
-                                },
-                                onSend = {
-                                        isEditing = false
-                                        focusManager.clearFocus()
-                                }
-                        ),
-                leadingIcon =
-                        leadingIcon?.let { icon ->
-                                {
-                                        Icon(
-                                                icon,
-                                                null,
-                                                tint =
-                                                        if (isFocused || isEditing) Color.Green
-                                                        else Color.Gray
-                                        )
-                                }
-                        },
-                singleLine = true,
-                colors =
-                        OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Color.Transparent,
-                                unfocusedBorderColor = Color.Transparent
-                        ),
-                interactionSource =
-                        remember { MutableInteractionSource() }.also { interactionSource ->
-                                LaunchedEffect(interactionSource) {
-                                        interactionSource.interactions.collect { interaction ->
-                                                if (interaction is
-                                                                androidx.compose.foundation.interaction.PressInteraction.Release
+
+                                // 5. Handle Text Changes
+                                addTextChangedListener(
+                                        object : android.text.TextWatcher {
+                                                override fun beforeTextChanged(
+                                                        s: CharSequence?,
+                                                        start: Int,
+                                                        count: Int,
+                                                        after: Int
+                                                ) {}
+                                                override fun onTextChanged(
+                                                        s: CharSequence?,
+                                                        start: Int,
+                                                        before: Int,
+                                                        count: Int
                                                 ) {
-                                                        isEditing = true
+                                                        // prevent infinite loop
+                                                        if (s.toString() != value) {
+                                                                onValueChange(s.toString())
+                                                        }
                                                 }
+                                                override fun afterTextChanged(
+                                                        s: android.text.Editable?
+                                                ) {}
                                         }
+                                )
+                        }
+                },
+                update = { editText ->
+                        if (editText.text.toString() != value) {
+                                editText.setText(value)
+                                try {
+                                        editText.setSelection(editText.text.length)
+                                } catch (e: Exception) {
+                                        // Ignore selection error
                                 }
                         }
+                }
         )
 }
 
@@ -1367,7 +1416,10 @@ fun ProfileManagerDialog(
                                                                 color = Color.Gray
                                                         )
                                                 }
-                                                IconButton(onClick = { onEdit(profile) }) {
+                                                IconButton(
+                                                        onClick = { onEdit(profile) },
+                                                        modifier = Modifier.focusable()
+                                                ) {
                                                         Icon(
                                                                 Icons.Default.Edit,
                                                                 null,
@@ -1376,7 +1428,10 @@ fun ProfileManagerDialog(
                                                                                 .primary
                                                         )
                                                 }
-                                                IconButton(onClick = { onDeleteProfile(profile) }) {
+                                                IconButton(
+                                                        onClick = { onDeleteProfile(profile) },
+                                                        modifier = Modifier.focusable()
+                                                ) {
                                                         Icon(
                                                                 Icons.Default.Delete,
                                                                 null,
@@ -1428,50 +1483,82 @@ fun SidebarItem(
         modifier: Modifier = Modifier,
         onDelete: (() -> Unit)? = null
 ) {
-        var isFocused by remember { mutableStateOf(false) }
-        Card(
-                modifier =
-                        modifier.fillMaxWidth()
-                                .onFocusChanged { state -> isFocused = state.isFocused }
-                                .clickable { onClick() },
-                border =
-                        if (isFocused) BorderStroke(3.dp, Color.Yellow)
-                        else if (isSelected) BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
-                        else null,
-                colors =
-                        CardDefaults.cardColors(
-                                containerColor =
-                                        if (isFocused)
-                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-                                        else if (isSelected)
-                                                MaterialTheme.colorScheme.primaryContainer
-                                        else MaterialTheme.colorScheme.surface
-                        )
-        ) {
-                Row(
-                        modifier = Modifier.fillMaxWidth().padding(10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                ) {
-                        if (icon != null) {
-                                Icon(
-                                        icon,
-                                        null,
-                                        tint =
-                                                if (isSelected || isFocused)
-                                                        MaterialTheme.colorScheme.primary
-                                                else Color.Gray
+        var isItemFocused by remember { mutableStateOf(false) }
+        var isDeleteFocused by remember { mutableStateOf(false) }
+
+        Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                // 1. Main Item Box
+                Card(
+                        modifier =
+                                Modifier.weight(1f)
+                                        .onFocusChanged { state -> isItemFocused = state.isFocused }
+                                        .clickable { onClick() }
+                                        .focusable(),
+                        border =
+                                if (isItemFocused) BorderStroke(3.dp, Color.Yellow)
+                                else if (isSelected)
+                                        BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+                                else null,
+                        colors =
+                                CardDefaults.cardColors(
+                                        containerColor =
+                                                if (isItemFocused)
+                                                        MaterialTheme.colorScheme.primary.copy(
+                                                                alpha = 0.3f
+                                                        )
+                                                else if (isSelected)
+                                                        MaterialTheme.colorScheme.primaryContainer
+                                                else MaterialTheme.colorScheme.surface
                                 )
-                                Spacer(Modifier.width(12.dp))
+                ) {
+                        Row(
+                                modifier = Modifier.padding(10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                        ) {
+                                if (icon != null) {
+                                        Icon(
+                                                icon,
+                                                null,
+                                                tint =
+                                                        if (isSelected || isItemFocused)
+                                                                MaterialTheme.colorScheme.primary
+                                                        else Color.Gray
+                                        )
+                                        Spacer(Modifier.width(12.dp))
+                                }
+                                Text(text, maxLines = 1)
                         }
-                        Text(text, modifier = Modifier.weight(1f), maxLines = 1)
-                        if (onDelete != null && (isFocused || isSelected))
-                                IconButton(onClick = onDelete, modifier = Modifier.size(24.dp)) {
+                }
+
+                // 2. Delete Button (if exists)
+                // 2. Delete Button (if exists) - Using Surface for reliable TV focus
+                if (onDelete != null) {
+                        Spacer(Modifier.width(8.dp))
+                        Surface(
+                                modifier =
+                                        Modifier.size(48.dp)
+                                                .onFocusChanged { isDeleteFocused = it.isFocused }
+                                                .clickable { onDelete() }
+                                                .focusable(),
+                                shape = CircleShape,
+                                color =
+                                        if (isDeleteFocused)
+                                                MaterialTheme.colorScheme.surfaceVariant
+                                        else Color.Transparent,
+                                border =
+                                        if (isDeleteFocused) BorderStroke(3.dp, Color.Yellow)
+                                        else null
+                        ) {
+                                Box(contentAlignment = Alignment.Center) {
                                         Icon(
                                                 Icons.Default.Delete,
                                                 null,
-                                                tint = Color.Red.copy(alpha = 0.7f)
+                                                tint =
+                                                        if (isDeleteFocused) Color.Red
+                                                        else Color.Gray
                                         )
                                 }
+                        }
                 }
         }
 }
@@ -1482,71 +1569,105 @@ fun ChannelItem(
         isPlaying: Boolean,
         onClick: () -> Unit,
         onFavoriteClick: () -> Unit,
-        modifier: Modifier = Modifier
+        modifier: Modifier = Modifier,
+        debugInfo: String = "" // Add debug info param
 ) {
-        var isFocused by remember { mutableStateOf(false) }
+        var isChannelFocused by remember { mutableStateOf(false) }
         var isFavFocused by remember { mutableStateOf(false) }
-        Card(
-                modifier =
-                        modifier.fillMaxWidth()
-                                .padding(4.dp)
-                                .onFocusChanged { state -> isFocused = state.isFocused }
-                                .clickable { onClick() },
-                border =
-                        when {
-                                isFocused -> BorderStroke(4.dp, Color.Yellow)
-                                isPlaying -> BorderStroke(2.dp, Color.Green)
-                                else -> BorderStroke(1.dp, Color.Gray.copy(alpha = 0.3f))
-                        },
-                colors =
-                        CardDefaults.cardColors(
-                                containerColor =
-                                        if (isFocused) Color(0xFF121212)
-                                        else if (isPlaying)
-                                                MaterialTheme.colorScheme.primaryContainer.copy(
-                                                        alpha = 0.6f
-                                                )
-                                        else MaterialTheme.colorScheme.surface
-                        )
+        val context = LocalContext.current
+
+        Row(
+                modifier = modifier.fillMaxWidth().padding(4.dp),
+                verticalAlignment = Alignment.CenterVertically
         ) {
-                Row(
-                        modifier = Modifier.fillMaxWidth().padding(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                // 1. Channel Info Block (Clickable Surface)
+                Surface(
+                        modifier =
+                                Modifier.weight(1f)
+                                        .height(60.dp) // Fixed height for consistency
+                                        .onFocusChanged { state ->
+                                                isChannelFocused = state.isFocused
+                                        }
+                                        .clickable { onClick() }
+                                        .focusable(), // Explicit
+                        shape = MaterialTheme.shapes.small,
+                        color =
+                                if (isChannelFocused) Color(0xFF121212)
+                                else if (isPlaying)
+                                        MaterialTheme.colorScheme.primaryContainer.copy(
+                                                alpha = 0.6f
+                                        )
+                                else MaterialTheme.colorScheme.surface,
+                        border =
+                                when {
+                                        isChannelFocused -> BorderStroke(3.dp, Color.Yellow)
+                                        isPlaying -> BorderStroke(2.dp, Color.Green)
+                                        else -> BorderStroke(1.dp, Color.Gray.copy(alpha = 0.3f))
+                                }
                 ) {
-                        AsyncImage(
-                                model = channel.stream_icon,
-                                contentDescription = null,
-                                modifier = Modifier.size(48.dp),
-                                contentScale = ContentScale.Fit
-                        )
-                        Spacer(Modifier.width(12.dp))
-                        Text(
-                                channel.name,
-                                modifier = Modifier.weight(1f),
-                                color =
-                                        if (isFocused) Color.Yellow
-                                        else if (isPlaying) Color.Green
-                                        else MaterialTheme.colorScheme.onSurface
-                        )
-                        if (isPlaying) Icon(Icons.Default.PlayArrow, null, tint = Color.Green)
-                        IconButton(
-                                onClick = onFavoriteClick,
-                                modifier =
-                                        Modifier.onFocusChanged { isFavFocused = it.isFocused }
-                                                .border(
-                                                        if (isFavFocused) 2.dp else 0.dp,
-                                                        if (isFavFocused) Color.Yellow
-                                                        else Color.Transparent,
-                                                        androidx.compose.foundation.shape
-                                                                .CircleShape
-                                                )
+                        Row(
+                                modifier = Modifier.padding(horizontal = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
                         ) {
+                                AsyncImage(
+                                        model = channel.stream_icon,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(40.dp),
+                                        contentScale = ContentScale.Fit
+                                )
+                                Spacer(Modifier.width(12.dp))
+                                Text(
+                                        channel.name,
+                                        color =
+                                                if (isChannelFocused) Color.Yellow
+                                                else if (isPlaying) Color.Green
+                                                else MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 1,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.weight(1f)
+                                )
+                                if (isPlaying) {
+                                        Spacer(Modifier.width(8.dp))
+                                        Icon(
+                                                Icons.Default.PlayArrow,
+                                                null,
+                                                tint = Color.Green,
+                                                modifier = Modifier.size(20.dp)
+                                        )
+                                }
+                        }
+                }
+
+                // Spacer
+                Spacer(Modifier.width(8.dp))
+
+                // 2. Favorite Star Block (Clickable Surface for better focus control)
+                Surface(
+                        modifier =
+                                Modifier.size(60.dp) // Square button, same height as channel
+                                        .onFocusChanged { state -> isFavFocused = state.isFocused }
+                                        .clickable {
+                                                Toast.makeText(
+                                                                context,
+                                                                debugInfo,
+                                                                Toast.LENGTH_SHORT
+                                                        )
+                                                        .show()
+                                                onFavoriteClick()
+                                        }
+                                        .focusable(), // Explicit
+                        shape = CircleShape,
+                        color =
+                                if (isFavFocused) MaterialTheme.colorScheme.surfaceVariant
+                                else Color.Transparent,
+                        border = if (isFavFocused) BorderStroke(3.dp, Color.Yellow) else null
+                ) {
+                        Box(contentAlignment = Alignment.Center) {
                                 Icon(
                                         Icons.Default.Star,
                                         null,
-                                        tint =
-                                                if (isFavFocused) Color.Yellow
-                                                else MaterialTheme.colorScheme.primary
+                                        tint = if (isFavFocused) Color.Yellow else Color.Gray,
+                                        modifier = Modifier.size(32.dp) // Larger Icon
                                 )
                         }
                 }
@@ -1570,7 +1691,7 @@ fun <T> GenericFavoriteDialog(
         }
         AlertDialog(
                 onDismissRequest = onDismiss,
-                title = { Text(title) },
+                title = { Text("$title (${items.size})") }, // Debug: Show count
                 text = {
                         if (items.isEmpty()) Text("Aucune liste.")
                         else
@@ -1604,6 +1725,10 @@ fun <T> GenericFavoriteDialog(
                                                                                                         )
                                                                                                 )
                                                                         }
+                                                                        .focusable() // CRITICAL:
+                                                                        // Makes row
+                                                                        // focusable on
+                                                                        // TV
                                                                         .padding(8.dp),
                                                         verticalAlignment =
                                                                 Alignment.CenterVertically
@@ -1623,136 +1748,4 @@ fun <T> GenericFavoriteDialog(
                 },
                 confirmButton = { TextButton(onClick = onDismiss) { Text("Fermer") } }
         )
-}
-
-@Composable
-fun VideoPlayerView(exoPlayer: Player, channelName: String, onBack: () -> Unit) {
-        val scope = rememberCoroutineScope()
-        var showControls by remember { mutableStateOf(true) }
-        var isPlaying by remember { mutableStateOf(exoPlayer.isPlaying) }
-        var isPlayPauseFocused by remember { mutableStateOf(false) }
-        val playPauseFocusRequester = remember { FocusRequester() }
-        var hideJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
-        fun startHideTimer() {
-                hideJob?.cancel()
-                hideJob =
-                        scope.launch {
-                                delay(5000)
-                                showControls = false
-                        }
-        }
-        LaunchedEffect(Unit) {
-                startHideTimer()
-                delay(500)
-                try {
-                        playPauseFocusRequester.requestFocus()
-                } catch (_: Exception) {}
-        }
-        Box(
-                modifier =
-                        Modifier.fillMaxSize().background(Color.Black).clickable(
-                                        interactionSource = remember { MutableInteractionSource() },
-                                        indication = null
-                                ) {
-                                showControls = !showControls
-                                if (showControls) startHideTimer()
-                        }
-        ) {
-                AndroidView(
-                        factory = { context ->
-                                PlayerView(context).apply {
-                                        player = exoPlayer
-                                        useController = false
-                                        keepScreenOn = true
-                                }
-                        },
-                        modifier = Modifier.fillMaxSize()
-                )
-                if (showControls) {
-                        Box(
-                                modifier =
-                                        Modifier.fillMaxSize()
-                                                .background(
-                                                        androidx.compose.ui.graphics.Brush
-                                                                .verticalGradient(
-                                                                        listOf(
-                                                                                Color.Black.copy(
-                                                                                        alpha = 0.6f
-                                                                                ),
-                                                                                Color.Transparent,
-                                                                                Color.Black.copy(
-                                                                                        alpha = 0.6f
-                                                                                )
-                                                                        )
-                                                                )
-                                                )
-                        )
-                        Row(
-                                modifier =
-                                        Modifier.fillMaxWidth()
-                                                .padding(16.dp)
-                                                .align(Alignment.TopStart),
-                                verticalAlignment = Alignment.CenterVertically
-                        ) {
-                                IconButton(onClick = onBack) {
-                                        Icon(
-                                                Icons.AutoMirrored.Filled.ArrowBack,
-                                                null,
-                                                tint = Color.White,
-                                                modifier = Modifier.size(32.dp)
-                                        )
-                                }
-                                Text(
-                                        channelName,
-                                        style = MaterialTheme.typography.titleLarge,
-                                        color = Color.White,
-                                        modifier = Modifier.weight(1f).padding(start = 16.dp)
-                                )
-                                val context = LocalContext.current
-                                IconButton(
-                                        onClick = {
-                                                exoPlayer.stop()
-                                                (context as? android.app.Activity)?.finishAffinity()
-                                        }
-                                ) {
-                                        Icon(
-                                                Icons.Default.PowerSettingsNew,
-                                                null,
-                                                tint = Color.Red,
-                                                modifier = Modifier.size(32.dp)
-                                        )
-                                }
-                        }
-                        IconButton(
-                                onClick = {
-                                        if (isPlaying) exoPlayer.pause() else exoPlayer.play()
-                                        isPlaying = !isPlaying
-                                        startHideTimer()
-                                },
-                                modifier =
-                                        Modifier.align(Alignment.Center)
-                                                .size(80.dp)
-                                                .onFocusChanged {
-                                                        isPlayPauseFocused = it.isFocused
-                                                }
-                                                .focusRequester(playPauseFocusRequester)
-                                                .border(
-                                                        2.dp,
-                                                        if (isPlayPauseFocused) Color.Yellow
-                                                        else Color.Transparent,
-                                                        androidx.compose.foundation.shape
-                                                                .CircleShape
-                                                )
-                        ) {
-                                Icon(
-                                        if (isPlaying) Icons.Default.Pause
-                                        else Icons.Default.PlayArrow,
-                                        null,
-                                        tint = Color.White,
-                                        modifier = Modifier.size(64.dp)
-                                )
-                        }
-                }
-        }
-        BackHandler(enabled = true) { if (showControls) onBack() else showControls = true }
 }
