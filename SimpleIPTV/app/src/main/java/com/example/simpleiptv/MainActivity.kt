@@ -107,26 +107,45 @@ fun MainScreen(iptvRepository: IptvRepository) {
                         contract = ActivityResultContracts.CreateDocument("application/json")
                 ) { uri ->
                         uri?.let {
-                                scope.launch {
+                                scope.launch(kotlinx.coroutines.Dispatchers.IO) {
                                         try {
                                                 val json = iptvRepository.exportDatabaseToJson()
-                                                context.contentResolver.openOutputStream(it)?.use {
-                                                        outputStream ->
-                                                        outputStream.write(json.toByteArray())
+                                                val outputStream =
+                                                        context.contentResolver.openOutputStream(it)
+                                                if (outputStream != null) {
+                                                        outputStream.use { stream ->
+                                                                java.io.OutputStreamWriter(stream)
+                                                                        .use { writer ->
+                                                                                writer.write(json)
+                                                                        }
+                                                        }
+                                                        kotlinx.coroutines.withContext(
+                                                                kotlinx.coroutines.Dispatchers.Main
+                                                        ) {
+                                                                Toast.makeText(
+                                                                                context,
+                                                                                "Backup saved successfully",
+                                                                                Toast.LENGTH_LONG
+                                                                        )
+                                                                        .show()
+                                                        }
+                                                } else {
+                                                        throw Exception(
+                                                                "Unable to open file for writing"
+                                                        )
                                                 }
-                                                Toast.makeText(
-                                                                context,
-                                                                "Backup saved successfully",
-                                                                Toast.LENGTH_LONG
-                                                        )
-                                                        .show()
-                                        } catch (e: Exception) {
-                                                Toast.makeText(
-                                                                context,
-                                                                "Export Error: ${e.message}",
-                                                                Toast.LENGTH_SHORT
-                                                        )
-                                                        .show()
+                                        } catch (e: Throwable) {
+                                                e.printStackTrace()
+                                                kotlinx.coroutines.withContext(
+                                                        kotlinx.coroutines.Dispatchers.Main
+                                                ) {
+                                                        Toast.makeText(
+                                                                        context,
+                                                                        "Export Error: ${e.message}",
+                                                                        Toast.LENGTH_LONG
+                                                                )
+                                                                .show()
+                                                }
                                         }
                                 }
                         }
@@ -275,25 +294,48 @@ fun MainScreen(iptvRepository: IptvRepository) {
                 exoPlayer?.let { player ->
                         val profile = profiles.find { p -> p.id == activeProfileId }
                         if (profile != null) {
-                                val baseUrl =
-                                        if (profile.url.endsWith("/")) profile.url
-                                        else "${profile.url}/"
-                                val streamUrl =
-                                        "${baseUrl}live/${profile.username}/${profile.password}/${channel.stream_id}.ts"
-                                val meta =
-                                        MediaMetadata.Builder()
-                                                .setTitle(channel.name)
-                                                .setArtworkUri(channel.stream_icon?.toUri())
-                                                .build()
-                                val mediaItem =
-                                        MediaItem.Builder()
-                                                .setUri(streamUrl)
-                                                .setMediaMetadata(meta)
-                                                .build()
-                                player.clearMediaItems()
-                                player.setMediaItem(mediaItem)
-                                player.prepare()
-                                player.play()
+                                scope.launch {
+                                        try {
+                                                val streamUrl =
+                                                        iptvRepository.getStreamUrl(
+                                                                profile,
+                                                                channel.stream_id
+                                                        )
+                                                if (streamUrl.isNotEmpty()) {
+                                                        val meta =
+                                                                MediaMetadata.Builder()
+                                                                        .setTitle(channel.name)
+                                                                        .setArtworkUri(
+                                                                                channel.stream_icon
+                                                                                        ?.toUri()
+                                                                        )
+                                                                        .build()
+                                                        val mediaItem =
+                                                                MediaItem.Builder()
+                                                                        .setUri(streamUrl)
+                                                                        .setMediaMetadata(meta)
+                                                                        .build()
+                                                        player.clearMediaItems()
+                                                        player.setMediaItem(mediaItem)
+                                                        player.prepare()
+                                                        player.play()
+                                                } else {
+                                                        Toast.makeText(
+                                                                        context,
+                                                                        "Impossible de récupérer le lien",
+                                                                        Toast.LENGTH_SHORT
+                                                                )
+                                                                .show()
+                                                }
+                                        } catch (e: Exception) {
+                                                Toast.makeText(
+                                                                context,
+                                                                "Erreur lecture: ${e.message}",
+                                                                Toast.LENGTH_SHORT
+                                                        )
+                                                        .show()
+                                        }
+                                }
                         }
                 }
                 scope.launch { iptvRepository.addToRecents(channel.stream_id, activeProfileId) }
@@ -350,6 +392,8 @@ fun MainScreen(iptvRepository: IptvRepository) {
                                                                                 .primary
                                                         )
 
+                                                        Spacer(Modifier.weight(1f))
+
                                                         TvInput(
                                                                 value = searchQuery,
                                                                 onValueChange = { query ->
@@ -359,16 +403,15 @@ fun MainScreen(iptvRepository: IptvRepository) {
                                                                 focusManager = focusManager,
                                                                 leadingIcon = Icons.Default.Search,
                                                                 modifier =
-                                                                        Modifier.weight(1f)
-                                                                                .padding(
-                                                                                        horizontal =
-                                                                                                16.dp
-                                                                                )
+                                                                        Modifier.width(
+                                                                                        250.dp
+                                                                                ) // Reduced width
                                                                                 .onFocusChanged {
                                                                                         isSearchFocused =
                                                                                                 it.isFocused
                                                                                 }
                                                         )
+
                                                         if (searchQuery.isNotBlank()) {
                                                                 IconButton(
                                                                         onClick = {
@@ -387,6 +430,18 @@ fun MainScreen(iptvRepository: IptvRepository) {
                                                                                                 .error
                                                                         )
                                                                 }
+                                                        }
+
+                                                        if (playingChannel != null) {
+                                                                HeaderIconButton(
+                                                                        Icons.Default.PlayArrow,
+                                                                        "Retour Player",
+                                                                        {
+                                                                                isFullScreenPlayer =
+                                                                                        true
+                                                                        },
+                                                                        tintNormal = Color.Green
+                                                                )
                                                         }
 
                                                         HeaderIconButton(
@@ -411,10 +466,7 @@ fun MainScreen(iptvRepository: IptvRepository) {
                                                                                         try {
                                                                                                 iptvRepository
                                                                                                         .refreshDatabase(
-                                                                                                                profile.id,
-                                                                                                                profile.url,
-                                                                                                                profile.username,
-                                                                                                                profile.password
+                                                                                                                profile
                                                                                                         )
                                                                                         } catch (
                                                                                                 e:
@@ -435,19 +487,144 @@ fun MainScreen(iptvRepository: IptvRepository) {
                                                                 Icons.Default.CloudUpload,
                                                                 "Sauvegarder",
                                                                 {
-                                                                        createDocumentLauncher
-                                                                                .launch(
-                                                                                        "simple_iptv_backup.json"
-                                                                                )
+                                                                        try {
+                                                                                createDocumentLauncher
+                                                                                        .launch(
+                                                                                                "simple_iptv_backup.json"
+                                                                                        )
+                                                                        } catch (e: Exception) {
+                                                                                if (android.os.Build
+                                                                                                .VERSION
+                                                                                                .SDK_INT >=
+                                                                                                29
+                                                                                ) {
+                                                                                        scope
+                                                                                                .launch(
+                                                                                                        kotlinx.coroutines
+                                                                                                                .Dispatchers
+                                                                                                                .IO
+                                                                                                ) {
+                                                                                                        try {
+                                                                                                                val json =
+                                                                                                                        iptvRepository
+                                                                                                                                .exportDatabaseToJson()
+                                                                                                                val values =
+                                                                                                                        android.content
+                                                                                                                                .ContentValues()
+                                                                                                                                .apply {
+                                                                                                                                        put(
+                                                                                                                                                android.provider
+                                                                                                                                                        .MediaStore
+                                                                                                                                                        .MediaColumns
+                                                                                                                                                        .DISPLAY_NAME,
+                                                                                                                                                "simple_iptv_backup.json"
+                                                                                                                                        )
+                                                                                                                                        put(
+                                                                                                                                                android.provider
+                                                                                                                                                        .MediaStore
+                                                                                                                                                        .MediaColumns
+                                                                                                                                                        .MIME_TYPE,
+                                                                                                                                                "application/json"
+                                                                                                                                        )
+                                                                                                                                        put(
+                                                                                                                                                android.provider
+                                                                                                                                                        .MediaStore
+                                                                                                                                                        .MediaColumns
+                                                                                                                                                        .RELATIVE_PATH,
+                                                                                                                                                android.os
+                                                                                                                                                        .Environment
+                                                                                                                                                        .DIRECTORY_DOWNLOADS
+                                                                                                                                        )
+                                                                                                                                }
+                                                                                                                val resolver =
+                                                                                                                        context.contentResolver
+                                                                                                                val uri =
+                                                                                                                        resolver.insert(
+                                                                                                                                android.provider
+                                                                                                                                        .MediaStore
+                                                                                                                                        .Downloads
+                                                                                                                                        .EXTERNAL_CONTENT_URI,
+                                                                                                                                values
+                                                                                                                        )
+                                                                                                                if (uri !=
+                                                                                                                                null
+                                                                                                                ) {
+                                                                                                                        resolver.openOutputStream(
+                                                                                                                                        uri
+                                                                                                                                )
+                                                                                                                                ?.use {
+                                                                                                                                        outputStream
+                                                                                                                                        ->
+                                                                                                                                        outputStream
+                                                                                                                                                .write(
+                                                                                                                                                        json.toByteArray()
+                                                                                                                                                )
+                                                                                                                                }
+                                                                                                                        kotlinx.coroutines
+                                                                                                                                .withContext(
+                                                                                                                                        kotlinx.coroutines
+                                                                                                                                                .Dispatchers
+                                                                                                                                                .Main
+                                                                                                                                ) {
+                                                                                                                                        Toast.makeText(
+                                                                                                                                                        context,
+                                                                                                                                                        "Sauvegardé: Downloads/simple_iptv_backup.json",
+                                                                                                                                                        Toast.LENGTH_LONG
+                                                                                                                                                )
+                                                                                                                                                .show()
+                                                                                                                                }
+                                                                                                                } else {
+                                                                                                                        throw Exception(
+                                                                                                                                "MediaStore a retourné null"
+                                                                                                                        )
+                                                                                                                }
+                                                                                                        } catch (
+                                                                                                                e2:
+                                                                                                                        Exception) {
+                                                                                                                e2.printStackTrace()
+                                                                                                                kotlinx.coroutines
+                                                                                                                        .withContext(
+                                                                                                                                kotlinx.coroutines
+                                                                                                                                        .Dispatchers
+                                                                                                                                        .Main
+                                                                                                                        ) {
+                                                                                                                                Toast.makeText(
+                                                                                                                                                context,
+                                                                                                                                                "Erreur MediaStore: ${e2.message}",
+                                                                                                                                                Toast.LENGTH_LONG
+                                                                                                                                        )
+                                                                                                                                        .show()
+                                                                                                                        }
+                                                                                                        }
+                                                                                                }
+                                                                                } else {
+                                                                                        Toast.makeText(
+                                                                                                        context,
+                                                                                                        "Erreur: Activez 'Stockage' dans les paramètres",
+                                                                                                        Toast.LENGTH_LONG
+                                                                                                )
+                                                                                                .show()
+                                                                                }
+                                                                        }
                                                                 }
                                                         )
                                                         HeaderIconButton(
                                                                 Icons.Default.CloudDownload,
                                                                 "Restaurer",
                                                                 {
-                                                                        openDocumentLauncher.launch(
-                                                                                "application/json"
-                                                                        )
+                                                                        try {
+                                                                                openDocumentLauncher
+                                                                                        .launch(
+                                                                                                "application/json"
+                                                                                        )
+                                                                        } catch (e: Exception) {
+                                                                                Toast.makeText(
+                                                                                                context,
+                                                                                                "Erreur: Gestionnaire de fichiers introuvable",
+                                                                                                Toast.LENGTH_LONG
+                                                                                        )
+                                                                                        .show()
+                                                                        }
                                                                 }
                                                         )
                                                         HeaderIconButton(
@@ -532,10 +709,7 @@ fun MainScreen(iptvRepository: IptvRepository) {
                                                                                                                 try {
                                                                                                                         iptvRepository
                                                                                                                                 .refreshDatabase(
-                                                                                                                                        profile.id,
-                                                                                                                                        profile.url,
-                                                                                                                                        profile.username,
-                                                                                                                                        profile.password
+                                                                                                                                        profile
                                                                                                                                 )
                                                                                                                 } catch (
                                                                                                                         e:
@@ -952,14 +1126,16 @@ fun MainScreen(iptvRepository: IptvRepository) {
         if (showProfileAddDialog) {
                 ProfileFormDialog(
                         onDismiss = { showProfileAddDialog = false },
-                        onSave = { n, u, us, p ->
+                        onSave = { n, u, us, p, mac, type ->
                                 scope.launch {
                                         iptvRepository.addProfile(
                                                 ProfileEntity(
                                                         profileName = n,
                                                         url = u,
                                                         username = us,
-                                                        password = p
+                                                        password = p,
+                                                        macAddress = mac,
+                                                        type = type
                                                 )
                                         )
                                         showProfileAddDialog = false
@@ -972,14 +1148,16 @@ fun MainScreen(iptvRepository: IptvRepository) {
                 ProfileFormDialog(
                         profile = showProfileEditDialog,
                         onDismiss = { showProfileEditDialog = null },
-                        onSave = { n, u, us, p ->
+                        onSave = { n, u, us, p, mac, type ->
                                 scope.launch {
                                         iptvRepository.updateProfile(
                                                 showProfileEditDialog!!.copy(
                                                         profileName = n,
                                                         url = u,
                                                         username = us,
-                                                        password = p
+                                                        password = p,
+                                                        macAddress = mac,
+                                                        type = type
                                                 )
                                         )
                                         showProfileEditDialog = null
@@ -1128,13 +1306,15 @@ fun MainScreen(iptvRepository: IptvRepository) {
 fun ProfileFormDialog(
         profile: ProfileEntity? = null,
         onDismiss: () -> Unit,
-        onSave: (String, String, String, String) -> Unit
+        onSave: (String, String, String, String, String?, String) -> Unit
 ) {
         val focusManager = LocalFocusManager.current
         var name by remember { mutableStateOf(profile?.profileName ?: "") }
         var url by remember { mutableStateOf(profile?.url ?: "") }
         var user by remember { mutableStateOf(profile?.username ?: "") }
         var pass by remember { mutableStateOf(profile?.password ?: "") }
+        var mac by remember { mutableStateOf(profile?.macAddress ?: "") }
+        var type by remember { mutableStateOf(profile?.type ?: "xtream") }
 
         var isM3uMode by remember { mutableStateOf(false) }
         var m3uUrlInput by remember { mutableStateOf("") }
@@ -1157,72 +1337,118 @@ fun ProfileFormDialog(
                                         focusManager = focusManager
                                 )
 
-                                if (profile == null) {
-                                        Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                modifier =
-                                                        Modifier.fillMaxWidth().padding(top = 8.dp)
-                                        ) {
-                                                Text(
-                                                        "Utiliser URL M3U",
-                                                        modifier = Modifier.weight(1f)
+                                // Protocol Selection
+                                Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+                                ) {
+                                        Text("Protocole: ", color = Color.Gray)
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                                RadioButton(
+                                                        selected = type == "xtream",
+                                                        onClick = { type = "xtream" }
                                                 )
-                                                Switch(
-                                                        checked = isM3uMode,
-                                                        onCheckedChange = { isM3uMode = it }
+                                                Text("Xtream")
+                                                Spacer(modifier = Modifier.width(16.dp))
+                                                RadioButton(
+                                                        selected = type == "stalker",
+                                                        onClick = { type = "stalker" }
                                                 )
+                                                Text("Stalker / MAC")
                                         }
                                 }
 
-                                if (isM3uMode) {
-                                        TvInput(
-                                                value = m3uUrlInput,
-                                                onValueChange = { input ->
-                                                        m3uUrlInput = input
-                                                        Regex("username=([^&]+)").find(input)?.let {
-                                                                user = it.groupValues[1]
-                                                        }
-                                                        Regex("password=([^&]+)").find(input)?.let {
-                                                                pass = it.groupValues[1]
-                                                        }
-                                                        Regex("^(https?://[^/?]+)")
-                                                                .find(input)
-                                                                ?.let {
-                                                                        url =
-                                                                                it.groupValues[1] +
-                                                                                        "/"
-                                                                }
-                                                },
-                                                label = "Lien M3U",
-                                                focusManager = focusManager
-                                        )
+                                if (type == "xtream") {
+                                        if (profile == null) {
+                                                Row(
+                                                        verticalAlignment =
+                                                                Alignment.CenterVertically,
+                                                        modifier =
+                                                                Modifier.fillMaxWidth()
+                                                                        .padding(top = 8.dp)
+                                                ) {
+                                                        Text(
+                                                                "Utiliser URL M3U",
+                                                                modifier = Modifier.weight(1f)
+                                                        )
+                                                        Switch(
+                                                                checked = isM3uMode,
+                                                                onCheckedChange = { isM3uMode = it }
+                                                        )
+                                                }
+                                        }
+
+                                        if (isM3uMode) {
+                                                TvInput(
+                                                        value = m3uUrlInput,
+                                                        onValueChange = { input ->
+                                                                m3uUrlInput = input
+                                                                Regex("username=([^&]+)")
+                                                                        .find(input)
+                                                                        ?.let {
+                                                                                user =
+                                                                                        it.groupValues[
+                                                                                                1]
+                                                                        }
+                                                                Regex("password=([^&]+)")
+                                                                        .find(input)
+                                                                        ?.let {
+                                                                                pass =
+                                                                                        it.groupValues[
+                                                                                                1]
+                                                                        }
+                                                                Regex("^(https?://[^/?]+)")
+                                                                        .find(input)
+                                                                        ?.let {
+                                                                                url =
+                                                                                        it.groupValues[
+                                                                                                1] +
+                                                                                                "/"
+                                                                        }
+                                                        },
+                                                        label = "Lien M3U",
+                                                        focusManager = focusManager
+                                                )
+                                        }
                                 }
 
                                 TvInput(
                                         value = url,
                                         onValueChange = { text -> url = text },
-                                        label = "URL Serveur",
+                                        label =
+                                                if (type == "stalker") "URL Portal (http://...)"
+                                                else "URL Serveur",
                                         focusManager = focusManager
                                 )
-                                TvInput(
-                                        value = user,
-                                        onValueChange = { text -> user = text },
-                                        label = "Utilisateur",
-                                        focusManager = focusManager
-                                )
-                                TvInput(
-                                        value = pass,
-                                        onValueChange = { text -> pass = text },
-                                        label = "Mot de passe",
-                                        isPassword = false, // Désactivé pour affichage direct (App
-                                        // personnelle)
-                                        focusManager = focusManager
-                                )
+
+                                if (type == "xtream") {
+                                        TvInput(
+                                                value = user,
+                                                onValueChange = { text -> user = text },
+                                                label = "Utilisateur",
+                                                focusManager = focusManager
+                                        )
+                                        TvInput(
+                                                value = pass,
+                                                onValueChange = { text -> pass = text },
+                                                label = "Mot de passe",
+                                                isPassword = false,
+                                                focusManager = focusManager
+                                        )
+                                } else {
+                                        TvInput(
+                                                value = mac,
+                                                onValueChange = { text -> mac = text },
+                                                label = "MAC Address (00:1A:79:...)",
+                                                focusManager = focusManager
+                                        )
+                                }
 
                                 Spacer(modifier = Modifier.height(16.dp))
 
                                 Button(
-                                        onClick = { onSave(name, url, user, pass) },
+                                        onClick = { onSave(name, url, user, pass, mac, type) },
                                         modifier =
                                                 Modifier.fillMaxWidth()
                                                         .onFocusChanged {
@@ -1321,7 +1547,10 @@ fun TvInput(
                                                                 Context.INPUT_METHOD_SERVICE
                                                         ) as
                                                                 InputMethodManager
-                                                imm.showSoftInput(v, InputMethodManager.SHOW_FORCED)
+                                                imm.showSoftInput(
+                                                        v,
+                                                        InputMethodManager.SHOW_IMPLICIT
+                                                )
                                                 return@setOnKeyListener true
                                         }
                                         false
@@ -1376,6 +1605,35 @@ fun ProfileManagerDialog(
         onDeleteProfile: (ProfileEntity) -> Unit,
         onAdd: () -> Unit
 ) {
+        var profileToDelete by remember { mutableStateOf<ProfileEntity?>(null) }
+
+        if (profileToDelete != null) {
+                AlertDialog(
+                        onDismissRequest = { profileToDelete = null },
+                        title = { Text("Supprimer le profil ?") },
+                        text = {
+                                Text(
+                                        "Êtes-vous sûr de vouloir supprimer '${profileToDelete?.profileName}' ?\nCette action est irréversible."
+                                )
+                        },
+                        confirmButton = {
+                                Button(
+                                        onClick = {
+                                                profileToDelete?.let { onDeleteProfile(it) }
+                                                profileToDelete = null
+                                        },
+                                        colors =
+                                                ButtonDefaults.buttonColors(
+                                                        containerColor = Color.Red
+                                                )
+                                ) { Text("Supprimer") }
+                        },
+                        dismissButton = {
+                                TextButton(onClick = { profileToDelete = null }) { Text("Annuler") }
+                        }
+                )
+        }
+
         AlertDialog(
                 onDismissRequest = onDismiss,
                 title = { Text("Gérer les profils") },
@@ -1384,57 +1642,137 @@ fun ProfileManagerDialog(
                 text = {
                         LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
                                 items(profiles) { profile ->
+                                        var isSelectFocused by remember { mutableStateOf(false) }
+                                        var isEditFocused by remember { mutableStateOf(false) }
+                                        var isDeleteFocused by remember { mutableStateOf(false) }
+
                                         Row(
-                                                modifier =
-                                                        Modifier.fillMaxWidth()
-                                                                .clickable {
-                                                                        onSelectProfile(profile)
-                                                                }
-                                                                .padding(8.dp),
+                                                modifier = Modifier.fillMaxWidth().padding(8.dp),
                                                 verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                                RadioButton(
-                                                        selected = profile.isSelected,
-                                                        onClick = { onSelectProfile(profile) }
-                                                )
-                                                Column(
+                                                // 1. Selection Area (Radio + Name)
+                                                Surface(
                                                         modifier =
                                                                 Modifier.weight(1f)
-                                                                        .padding(start = 8.dp)
+                                                                        .onFocusChanged {
+                                                                                isSelectFocused =
+                                                                                        it.isFocused
+                                                                        }
+                                                                        .clickable {
+                                                                                onSelectProfile(
+                                                                                        profile
+                                                                                )
+                                                                        }
+                                                                        .focusable()
+                                                                        .border(
+                                                                                if (isSelectFocused)
+                                                                                        3.dp
+                                                                                else 0.dp,
+                                                                                if (isSelectFocused)
+                                                                                        Color.Yellow
+                                                                                else
+                                                                                        Color.Transparent,
+                                                                                MaterialTheme.shapes
+                                                                                        .small
+                                                                        ),
+                                                        shape = MaterialTheme.shapes.small,
+                                                        color =
+                                                                if (profile.isSelected)
+                                                                        MaterialTheme.colorScheme
+                                                                                .primaryContainer
+                                                                else Color.Transparent
                                                 ) {
-                                                        Text(
-                                                                profile.profileName,
-                                                                style =
-                                                                        MaterialTheme.typography
-                                                                                .titleMedium
-                                                        )
-                                                        Text(
-                                                                profile.url,
-                                                                style =
-                                                                        MaterialTheme.typography
-                                                                                .bodySmall,
-                                                                color = Color.Gray
-                                                        )
+                                                        Row(
+                                                                verticalAlignment =
+                                                                        Alignment.CenterVertically,
+                                                                modifier = Modifier.padding(8.dp)
+                                                        ) {
+                                                                RadioButton(
+                                                                        selected =
+                                                                                profile.isSelected,
+                                                                        onClick = null // Handled by
+                                                                        // Surface click
+                                                                        )
+                                                                Column(
+                                                                        modifier =
+                                                                                Modifier.padding(
+                                                                                        start = 8.dp
+                                                                                )
+                                                                ) {
+                                                                        Text(
+                                                                                profile.profileName,
+                                                                                style =
+                                                                                        MaterialTheme
+                                                                                                .typography
+                                                                                                .titleMedium
+                                                                        )
+                                                                        Text(
+                                                                                profile.url,
+                                                                                style =
+                                                                                        MaterialTheme
+                                                                                                .typography
+                                                                                                .bodySmall,
+                                                                                color = Color.Gray,
+                                                                                maxLines = 1
+                                                                        )
+                                                                }
+                                                        }
                                                 }
+
+                                                Spacer(Modifier.width(8.dp))
+
+                                                // 2. Edit Button
                                                 IconButton(
                                                         onClick = { onEdit(profile) },
-                                                        modifier = Modifier.focusable()
+                                                        modifier =
+                                                                Modifier.onFocusChanged {
+                                                                                isEditFocused =
+                                                                                        it.isFocused
+                                                                        }
+                                                                        .focusable()
+                                                                        .border(
+                                                                                if (isEditFocused)
+                                                                                        3.dp
+                                                                                else 0.dp,
+                                                                                if (isEditFocused)
+                                                                                        Color.Yellow
+                                                                                else
+                                                                                        Color.Transparent,
+                                                                                CircleShape
+                                                                        )
                                                 ) {
                                                         Icon(
                                                                 Icons.Default.Edit,
-                                                                null,
+                                                                contentDescription = "Modifier",
                                                                 tint =
                                                                         MaterialTheme.colorScheme
                                                                                 .primary
                                                         )
                                                 }
+
+                                                // 3. Delete Button (Triggers Confirmation)
                                                 IconButton(
-                                                        onClick = { onDeleteProfile(profile) },
-                                                        modifier = Modifier.focusable()
+                                                        onClick = { profileToDelete = profile },
+                                                        modifier =
+                                                                Modifier.onFocusChanged {
+                                                                                isDeleteFocused =
+                                                                                        it.isFocused
+                                                                        }
+                                                                        .focusable()
+                                                                        .border(
+                                                                                if (isDeleteFocused)
+                                                                                        3.dp
+                                                                                else 0.dp,
+                                                                                if (isDeleteFocused)
+                                                                                        Color.Yellow
+                                                                                else
+                                                                                        Color.Transparent,
+                                                                                CircleShape
+                                                                        )
                                                 ) {
                                                         Icon(
                                                                 Icons.Default.Delete,
-                                                                null,
+                                                                contentDescription = "Supprimer",
                                                                 tint = Color.Red
                                                         )
                                                 }

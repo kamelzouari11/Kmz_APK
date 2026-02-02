@@ -80,7 +80,7 @@ interface IptvDao {
             "SELECT * FROM channel_favorites WHERE channelId = :channelId AND listId = :listId AND profileId = :profileId"
     )
     suspend fun getFavoriteCrossRef(
-            channelId: Int,
+            channelId: String,
             listId: Int,
             profileId: Int
     ): ChannelFavoriteCrossRef?
@@ -91,10 +91,10 @@ interface IptvDao {
     @Query(
             "SELECT listId FROM channel_favorites WHERE channelId = :channelId AND profileId = :profileId"
     )
-    suspend fun getListIdsForChannel(channelId: Int, profileId: Int): List<Int>
+    suspend fun getListIdsForChannel(channelId: String, profileId: Int): List<Int>
 
     @Query("SELECT * FROM channels WHERE stream_id = :channelId AND profileId = :profileId")
-    suspend fun getChannelById(channelId: Int, profileId: Int): ChannelEntity?
+    suspend fun getChannelById(channelId: String, profileId: Int): ChannelEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertChannel(channel: ChannelEntity)

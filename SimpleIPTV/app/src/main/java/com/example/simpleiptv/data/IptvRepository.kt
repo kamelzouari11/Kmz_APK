@@ -125,7 +125,7 @@ class IptvRepository(private val api: XtreamApi, private val dao: IptvDao) {
         dao.deleteFavoriteList(list)
     }
 
-    suspend fun toggleChannelFavorite(channelId: Int, listId: Int, profileId: Int) {
+    suspend fun toggleChannelFavorite(channelId: String, listId: Int, profileId: Int) {
         val currentLists = dao.getListIdsForChannel(channelId, profileId)
         if (currentLists.contains(listId)) {
             dao.removeChannelFromFavorite(ChannelFavoriteCrossRef(channelId, listId, profileId))
@@ -137,7 +137,7 @@ class IptvRepository(private val api: XtreamApi, private val dao: IptvDao) {
         }
     }
 
-    suspend fun moveChannelInList(channelId: Int, listId: Int, profileId: Int, up: Boolean) {
+    suspend fun moveChannelInList(channelId: String, listId: Int, profileId: Int, up: Boolean) {
         val channels = dao.getChannelsByFavoriteList(listId, profileId).first()
         val index = channels.indexOfFirst { it.stream_id == channelId }
         if (index == -1) return
@@ -156,11 +156,11 @@ class IptvRepository(private val api: XtreamApi, private val dao: IptvDao) {
         dao.updateFavoriteCrossRef(targetRef.copy(sortPosition = tempPos))
     }
 
-    suspend fun getListIdsForChannel(channelId: Int, profileId: Int): List<Int> {
+    suspend fun getListIdsForChannel(channelId: String, profileId: Int): List<Int> {
         return dao.getListIdsForChannel(channelId, profileId)
     }
 
-    suspend fun addToRecents(channelId: Int, profileId: Int) {
+    suspend fun addToRecents(channelId: String, profileId: Int) {
         dao.insertRecent(RecentChannelEntity(channelId, System.currentTimeMillis(), profileId))
         dao.trimRecents(profileId)
     }
@@ -193,27 +193,221 @@ class IptvRepository(private val api: XtreamApi, private val dao: IptvDao) {
         dao.selectProfile(profileId)
     }
 
-    suspend fun refreshDatabase(profileId: Int, baseUrl: String, user: String, pass: String) {
+    suspend fun refreshDatabase(profile: ProfileEntity) {
+        val baseUrl = profile.url
+        val user = profile.username
+        val pass = profile.password
+
+        if (profile.type == "stalker") {
+            refreshStalker(profile)
+        } else {
+            refreshXtream(profile.id, baseUrl, user, pass)
+        }
+    }
+
+    private suspend fun refreshXtream(profileId: Int, baseUrl: String, user: String, pass: String) {
         val dynamicApi = XtreamClient.create(baseUrl)
         val apiCategories = dynamicApi.getLiveCategories(user, pass)
         val apiChannels = dynamicApi.getLiveStreams(user, pass)
 
         val categoryEntities =
                 apiCategories.map { cat ->
-                    CategoryEntity(cat.category_id, cat.category_name, profileId)
+                    CategoryEntity(cat.category_id ?: "0", cat.category_name, profileId)
                 }
-        val channelEntitiesMap = mutableMapOf<Int, ChannelEntity>()
+        val channelEntitiesMap = mutableMapOf<String, ChannelEntity>()
         val linkEntities = mutableListOf<ChannelCategoryCrossRef>()
 
         apiChannels.forEach { ch ->
-            channelEntitiesMap[ch.stream_id] =
-                    ChannelEntity(ch.stream_id, ch.name, ch.stream_icon, profileId)
-            linkEntities.add(ChannelCategoryCrossRef(ch.stream_id, ch.category_id, profileId))
+            val id = ch.stream_id.toString()
+            channelEntitiesMap[id] = ChannelEntity(id, ch.name, ch.stream_icon, profileId)
+            linkEntities.add(ChannelCategoryCrossRef(id, ch.category_id ?: "0", profileId))
         }
 
+        saveToDao(profileId, categoryEntities, channelEntitiesMap.values.toList(), linkEntities)
+    }
+
+    private suspend fun refreshStalker(profile: ProfileEntity) {
+        val mac =
+                profile.macAddress?.trim()?.uppercase()
+                        ?: throw IllegalArgumentException("MAC Address required for Stalker")
+        val api = com.example.simpleiptv.data.api.StalkerClient.create(profile.url, mac)
+
+        // 1. Handshake
+        val handshake = api.handshake(mac)
+        val token = "Bearer " + handshake.js.token
+
+        // 2. Genres
+        val genresResponse = api.getGenres(token)
+        val categoryEntities =
+                genresResponse.js.map { genre -> CategoryEntity(genre.id, genre.title, profile.id) }
+
+        val channelEntitiesMap = mutableMapOf<String, ChannelEntity>()
+        val linkEntities = mutableListOf<ChannelCategoryCrossRef>()
+
+        // 3. Channels
+        val channelsData = mutableListOf<Map<String, Any?>>()
+        var globalFetchSuccess = false
+
+        try {
+            val allChannelsResponse = api.getAllChannels(token)
+            val rawData = allChannelsResponse.js
+
+            val allList =
+                    when (rawData) {
+                        is List<*> -> rawData.filterIsInstance<Map<String, Any?>>()
+                        is Map<*, *> -> {
+                            if (rawData.containsKey("data") && rawData["data"] is List<*>) {
+                                (rawData["data"] as List<*>).filterIsInstance<Map<String, Any?>>()
+                            } else {
+                                rawData.values.filterIsInstance<Map<String, Any?>>()
+                            }
+                        }
+                        else -> emptyList()
+                    }
+
+            if (allList.isNotEmpty()) {
+                // Check quality of data - do we have genre IDs?
+                val firstWithGenre = allList.find { it["tv_genre_id"] != null }
+                if (firstWithGenre == null && categoryEntities.isNotEmpty()) {
+
+                    globalFetchSuccess = false
+                } else {
+
+                    channelsData.addAll(allList)
+                    globalFetchSuccess = true
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("StalkerRepo", "get_all_channels failed", e)
+        }
+
+        // If global fetch failed or data was poor, iterate per genre
+        if (!globalFetchSuccess) {
+
+            // ... (existing per-genre loop) ...
+            categoryEntities.forEach { category ->
+                try {
+                    val channelsResponse = api.getChannels(token, category.category_id)
+                    val rawData = channelsResponse.js
+                    val genreList =
+                            when (rawData) {
+                                is List<*> -> rawData.filterIsInstance<Map<String, Any?>>()
+                                is Map<*, *> -> rawData.values.filterIsInstance<Map<String, Any?>>()
+                                else -> emptyList()
+                            }
+                    if (genreList.isNotEmpty()) {
+                        val enrichedList =
+                                genreList.map { it + ("tv_genre_id" to category.category_id) }
+                        channelsData.addAll(enrichedList)
+                    }
+                } catch (e: Exception) {
+                    // Ignore error for single category
+                }
+            }
+        } else {}
+
+        // Process all gathered channels
+        channelsData.forEach { chMap ->
+            val id = chMap["id"]?.toString() ?: return@forEach
+            val name = chMap["name"]?.toString() ?: "Unknown"
+            val logoUrl = chMap["logo"]?.toString()
+            val cmd = chMap["cmd"]?.toString() ?: ""
+            // Use provided tv_genre_id or fallback to trying to find it
+            val genreId = chMap["tv_genre_id"]?.toString()
+
+            val icon =
+                    if (!logoUrl.isNullOrEmpty()) {
+                        if (logoUrl.startsWith("http")) logoUrl
+                        else "${profile.url}/${logoUrl.removePrefix("/")}"
+                    } else null
+
+            if (!channelEntitiesMap.containsKey(id)) {
+                channelEntitiesMap[id] = ChannelEntity(id, name, icon, profile.id, cmd)
+            }
+
+            // Link to category if we have a genre ID
+            if (genreId != null) {
+                linkEntities.add(ChannelCategoryCrossRef(id, genreId, profile.id))
+            } else {
+                // Fallback: If we fetched per-genre, we already injected the ID.
+                // If we came from get_all_channels but no tv_genre_id field, we might lose mapping.
+                // Most 'get_all_channels' include 'tv_genre_id'.
+
+            }
+        }
+
+        saveToDao(profile.id, categoryEntities, channelEntitiesMap.values.toList(), linkEntities)
+    }
+
+    private suspend fun saveToDao(
+            profileId: Int,
+            categories: List<CategoryEntity>,
+            channels: List<ChannelEntity>,
+            links: List<ChannelCategoryCrossRef>
+    ) {
         dao.clearChannelCategoryLinks(profileId)
-        dao.insertCategories(categoryEntities)
-        dao.insertChannels(channelEntitiesMap.values.toList())
-        dao.insertChannelCategoryLinks(linkEntities)
+        dao.insertCategories(categories)
+        dao.insertChannels(channels)
+        dao.insertChannelCategoryLinks(links)
+    }
+
+    suspend fun getStreamUrl(profile: ProfileEntity, channelId: String): String {
+        return if (profile.type == "stalker") {
+            // Retrieve a fresh link from Stalker API
+            val mac = profile.macAddress ?: return ""
+            val api = com.example.simpleiptv.data.api.StalkerClient.create(profile.url, mac)
+            val handshake = api.handshake(mac)
+            val token = "Bearer " + handshake.js.token
+
+            val channel = dao.getChannelById(channelId, profile.id)
+            val rawCmd = channel?.extraParams
+
+            // Fix for 444 Error (Stalker):
+            // The server fails to parse complex URLs passed as 'cmd'.
+            // It expects the Channel/Stream ID for lookup.
+            // If the command looks like a URL with stream ID, we rely on the channelId.
+            // We observed that sending the full URL resulted in 'stream=' (empty) in the response.
+            val cmdToSend =
+                    if (!rawCmd.isNullOrEmpty() && rawCmd.contains("stream=")) {
+                        channelId
+                    } else {
+                        if (rawCmd?.startsWith("ffmpeg ") == true) {
+                            rawCmd.substringAfter("ffmpeg ").trim()
+                        } else {
+                            rawCmd ?: channelId
+                        }
+                    }
+
+            // Try creating link
+            val linkResponse = api.createLink(token, cmdToSend)
+            var url = linkResponse.js.cmd
+
+            // Cleanup: Strip "ffmpeg " prefix if present in the response
+            if (url.startsWith("ffmpeg ")) {
+                url = url.substringAfter("ffmpeg ").trim()
+            }
+
+            // Fix for Empty Stream ID (Stalker Server Bug):
+            // The server is returning URLs with "stream=&" even when a valid Channel ID is sent.
+            // This causes Error 444. We manually inject the Channel ID back into the URL.
+            if (url.contains("stream=&")) {
+                android.util.Log.w(
+                        "StalkerRepo",
+                        "Server returned empty stream ID. Patching URL with ID: $channelId"
+                )
+                url = url.replace("stream=&", "stream=$channelId&")
+            } else if (url.endsWith("stream=")) {
+                android.util.Log.w(
+                        "StalkerRepo",
+                        "Server returned empty stream ID. Patching URL with ID: $channelId"
+                )
+                url = url + channelId
+            }
+
+            url
+        } else {
+            val baseUrl = if (profile.url.endsWith("/")) profile.url else "${profile.url}/"
+            "${baseUrl}live/${profile.username}/${profile.password}/${channelId}.ts"
+        }
     }
 }

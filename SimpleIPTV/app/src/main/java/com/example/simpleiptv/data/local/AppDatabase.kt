@@ -16,7 +16,7 @@ import com.example.simpleiptv.data.local.entities.*
                         ChannelFavoriteCrossRef::class,
                         RecentChannelEntity::class,
                         ProfileEntity::class],
-        version = 5,
+        version = 7,
         exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

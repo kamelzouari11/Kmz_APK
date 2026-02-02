@@ -8,17 +8,22 @@ data class CategoryEntity(val category_id: String, val category_name: String, va
 
 @Entity(tableName = "channels", primaryKeys = ["stream_id", "profileId"])
 data class ChannelEntity(
-        val stream_id: Int,
+        val stream_id: String,
         val name: String,
         val stream_icon: String?,
-        val profileId: Int
+        val profileId: Int,
+        val extraParams: String? = null
 )
 
 @Entity(
         tableName = "channel_category_links",
         primaryKeys = ["channelId", "categoryId", "profileId"]
 )
-data class ChannelCategoryCrossRef(val channelId: Int, val categoryId: String, val profileId: Int)
+data class ChannelCategoryCrossRef(
+        val channelId: String,
+        val categoryId: String,
+        val profileId: Int
+)
 
 @Entity(tableName = "favorite_lists")
 data class FavoriteListEntity(
@@ -29,14 +34,14 @@ data class FavoriteListEntity(
 
 @Entity(tableName = "channel_favorites", primaryKeys = ["channelId", "listId", "profileId"])
 data class ChannelFavoriteCrossRef(
-        val channelId: Int,
+        val channelId: String,
         val listId: Int,
         val profileId: Int,
         val sortPosition: Int = 0
 )
 
 @Entity(tableName = "recent_channels", primaryKeys = ["channelId", "profileId"])
-data class RecentChannelEntity(val channelId: Int, val timestamp: Long, val profileId: Int)
+data class RecentChannelEntity(val channelId: String, val timestamp: Long, val profileId: Int)
 
 @Entity(tableName = "profiles")
 data class ProfileEntity(
@@ -45,5 +50,7 @@ data class ProfileEntity(
         val url: String,
         val username: String,
         val password: String,
+        val macAddress: String? = null,
+        val type: String = "xtream", // xtream, stalker
         val isSelected: Boolean = false
 )
