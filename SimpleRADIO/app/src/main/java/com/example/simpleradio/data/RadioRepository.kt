@@ -6,9 +6,9 @@ import com.example.simpleradio.data.local.entities.*
 import com.example.simpleradio.data.model.*
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 
 class RadioRepository(private val api: RadioBrowserApi, private val dao: RadioDao) {
     private val moshi = Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
@@ -155,5 +155,32 @@ class RadioRepository(private val api: RadioBrowserApi, private val dao: RadioDa
 
     suspend fun getStationByUuid(uuid: String): RadioStationEntity? {
         return dao.getStationByUuid(uuid)
+    }
+
+    suspend fun addCustomRadio(name: String, url: String) {
+        val listName = "mes urls"
+        // 1. Ensure list exists (Insert IGNORE)
+        dao.insertRadioFavoriteList(RadioFavoriteListEntity(name = listName))
+
+        // 2. Get list ID
+        val allLists = dao.getAllRadioFavoriteLists().first()
+        val customList = allLists.find { it.name == listName } ?: return
+
+        // 3. Create & Insert Station
+        val uuid = java.util.UUID.randomUUID().toString()
+        val station =
+                RadioStationEntity(
+                        stationuuid = uuid,
+                        name = name,
+                        url = url,
+                        favicon = null,
+                        country = "Custom",
+                        tags = "custom",
+                        bitrate = 0
+                )
+        dao.insertRadioStations(listOf(station))
+
+        // 4. Link to Favorites
+        dao.addRadioToFavorite(RadioFavoriteCrossRef(uuid, customList.id))
     }
 }

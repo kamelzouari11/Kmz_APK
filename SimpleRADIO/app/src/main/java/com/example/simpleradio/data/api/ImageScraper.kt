@@ -27,7 +27,7 @@ object ImageScraper {
                 val googleLogos = searchGoogleLogos(query)
                 logos.addAll(googleLogos)
 
-                return@withContext logos.distinct().take(3)
+                return@withContext logos.distinct().take(5)
             }
 
     suspend fun findBestLogo(radioName: String, country: String?, streamUrl: String?): String? {
@@ -66,10 +66,7 @@ object ImageScraper {
             withContext(Dispatchers.IO) {
                 val results = mutableListOf<String>()
                 results.addAll(fetchGoogleImages(query, "l"))
-                if (results.size < 3) {
-                    results.addAll(fetchGoogleImages(query, null))
-                }
-                return@withContext results.distinct().take(3)
+                return@withContext results.distinct().take(5)
             }
 
     private fun fetchGoogleImages(query: String, size: String?): List<String> {
