@@ -42,6 +42,7 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.example.simpleradio.cast.CastHelper
+import com.example.simpleradio.data.CsvDataLoader
 import com.example.simpleradio.data.RadioRepository
 import com.example.simpleradio.data.api.LrcLibApi
 import com.example.simpleradio.data.api.LyricsClient
@@ -95,7 +96,8 @@ class MainActivity : AppCompatActivity() {
 
                 val database = AppDatabase.getDatabase(this)
                 val radioApi = RadioClient.create()
-                val radioRepository = RadioRepository(radioApi, database.radioDao())
+                val csvDataLoader = CsvDataLoader(this)
+                val radioRepository = RadioRepository(radioApi, database.radioDao(), csvDataLoader)
                 val lrcLibApi = LyricsClient.createLrcLib()
                 setContent {
                         SimpleRADIOTheme(darkTheme = true) {
@@ -387,8 +389,6 @@ fun MainScreen(radioRepository: RadioRepository, lrcLibApi: LrcLibApi) {
 
         var searchTrigger by rememberSaveable { mutableIntStateOf(0) }
         var radioSortOrder by remember { mutableStateOf("clickcount") }
-        var sidebarCountrySearch by remember { mutableStateOf("") }
-        var sidebarTagSearch by remember { mutableStateOf("") }
 
         var isQualityExpanded by remember { mutableStateOf(false) }
         var isCountryExpanded by remember { mutableStateOf(false) }
@@ -445,15 +445,6 @@ fun MainScreen(radioRepository: RadioRepository, lrcLibApi: LrcLibApi) {
                         }
                 }
         }
-
-        val qualityOptions =
-                listOf(
-                        "Qualité" to null,
-                        "Basse (< 64k)" to 0,
-                        "Moyenne (64-128k)" to 64,
-                        "Haute (128-192k)" to 128,
-                        "Très Haute (> 192k)" to 192
-                )
 
         // --- NAVIGATION BACK (Global Niv3 > Niv2 > Niv1 > Niv0) ---
         BackHandler(enabled = true) {
@@ -587,15 +578,7 @@ fun MainScreen(radioRepository: RadioRepository, lrcLibApi: LrcLibApi) {
                 }
         }
 
-        LaunchedEffect(
-                selectedRadioCountry,
-                selectedRadioTag,
-                selectedRadioBitrate,
-                searchTrigger,
-                selectedRadioFavoriteListId,
-                showRecentRadiosOnly,
-                radioSortOrder
-        ) {
+        LaunchedEffect(searchTrigger, selectedRadioFavoriteListId, showRecentRadiosOnly) {
                 if (!showRecentRadiosOnly && selectedRadioFavoriteListId == null) {
                         isLoading = true
                         Log.d(
@@ -653,24 +636,6 @@ fun MainScreen(radioRepository: RadioRepository, lrcLibApi: LrcLibApi) {
                                                                         .padding(12.dp)
                                                 ) {
                                                         // États de focus pour la toolbar
-                                                        var isRefreshFocused by remember {
-                                                                mutableStateOf(false)
-                                                        }
-                                                        var isRecentFocused by remember {
-                                                                mutableStateOf(false)
-                                                        }
-                                                        var isQuitFocused by remember {
-                                                                mutableStateOf(false)
-                                                        }
-                                                        var isExportFocused by remember {
-                                                                mutableStateOf(false)
-                                                        }
-                                                        var isImportFocused by remember {
-                                                                mutableStateOf(false)
-                                                        }
-                                                        var isPlayerFocused by remember {
-                                                                mutableStateOf(false)
-                                                        }
 
                                                         // LIGNE 1: Icône 48dp + Upload + Download +
                                                         // Power
@@ -765,83 +730,98 @@ fun MainScreen(radioRepository: RadioRepository, lrcLibApi: LrcLibApi) {
                                                                 horizontalArrangement =
                                                                         Arrangement.SpaceBetween
                                                         ) {
-                                                                // Bouton Recent (pillule avec
-                                                                // texte)
-                                                                var isRecentFocused by remember {
-                                                                        mutableStateOf(false)
-                                                                }
-                                                                Surface(
-                                                                        onClick = {
-                                                                                showRecentRadiosOnly =
-                                                                                        true
-                                                                                selectedRadioCountry =
-                                                                                        null
-                                                                                selectedRadioTag =
-                                                                                        null
-                                                                                selectedRadioBitrate =
-                                                                                        null
-                                                                                radioSearchQuery =
-                                                                                        ""
-                                                                                isViewingRadioResults =
-                                                                                        true
-                                                                                searchTrigger++
-                                                                        },
-                                                                        modifier =
-                                                                                Modifier.height(
-                                                                                                48.dp
-                                                                                        )
-                                                                                        .onFocusChanged {
-                                                                                                isRecentFocused =
-                                                                                                        it.isFocused
-                                                                                        },
-                                                                        color =
-                                                                                if (isRecentFocused)
-                                                                                        Color.White
-                                                                                else
-                                                                                        Color.Transparent,
-                                                                        shape =
-                                                                                RoundedCornerShape(
-                                                                                        24.dp
-                                                                                )
-                                                                ) {
-                                                                        Row(
-                                                                                modifier =
-                                                                                        Modifier.padding(
-                                                                                                horizontal =
-                                                                                                        16.dp
-                                                                                        ),
-                                                                                verticalAlignment =
-                                                                                        Alignment
-                                                                                                .CenterVertically
-                                                                        ) {
-                                                                                Icon(
-                                                                                        Icons.Default
-                                                                                                .History,
-                                                                                        "Récents",
-                                                                                        tint =
-                                                                                                if (isRecentFocused
-                                                                                                )
-                                                                                                        Color.Black
-                                                                                                else
-                                                                                                        Color.White
-                                                                                )
-                                                                                Spacer(
-                                                                                        Modifier.width(
+                                                                Row(
+                                                                        horizontalArrangement =
+                                                                                Arrangement
+                                                                                        .spacedBy(
                                                                                                 8.dp
-                                                                                        )
+                                                                                        ),
+                                                                        verticalAlignment =
+                                                                                Alignment
+                                                                                        .CenterVertically
+                                                                ) {
+                                                                        // Bouton Recent (pillule
+                                                                        // avec
+                                                                        // texte)
+                                                                        var isRecentFocused by remember {
+                                                                                mutableStateOf(
+                                                                                        false
                                                                                 )
-                                                                                Text(
-                                                                                        "Récents",
-                                                                                        color =
-                                                                                                if (isRecentFocused
+                                                                        }
+                                                                        Surface(
+                                                                                onClick = {
+                                                                                        showRecentRadiosOnly =
+                                                                                                true
+                                                                                        selectedRadioCountry =
+                                                                                                null
+                                                                                        selectedRadioTag =
+                                                                                                null
+                                                                                        selectedRadioBitrate =
+                                                                                                null
+                                                                                        radioSearchQuery =
+                                                                                                ""
+                                                                                        isViewingRadioResults =
+                                                                                                true
+                                                                                        searchTrigger++
+                                                                                },
+                                                                                modifier =
+                                                                                        Modifier.height(
+                                                                                                        48.dp
                                                                                                 )
-                                                                                                        Color.Black
-                                                                                                else
-                                                                                                        Color.White,
-                                                                                        fontWeight =
-                                                                                                FontWeight
-                                                                                                        .Bold
-                                                                                )
+                                                                                                .onFocusChanged {
+                                                                                                        isRecentFocused =
+                                                                                                                it.isFocused
+                                                                                                },
+                                                                                color =
+                                                                                        if (isRecentFocused
+                                                                                        )
+                                                                                                Color.White
+                                                                                        else
+                                                                                                Color.Transparent,
+                                                                                shape =
+                                                                                        RoundedCornerShape(
+                                                                                                24.dp
+                                                                                        )
+                                                                        ) {
+                                                                                Row(
+                                                                                        modifier =
+                                                                                                Modifier.padding(
+                                                                                                        horizontal =
+                                                                                                                16.dp
+                                                                                                ),
+                                                                                        verticalAlignment =
+                                                                                                Alignment
+                                                                                                        .CenterVertically
+                                                                                ) {
+                                                                                        Icon(
+                                                                                                Icons.Default
+                                                                                                        .History,
+                                                                                                "Récents",
+                                                                                                tint =
+                                                                                                        if (isRecentFocused
+                                                                                                        )
+                                                                                                                Color.Black
+                                                                                                        else
+                                                                                                                Color.White
+                                                                                        )
+                                                                                        Spacer(
+                                                                                                Modifier.width(
+                                                                                                        8.dp
+                                                                                                )
+                                                                                        )
+                                                                                        Text(
+                                                                                                "Récents",
+                                                                                                color =
+                                                                                                        if (isRecentFocused
+                                                                                                        )
+                                                                                                                Color.Black
+                                                                                                        else
+                                                                                                                Color.White,
+                                                                                                fontWeight =
+                                                                                                        FontWeight
+                                                                                                                .Bold
+                                                                                        )
+                                                                                }
                                                                         }
                                                                 }
 
@@ -899,6 +879,8 @@ fun MainScreen(radioRepository: RadioRepository, lrcLibApi: LrcLibApi) {
                                                                                                                         bitrateMax,
                                                                                                                         radioSortOrder
                                                                                                                 )
+                                                                                                isViewingRadioResults =
+                                                                                                        true
                                                                                         } catch (
                                                                                                 _:
                                                                                                         Exception) {}
@@ -1021,10 +1003,7 @@ fun MainScreen(radioRepository: RadioRepository, lrcLibApi: LrcLibApi) {
                                                 selectedRadioCountry = selectedRadioCountry,
                                                 selectedRadioTag = selectedRadioTag,
                                                 selectedRadioBitrate = selectedRadioBitrate,
-                                                showRecentRadiosOnly = showRecentRadiosOnly,
                                                 radioSearchQuery = radioSearchQuery,
-                                                sidebarCountrySearch = sidebarCountrySearch,
-                                                sidebarTagSearch = sidebarTagSearch,
                                                 isQualityExpanded = isQualityExpanded,
                                                 isCountryExpanded = isCountryExpanded,
                                                 isGenreExpanded = isGenreExpanded,
@@ -1032,32 +1011,9 @@ fun MainScreen(radioRepository: RadioRepository, lrcLibApi: LrcLibApi) {
                                                 playingRadio = playingRadio,
                                                 listFocusRequester = listFocusRequester,
                                                 resultsListState = resultsListState,
-                                                onCountrySelected = {
-                                                        selectedRadioCountry = it
-                                                        isCountryExpanded = false
-                                                        showRecentRadiosOnly = false
-                                                        isViewingRadioResults = true
-                                                        searchTrigger++
-                                                },
-                                                onTagSelected = {
-                                                        selectedRadioTag = it
-                                                        isGenreExpanded = false
-                                                        showRecentRadiosOnly = false
-                                                        isViewingRadioResults = true
-                                                        searchTrigger++
-                                                },
-                                                onBitrateSelected = {
-                                                        selectedRadioBitrate = it
-                                                        showRecentRadiosOnly = false
-                                                        isViewingRadioResults = true
-                                                        searchTrigger++
-                                                },
-                                                onSidebarCountrySearchChanged = {
-                                                        sidebarCountrySearch = it
-                                                },
-                                                onSidebarTagSearchChanged = {
-                                                        sidebarTagSearch = it
-                                                },
+                                                onCountrySelected = { selectedRadioCountry = it },
+                                                onTagSelected = { selectedRadioTag = it },
+                                                onBitrateSelected = { selectedRadioBitrate = it },
                                                 onToggleQualityExpanded = {
                                                         isQualityExpanded = !isQualityExpanded
                                                 },
@@ -1067,19 +1023,8 @@ fun MainScreen(radioRepository: RadioRepository, lrcLibApi: LrcLibApi) {
                                                 onToggleGenreExpanded = {
                                                         isGenreExpanded = !isGenreExpanded
                                                 },
-                                                onToggleRecentOnly = {
-                                                        showRecentRadiosOnly = it
-                                                        if (it) {
-                                                                selectedRadioCountry = null
-                                                                selectedRadioTag = null
-                                                                selectedRadioBitrate = null
-                                                                radioSearchQuery = ""
-                                                                isViewingRadioResults = true
-                                                                searchTrigger++
-                                                        }
-                                                },
-                                                onToggleViewingResults = {
-                                                        isViewingRadioResults = it
+                                                onToggleViewingResults = { shouldView ->
+                                                        isViewingRadioResults = shouldView
                                                 },
                                                 onRadioSelected = { radio ->
                                                         currentArtist = null
@@ -1134,6 +1079,11 @@ fun MainScreen(radioRepository: RadioRepository, lrcLibApi: LrcLibApi) {
                                                         radioSearchQuery = ""
                                                         showRecentRadiosOnly = false
                                                         isViewingRadioResults = false
+                                                        searchTrigger++
+                                                },
+                                                onSearchClick = { showSearchDialog = true },
+                                                onApplyFilters = {
+                                                        isViewingRadioResults = true
                                                         searchTrigger++
                                                 }
                                         )
@@ -1200,6 +1150,12 @@ fun MainScreen(radioRepository: RadioRepository, lrcLibApi: LrcLibApi) {
                                         onSearch = { query ->
                                                 radioSearchQuery = query
                                                 showRecentRadiosOnly = false
+                                                // Clear filters for search to work on entire
+                                                // database
+                                                selectedRadioCountry = null
+                                                selectedRadioTag = null
+                                                selectedRadioBitrate = null
+                                                isViewingRadioResults = true
                                                 searchTrigger++
                                                 showSearchDialog = false
                                         }

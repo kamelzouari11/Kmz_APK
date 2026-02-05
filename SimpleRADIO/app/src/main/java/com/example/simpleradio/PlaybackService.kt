@@ -153,6 +153,7 @@ class PlaybackService : MediaSessionService() {
     }
     
     // Classe interne pour gérer l'injection de métadonnées et la notification
+    @OptIn(UnstableApi::class)
     inner class CustomForwardingPlayer(player: androidx.media3.common.Player) : androidx.media3.common.ForwardingPlayer(player) {
         private val listeners = java.util.concurrent.CopyOnWriteArraySet<androidx.media3.common.Player.Listener>()
 

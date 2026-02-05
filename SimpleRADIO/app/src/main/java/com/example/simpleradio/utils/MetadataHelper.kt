@@ -96,10 +96,7 @@ object MetadataHelper {
     suspend fun fetchArtwork(artist: String?, title: String?): String? {
         if (artist.isNullOrBlank()) return null
         return try {
-            val searchTerm = if (!title.isNullOrBlank()) "$artist $title" else artist
-            val results =
-                    com.example.simpleradio.data.api.ImageScraper.searchGoogleLogos(searchTerm)
-            results.firstOrNull()
+            com.example.simpleradio.data.api.ImageScraper.findArtwork(artist, title)
         } catch (_: Exception) {
             null
         }

@@ -8,8 +8,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SignalCellularAlt
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -32,10 +33,7 @@ fun BrowseScreen(
         selectedRadioCountry: String?,
         selectedRadioTag: String?,
         selectedRadioBitrate: Int?,
-        showRecentRadiosOnly: Boolean,
         radioSearchQuery: String,
-        sidebarCountrySearch: String,
-        sidebarTagSearch: String,
         isQualityExpanded: Boolean,
         isCountryExpanded: Boolean,
         isGenreExpanded: Boolean,
@@ -46,16 +44,15 @@ fun BrowseScreen(
         onCountrySelected: (String?) -> Unit,
         onTagSelected: (String?) -> Unit,
         onBitrateSelected: (Int?) -> Unit,
-        onSidebarCountrySearchChanged: (String) -> Unit,
-        onSidebarTagSearchChanged: (String) -> Unit,
         onToggleQualityExpanded: () -> Unit,
         onToggleCountryExpanded: () -> Unit,
         onToggleGenreExpanded: () -> Unit,
-        onToggleRecentOnly: (Boolean) -> Unit,
         onToggleViewingResults: (Boolean) -> Unit,
         onRadioSelected: (RadioStationEntity) -> Unit,
         onAddFavorite: (RadioStationEntity) -> Unit,
-        onResetFilters: () -> Unit
+        onResetFilters: () -> Unit,
+        onSearchClick: () -> Unit,
+        onApplyFilters: () -> Unit
 ) {
     if (isPortrait) {
         Box(modifier = Modifier.fillMaxWidth().fillMaxHeight()) {
@@ -65,13 +62,13 @@ fun BrowseScreen(
                         modifier = Modifier.fillMaxSize().padding(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // 1. Récents
+                    // 1. Recherche
                     item {
                         SidebarItem(
-                                text = "Récents",
-                                icon = Icons.Default.History,
-                                isSelected = showRecentRadiosOnly && isViewingRadioResults,
-                                onClick = { onToggleRecentOnly(true) }
+                                text = "Recherche",
+                                icon = Icons.Default.Search,
+                                isSelected = false,
+                                onClick = onSearchClick
                         )
                     }
 
@@ -157,16 +154,7 @@ fun BrowseScreen(
                                     }
                             )
                         }
-                        items(
-                                radioCountries
-                                        .filter {
-                                            it.name.contains(
-                                                    sidebarCountrySearch,
-                                                    ignoreCase = true
-                                            )
-                                        }
-                                        .take(50)
-                        ) { country ->
+                        items(radioCountries.take(50)) { country ->
                             SidebarItem(
                                     text = country.name,
                                     isSelected = selectedRadioCountry == country.iso_3166_1,
@@ -198,13 +186,7 @@ fun BrowseScreen(
                                     }
                             )
                         }
-                        items(
-                                radioTags
-                                        .filter {
-                                            it.name.contains(sidebarTagSearch, ignoreCase = true)
-                                        }
-                                        .take(50)
-                        ) { tag ->
+                        items(radioTags.take(50)) { tag ->
                             SidebarItem(
                                     text = tag.name,
                                     isSelected = selectedRadioTag == tag.name,
@@ -216,19 +198,41 @@ fun BrowseScreen(
                         }
                     }
 
+                    // Bouton Filtrer liste
+                    item {
+                        SidebarItem(
+                                text = "Filtrer liste",
+                                icon = Icons.Default.FilterList,
+                                isSelected = false,
+                                onClick = onApplyFilters
+                        )
+                    }
+
                     // Spacer
                     item { Spacer(modifier = Modifier.height(120.dp)) }
                 }
             } else {
                 // RADIO LIST (PORTRAIT)
                 Column(Modifier.fillMaxSize()) {
-                    Button(
-                            onClick = { onToggleViewingResults(false) },
-                            modifier = Modifier.fillMaxWidth().padding(8.dp)
+                    Row(
+                            modifier = Modifier.fillMaxWidth().padding(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Retour aux catégories")
+                        Button(
+                                onClick = { onToggleViewingResults(false) },
+                                modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Retour aux catégories")
+                        }
+                        Button(
+                                onClick = onResetFilters,
+                                colors =
+                                        ButtonDefaults.buttonColors(
+                                                containerColor = MaterialTheme.colorScheme.error
+                                        )
+                        ) { Icon(Icons.Default.Clear, "Reset") }
                     }
                     LazyColumn(
                             state = resultsListState,
@@ -260,13 +264,13 @@ fun BrowseScreen(
             // LEFT SIDEBAR
             Column(modifier = Modifier.weight(0.3f).fillMaxHeight().padding(8.dp)) {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    // Récents
+                    // Recherche
                     item {
                         SidebarItem(
-                                text = "Récents",
-                                icon = Icons.Default.History,
-                                isSelected = showRecentRadiosOnly,
-                                onClick = { onToggleRecentOnly(true) }
+                                text = "Recherche",
+                                icon = Icons.Default.Search,
+                                isSelected = false,
+                                onClick = onSearchClick
                         )
                     }
                     // Qualité
@@ -350,16 +354,7 @@ fun BrowseScreen(
                                     }
                             )
                         }
-                        items(
-                                radioCountries
-                                        .filter {
-                                            it.name.contains(
-                                                    sidebarCountrySearch,
-                                                    ignoreCase = true
-                                            )
-                                        }
-                                        .take(50)
-                        ) { country ->
+                        items(radioCountries.take(50)) { country ->
                             SidebarItem(
                                     text = country.name,
                                     isSelected = selectedRadioCountry == country.iso_3166_1,
@@ -390,13 +385,7 @@ fun BrowseScreen(
                                     }
                             )
                         }
-                        items(
-                                radioTags
-                                        .filter {
-                                            it.name.contains(sidebarTagSearch, ignoreCase = true)
-                                        }
-                                        .take(50)
-                        ) { tag ->
+                        items(radioTags.take(50)) { tag ->
                             SidebarItem(
                                     text = tag.name,
                                     isSelected = selectedRadioTag == tag.name,
@@ -406,6 +395,16 @@ fun BrowseScreen(
                                     }
                             )
                         }
+                    }
+
+                    // Bouton Filtrer liste
+                    item {
+                        SidebarItem(
+                                text = "Filtrer liste",
+                                icon = Icons.Default.FilterList,
+                                isSelected = false,
+                                onClick = onApplyFilters
+                        )
                     }
 
                     item { Spacer(Modifier.height(120.dp)) }

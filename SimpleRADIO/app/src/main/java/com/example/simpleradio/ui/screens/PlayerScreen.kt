@@ -132,11 +132,12 @@ fun VideoPlayerView(
     LaunchedEffect(artist, title) {
         alternativeArtworks = emptyList()
         if (!artist.isNullOrBlank() && !title.isNullOrBlank()) {
-            try {
-                val searchTerm = "$artist $title"
-                val results = ImageScraper.searchGoogleLogos(searchTerm)
-                alternativeArtworks = results
-            } catch (_: Exception) {}
+            scope.launch(Dispatchers.IO) {
+                try {
+                    val results = ImageScraper.findArtworks(artist!!, title)
+                    alternativeArtworks = results
+                } catch (_: Exception) {}
+            }
         }
     }
 

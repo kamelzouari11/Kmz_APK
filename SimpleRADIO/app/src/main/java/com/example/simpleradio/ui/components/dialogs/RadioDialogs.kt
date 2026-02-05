@@ -6,6 +6,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -88,6 +90,13 @@ fun SearchDialog(initialQuery: String, onDismiss: () -> Unit, onSearch: (String)
                         placeholder = { Text("Ex: Jazz, Pop, France...") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
+                        trailingIcon = {
+                            if (tempQuery.isNotEmpty()) {
+                                IconButton(onClick = { tempQuery = "" }) {
+                                    Icon(Icons.Default.Close, contentDescription = "Réinitialiser")
+                                }
+                            }
+                        },
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                         keyboardActions = KeyboardActions(onSearch = { onSearch(tempQuery) })
                 )

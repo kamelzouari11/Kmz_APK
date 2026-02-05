@@ -10,7 +10,11 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 
-class RadioRepository(private val api: RadioBrowserApi, private val dao: RadioDao) {
+class RadioRepository(
+        private val api: RadioBrowserApi,
+        private val dao: RadioDao,
+        private val csvDataLoader: CsvDataLoader
+) {
     private val moshi = Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
     private val listAdapter =
             moshi.adapter<List<RadioStationEntity>>(
@@ -82,10 +86,18 @@ class RadioRepository(private val api: RadioBrowserApi, private val dao: RadioDa
         }
     }
 
-    suspend fun getCountries(): List<RadioCountry> = api.getCountries()
+    // Charger les pays depuis le CSV local (ordre préservé)
+    suspend fun getCountries(): List<RadioCountry> =
+            withContext(kotlinx.coroutines.Dispatchers.IO) { csvDataLoader.loadCountries() }
 
-    suspend fun getTags(): List<RadioTag> = api.getTags(order = "stationcount", reverse = true)
-    suspend fun getTagsFiltered(filter: String): List<RadioTag> = api.getTagsFiltered(filter)
+    // Charger les genres depuis le CSV local (ordre préservé)
+    suspend fun getTags(): List<RadioTag> =
+            withContext(kotlinx.coroutines.Dispatchers.IO) { csvDataLoader.loadGenres() }
+
+    suspend fun getTagsFiltered(filter: String): List<RadioTag> =
+            withContext(kotlinx.coroutines.Dispatchers.IO) {
+                csvDataLoader.loadGenres().filter { it.name.contains(filter, ignoreCase = true) }
+            }
 
     suspend fun searchStations(
             countryCode: String? = null,
@@ -93,7 +105,8 @@ class RadioRepository(private val api: RadioBrowserApi, private val dao: RadioDa
             query: String? = null,
             bitrateMin: Int? = null,
             bitrateMax: Int? = null,
-            order: String = "clickcount"
+            order: String = "clickcount",
+            limit: Int = 200
     ): List<RadioStationEntity> {
         val stations =
                 api.searchStations(
@@ -105,7 +118,7 @@ class RadioRepository(private val api: RadioBrowserApi, private val dao: RadioDa
                         order = order
                 )
         val entities =
-                stations.map {
+                stations.take(limit).map {
                     RadioStationEntity(
                             stationuuid = it.stationuuid,
                             name = it.name,
