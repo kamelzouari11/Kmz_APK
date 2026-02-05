@@ -29,6 +29,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -413,12 +414,43 @@ fun MainScreen(iptvRepository: IptvRepository) {
                                                         )
 
                                                         if (searchQuery.isNotBlank()) {
+                                                                var isClearFocused by remember {
+                                                                        mutableStateOf(false)
+                                                                }
                                                                 IconButton(
                                                                         onClick = {
                                                                                 searchQuery = ""
                                                                                 focusManager
                                                                                         .clearFocus()
-                                                                        }
+                                                                        },
+                                                                        modifier =
+                                                                                Modifier
+                                                                                        .onFocusChanged {
+                                                                                                isClearFocused =
+                                                                                                        it.isFocused
+                                                                                        }
+                                                                                        .scale(
+                                                                                                if (isClearFocused
+                                                                                                )
+                                                                                                        1.1f
+                                                                                                else
+                                                                                                        1f
+                                                                                        )
+                                                                                        .background(
+                                                                                                if (isClearFocused
+                                                                                                )
+                                                                                                        Color.White
+                                                                                                                .copy(
+                                                                                                                        alpha =
+                                                                                                                                0.2f
+                                                                                                                )
+                                                                                                else
+                                                                                                        Color.Transparent,
+                                                                                                androidx.compose
+                                                                                                        .foundation
+                                                                                                        .shape
+                                                                                                        .CircleShape
+                                                                                        )
                                                                 ) {
                                                                         Icon(
                                                                                 Icons.Default.Close,
@@ -988,7 +1020,7 @@ fun MainScreen(iptvRepository: IptvRepository) {
                                                                 Arrangement.spacedBy(8.dp)
                                                 ) {
                                                         item {
-                                                                FilterChip(
+                                                                TvFilterChip(
                                                                         selected = showRecentOnly,
                                                                         onClick = {
                                                                                 showRecentOnly =
@@ -999,34 +1031,23 @@ fun MainScreen(iptvRepository: IptvRepository) {
                                                                                         -1
                                                                                 searchQuery = ""
                                                                         },
-                                                                        label = { Text("Récents") },
-                                                                        leadingIcon = {
-                                                                                Icon(
-                                                                                        Icons.Default
-                                                                                                .History,
-                                                                                        null
-                                                                                )
-                                                                        }
+                                                                        label = "Récents",
+                                                                        icon = Icons.Default.History
                                                                 )
                                                         }
                                                         item {
-                                                                FilterChip(
+                                                                TvFilterChip(
                                                                         selected = false,
                                                                         onClick = {
                                                                                 showAddListDialog =
                                                                                         true
                                                                         },
-                                                                        label = {
-                                                                                Icon(
-                                                                                        Icons.Default
-                                                                                                .Add,
-                                                                                        "Ajouter liste"
-                                                                                )
-                                                                        }
+                                                                        label = "Ajouter",
+                                                                        icon = Icons.Default.Add
                                                                 )
                                                         }
                                                         items(favoriteLists) { list ->
-                                                                FilterChip(
+                                                                TvFilterChip(
                                                                         selected =
                                                                                 selectedFavoriteListId ==
                                                                                         list.id,
@@ -1039,18 +1060,12 @@ fun MainScreen(iptvRepository: IptvRepository) {
                                                                                         false
                                                                                 searchQuery = ""
                                                                         },
-                                                                        label = { Text(list.name) },
-                                                                        leadingIcon = {
-                                                                                Icon(
-                                                                                        Icons.Default
-                                                                                                .Star,
-                                                                                        null
-                                                                                )
-                                                                        }
+                                                                        label = list.name,
+                                                                        icon = Icons.Default.Star
                                                                 )
                                                         }
                                                         items(categories) { category ->
-                                                                FilterChip(
+                                                                TvFilterChip(
                                                                         selected =
                                                                                 selectedCategoryId ==
                                                                                         category.category_id,
@@ -1063,11 +1078,8 @@ fun MainScreen(iptvRepository: IptvRepository) {
                                                                                         false
                                                                                 searchQuery = ""
                                                                         },
-                                                                        label = {
-                                                                                Text(
-                                                                                        category.category_name
-                                                                                )
-                                                                        }
+                                                                        label =
+                                                                                category.category_name
                                                                 )
                                                         }
                                                 }
@@ -1190,9 +1202,12 @@ fun MainScreen(iptvRepository: IptvRepository) {
                                                         .onFocusChanged {
                                                                 isAddFocused = it.isFocused
                                                         }
-                                                        .border(
-                                                                if (isAddFocused) 2.dp else 0.dp,
-                                                                if (isAddFocused) Color.Yellow
+                                                        .scale(if (isAddFocused) 1.05f else 1f)
+                                                        .background(
+                                                                if (isAddFocused)
+                                                                        Color.White.copy(
+                                                                                alpha = 0.2f
+                                                                        )
                                                                 else Color.Transparent,
                                                                 MaterialTheme.shapes.small
                                                         ),
@@ -1454,15 +1469,14 @@ fun ProfileFormDialog(
                                                         .onFocusChanged {
                                                                 isSaveFocused = it.isFocused
                                                         }
-                                                        .border(
-                                                                width =
-                                                                        if (isSaveFocused) 3.dp
-                                                                        else 0.dp,
-                                                                color =
-                                                                        if (isSaveFocused)
-                                                                                Color.Yellow
-                                                                        else Color.Transparent,
-                                                                shape = MaterialTheme.shapes.medium
+                                                        .scale(if (isSaveFocused) 1.05f else 1f)
+                                                        .background(
+                                                                if (isSaveFocused)
+                                                                        Color.White.copy(
+                                                                                alpha = 0.1f
+                                                                        )
+                                                                else Color.Transparent,
+                                                                MaterialTheme.shapes.medium
                                                         ),
                                         shape = MaterialTheme.shapes.medium
                                 ) {
@@ -1488,21 +1502,20 @@ fun TvInput(
         leadingIcon: ImageVector? = null
 ) {
         val context = LocalContext.current
+        var isFocused by remember { mutableStateOf(false) }
 
         AndroidView(
                 modifier =
                         modifier.fillMaxWidth()
                                 .height(60.dp)
+                                .onFocusChanged { isFocused = it.isFocused }
+                                .scale(if (isFocused) 1.02f else 1f)
                                 .background(
                                         color =
-                                                MaterialTheme.colorScheme.surfaceVariant.copy(
-                                                        alpha = 0.3f
-                                                ),
-                                        shape = MaterialTheme.shapes.medium
-                                )
-                                .border(
-                                        width = 1.dp,
-                                        color = Color.Gray.copy(alpha = 0.5f),
+                                                if (isFocused) Color.White.copy(alpha = 0.95f)
+                                                else
+                                                        MaterialTheme.colorScheme.surfaceVariant
+                                                                .copy(alpha = 0.3f),
                                         shape = MaterialTheme.shapes.medium
                                 ),
                 factory = { ctx ->
@@ -1515,6 +1528,7 @@ fun TvInput(
                                 setBackgroundColor(android.graphics.Color.TRANSPARENT)
                                 setPadding(32, 16, 32, 16)
                                 setGravity(Gravity.CENTER_VERTICAL)
+                                textSize = 16f
 
                                 // 2. Input Type Setup
                                 inputType =
@@ -1528,6 +1542,9 @@ fun TvInput(
 
                                 // 3. ESSENTIAL: Prevent keyboard on simple focus
                                 showSoftInputOnFocus = false
+
+                                // CRITICAL: Sync focus state to Compose for visual updates
+                                setOnFocusChangeListener { _, hasFocus -> isFocused = hasFocus }
 
                                 // 4. Listen for OK / ENTER to force keyboard
                                 setOnKeyListener { v, keyCode, event ->
@@ -1547,10 +1564,8 @@ fun TvInput(
                                                                 Context.INPUT_METHOD_SERVICE
                                                         ) as
                                                                 InputMethodManager
-                                                imm.showSoftInput(
-                                                        v,
-                                                        InputMethodManager.SHOW_IMPLICIT
-                                                )
+                                                @Suppress("DEPRECATION")
+                                                imm.showSoftInput(v, InputMethodManager.SHOW_FORCED)
                                                 return@setOnKeyListener true
                                         }
                                         false
@@ -1592,6 +1607,14 @@ fun TvInput(
                                         // Ignore selection error
                                 }
                         }
+                        // DYNAMIC COLOR UPDATE
+                        if (isFocused) {
+                                editText.setTextColor(android.graphics.Color.BLACK)
+                                editText.setHintTextColor(android.graphics.Color.DKGRAY)
+                        } else {
+                                editText.setTextColor(android.graphics.Color.WHITE)
+                                editText.setHintTextColor(android.graphics.Color.GRAY)
+                        }
                 }
         )
 }
@@ -1617,6 +1640,7 @@ fun ProfileManagerDialog(
                                 )
                         },
                         confirmButton = {
+                                var isFocused by remember { mutableStateOf(false) }
                                 Button(
                                         onClick = {
                                                 profileToDelete?.let { onDeleteProfile(it) }
@@ -1625,11 +1649,33 @@ fun ProfileManagerDialog(
                                         colors =
                                                 ButtonDefaults.buttonColors(
                                                         containerColor = Color.Red
-                                                )
+                                                ),
+                                        modifier =
+                                                Modifier.onFocusChanged { isFocused = it.isFocused }
+                                                        .scale(if (isFocused) 1.05f else 1f)
+                                                        .border(
+                                                                if (isFocused) 2.dp else 0.dp,
+                                                                Color.White,
+                                                                MaterialTheme.shapes.extraSmall
+                                                        )
                                 ) { Text("Supprimer") }
                         },
                         dismissButton = {
-                                TextButton(onClick = { profileToDelete = null }) { Text("Annuler") }
+                                var isFocused by remember { mutableStateOf(false) }
+                                TextButton(
+                                        onClick = { profileToDelete = null },
+                                        modifier =
+                                                Modifier.onFocusChanged { isFocused = it.isFocused }
+                                                        .scale(if (isFocused) 1.05f else 1f)
+                                                        .background(
+                                                                if (isFocused)
+                                                                        Color.White.copy(
+                                                                                alpha = 0.2f
+                                                                        )
+                                                                else Color.Transparent,
+                                                                MaterialTheme.shapes.extraSmall
+                                                        )
+                                ) { Text("Annuler") }
                         }
                 )
         }
@@ -1637,8 +1683,36 @@ fun ProfileManagerDialog(
         AlertDialog(
                 onDismissRequest = onDismiss,
                 title = { Text("Gérer les profils") },
-                confirmButton = { TextButton(onClick = onAdd) { Text("Nouveau Profil") } },
-                dismissButton = { TextButton(onClick = onDismiss) { Text("Fermer") } },
+                confirmButton = {
+                        var isFocused by remember { mutableStateOf(false) }
+                        TextButton(
+                                onClick = onAdd,
+                                modifier =
+                                        Modifier.onFocusChanged { isFocused = it.isFocused }
+                                                .scale(if (isFocused) 1.05f else 1f)
+                                                .background(
+                                                        if (isFocused)
+                                                                Color.White.copy(alpha = 0.2f)
+                                                        else Color.Transparent,
+                                                        MaterialTheme.shapes.extraSmall
+                                                )
+                        ) { Text("Nouveau Profil") }
+                },
+                dismissButton = {
+                        var isFocused by remember { mutableStateOf(false) }
+                        TextButton(
+                                onClick = onDismiss,
+                                modifier =
+                                        Modifier.onFocusChanged { isFocused = it.isFocused }
+                                                .scale(if (isFocused) 1.05f else 1f)
+                                                .background(
+                                                        if (isFocused)
+                                                                Color.White.copy(alpha = 0.2f)
+                                                        else Color.Transparent,
+                                                        MaterialTheme.shapes.extraSmall
+                                                )
+                        ) { Text("Fermer") }
+                },
                 text = {
                         LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
                                 items(profiles) { profile ->
@@ -1658,26 +1732,24 @@ fun ProfileManagerDialog(
                                                                                 isSelectFocused =
                                                                                         it.isFocused
                                                                         }
+                                                                        .scale(
+                                                                                if (isSelectFocused)
+                                                                                        1.02f
+                                                                                else 1f
+                                                                        )
                                                                         .clickable {
                                                                                 onSelectProfile(
                                                                                         profile
                                                                                 )
                                                                         }
-                                                                        .focusable()
-                                                                        .border(
-                                                                                if (isSelectFocused)
-                                                                                        3.dp
-                                                                                else 0.dp,
-                                                                                if (isSelectFocused)
-                                                                                        Color.Yellow
-                                                                                else
-                                                                                        Color.Transparent,
-                                                                                MaterialTheme.shapes
-                                                                                        .small
-                                                                        ),
+                                                                        .focusable(),
                                                         shape = MaterialTheme.shapes.small,
                                                         color =
-                                                                if (profile.isSelected)
+                                                                if (isSelectFocused)
+                                                                        Color.White.copy(
+                                                                                alpha = 0.9f
+                                                                        )
+                                                                else if (profile.isSelected)
                                                                         MaterialTheme.colorScheme
                                                                                 .primaryContainer
                                                                 else Color.Transparent
@@ -1690,9 +1762,31 @@ fun ProfileManagerDialog(
                                                                 RadioButton(
                                                                         selected =
                                                                                 profile.isSelected,
-                                                                        onClick = null // Handled by
-                                                                        // Surface click
-                                                                        )
+                                                                        onClick =
+                                                                                null, // Handled by
+                                                                        // Surface
+                                                                        // click
+                                                                        colors =
+                                                                                RadioButtonDefaults
+                                                                                        .colors(
+                                                                                                selectedColor =
+                                                                                                        if (isSelectFocused
+                                                                                                        )
+                                                                                                                Color.Black
+                                                                                                        else
+                                                                                                                MaterialTheme
+                                                                                                                        .colorScheme
+                                                                                                                        .primary,
+                                                                                                unselectedColor =
+                                                                                                        if (isSelectFocused
+                                                                                                        )
+                                                                                                                Color.Gray
+                                                                                                        else
+                                                                                                                MaterialTheme
+                                                                                                                        .colorScheme
+                                                                                                                        .onSurfaceVariant
+                                                                                        )
+                                                                )
                                                                 Column(
                                                                         modifier =
                                                                                 Modifier.padding(
@@ -1704,7 +1798,13 @@ fun ProfileManagerDialog(
                                                                                 style =
                                                                                         MaterialTheme
                                                                                                 .typography
-                                                                                                .titleMedium
+                                                                                                .titleMedium,
+                                                                                color =
+                                                                                        if (isSelectFocused
+                                                                                        )
+                                                                                                Color.Black
+                                                                                        else
+                                                                                                Color.Unspecified
                                                                         )
                                                                         Text(
                                                                                 profile.url,
@@ -1712,7 +1812,12 @@ fun ProfileManagerDialog(
                                                                                         MaterialTheme
                                                                                                 .typography
                                                                                                 .bodySmall,
-                                                                                color = Color.Gray,
+                                                                                color =
+                                                                                        if (isSelectFocused
+                                                                                        )
+                                                                                                Color.DarkGray
+                                                                                        else
+                                                                                                Color.Gray,
                                                                                 maxLines = 1
                                                                         )
                                                                 }
@@ -1729,13 +1834,18 @@ fun ProfileManagerDialog(
                                                                                 isEditFocused =
                                                                                         it.isFocused
                                                                         }
-                                                                        .focusable()
-                                                                        .border(
+                                                                        .scale(
                                                                                 if (isEditFocused)
-                                                                                        3.dp
-                                                                                else 0.dp,
+                                                                                        1.1f
+                                                                                else 1f
+                                                                        )
+                                                                        .background(
                                                                                 if (isEditFocused)
-                                                                                        Color.Yellow
+                                                                                        Color.White
+                                                                                                .copy(
+                                                                                                        alpha =
+                                                                                                                0.2f
+                                                                                                )
                                                                                 else
                                                                                         Color.Transparent,
                                                                                 CircleShape
@@ -1758,13 +1868,18 @@ fun ProfileManagerDialog(
                                                                                 isDeleteFocused =
                                                                                         it.isFocused
                                                                         }
-                                                                        .focusable()
-                                                                        .border(
+                                                                        .scale(
                                                                                 if (isDeleteFocused)
-                                                                                        3.dp
-                                                                                else 0.dp,
+                                                                                        1.1f
+                                                                                else 1f
+                                                                        )
+                                                                        .background(
                                                                                 if (isDeleteFocused)
-                                                                                        Color.Yellow
+                                                                                        Color.White
+                                                                                                .copy(
+                                                                                                        alpha =
+                                                                                                                0.2f
+                                                                                                )
                                                                                 else
                                                                                         Color.Transparent,
                                                                                 CircleShape
@@ -1797,16 +1912,17 @@ fun HeaderIconButton(
                 modifier =
                         modifier.size(40.dp)
                                 .onFocusChanged { state -> isFocused = state.isFocused }
-                                .border(
-                                        if (isFocused) 3.dp else 0.dp,
-                                        if (isFocused) Color.Yellow else Color.Transparent,
+                                .scale(if (isFocused) 1.1f else 1f)
+                                .background(
+                                        if (isFocused) Color.White.copy(alpha = 0.2f)
+                                        else Color.Transparent,
                                         MaterialTheme.shapes.small
                                 )
         ) {
                 Icon(
                         icon,
                         desc,
-                        tint = if (isFocused) Color.Yellow else tintNormal,
+                        tint = if (isFocused) Color.White else tintNormal,
                         modifier = Modifier.size(24.dp)
                 )
         }
@@ -1830,20 +1946,17 @@ fun SidebarItem(
                         modifier =
                                 Modifier.weight(1f)
                                         .onFocusChanged { state -> isItemFocused = state.isFocused }
+                                        .scale(if (isItemFocused) 1.02f else 1f)
                                         .clickable { onClick() }
                                         .focusable(),
                         border =
-                                if (isItemFocused) BorderStroke(3.dp, Color.Yellow)
-                                else if (isSelected)
+                                if (isSelected && !isItemFocused)
                                         BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
                                 else null,
                         colors =
                                 CardDefaults.cardColors(
                                         containerColor =
-                                                if (isItemFocused)
-                                                        MaterialTheme.colorScheme.primary.copy(
-                                                                alpha = 0.3f
-                                                        )
+                                                if (isItemFocused) Color.White.copy(alpha = 0.95f)
                                                 else if (isSelected)
                                                         MaterialTheme.colorScheme.primaryContainer
                                                 else MaterialTheme.colorScheme.surface
@@ -1858,34 +1971,37 @@ fun SidebarItem(
                                                 icon,
                                                 null,
                                                 tint =
-                                                        if (isSelected || isItemFocused)
+                                                        if (isItemFocused) Color.Black
+                                                        else if (isSelected)
                                                                 MaterialTheme.colorScheme.primary
                                                         else Color.Gray
                                         )
                                         Spacer(Modifier.width(12.dp))
                                 }
-                                Text(text, maxLines = 1)
+                                Text(
+                                        text,
+                                        maxLines = 1,
+                                        color =
+                                                if (isItemFocused) Color.Black
+                                                else Color.Unspecified
+                                )
                         }
                 }
 
                 // 2. Delete Button (if exists)
-                // 2. Delete Button (if exists) - Using Surface for reliable TV focus
                 if (onDelete != null) {
                         Spacer(Modifier.width(8.dp))
                         Surface(
                                 modifier =
                                         Modifier.size(48.dp)
                                                 .onFocusChanged { isDeleteFocused = it.isFocused }
+                                                .scale(if (isDeleteFocused) 1.1f else 1f)
                                                 .clickable { onDelete() }
                                                 .focusable(),
                                 shape = CircleShape,
                                 color =
-                                        if (isDeleteFocused)
-                                                MaterialTheme.colorScheme.surfaceVariant
-                                        else Color.Transparent,
-                                border =
-                                        if (isDeleteFocused) BorderStroke(3.dp, Color.Yellow)
-                                        else null
+                                        if (isDeleteFocused) Color.White.copy(alpha = 0.2f)
+                                        else Color.Transparent
                         ) {
                                 Box(contentAlignment = Alignment.Center) {
                                         Icon(
@@ -1926,11 +2042,12 @@ fun ChannelItem(
                                         .onFocusChanged { state ->
                                                 isChannelFocused = state.isFocused
                                         }
+                                        .scale(if (isChannelFocused) 1.02f else 1f)
                                         .clickable { onClick() }
                                         .focusable(), // Explicit
                         shape = MaterialTheme.shapes.small,
                         color =
-                                if (isChannelFocused) Color(0xFF121212)
+                                if (isChannelFocused) Color.White.copy(alpha = 0.95f)
                                 else if (isPlaying)
                                         MaterialTheme.colorScheme.primaryContainer.copy(
                                                 alpha = 0.6f
@@ -1938,7 +2055,6 @@ fun ChannelItem(
                                 else MaterialTheme.colorScheme.surface,
                         border =
                                 when {
-                                        isChannelFocused -> BorderStroke(3.dp, Color.Yellow)
                                         isPlaying -> BorderStroke(2.dp, Color.Green)
                                         else -> BorderStroke(1.dp, Color.Gray.copy(alpha = 0.3f))
                                 }
@@ -1957,7 +2073,7 @@ fun ChannelItem(
                                 Text(
                                         channel.name,
                                         color =
-                                                if (isChannelFocused) Color.Yellow
+                                                if (isChannelFocused) Color.Black
                                                 else if (isPlaying) Color.Green
                                                 else MaterialTheme.colorScheme.onSurface,
                                         maxLines = 1,
@@ -1984,6 +2100,7 @@ fun ChannelItem(
                         modifier =
                                 Modifier.size(60.dp) // Square button, same height as channel
                                         .onFocusChanged { state -> isFavFocused = state.isFocused }
+                                        .scale(if (isFavFocused) 1.1f else 1f)
                                         .clickable {
                                                 Toast.makeText(
                                                                 context,
@@ -1996,15 +2113,14 @@ fun ChannelItem(
                                         .focusable(), // Explicit
                         shape = CircleShape,
                         color =
-                                if (isFavFocused) MaterialTheme.colorScheme.surfaceVariant
-                                else Color.Transparent,
-                        border = if (isFavFocused) BorderStroke(3.dp, Color.Yellow) else null
+                                if (isFavFocused) Color.White.copy(alpha = 0.2f)
+                                else Color.Transparent
                 ) {
                         Box(contentAlignment = Alignment.Center) {
                                 Icon(
                                         Icons.Default.Star,
                                         null,
-                                        tint = if (isFavFocused) Color.Yellow else Color.Gray,
+                                        tint = if (isFavFocused) Color.White else Color.Gray,
                                         modifier = Modifier.size(32.dp) // Larger Icon
                                 )
                         }
@@ -2086,4 +2202,56 @@ fun <T> GenericFavoriteDialog(
                 },
                 confirmButton = { TextButton(onClick = onDismiss) { Text("Fermer") } }
         )
+}
+
+@Composable
+fun TvFilterChip(
+        selected: Boolean,
+        onClick: () -> Unit,
+        label: String?,
+        icon: ImageVector? = null,
+        modifier: Modifier = Modifier
+) {
+        var isFocused by remember { mutableStateOf(false) }
+        Surface(
+                modifier =
+                        modifier
+                                .onFocusChanged { isFocused = it.isFocused }
+                                .scale(if (isFocused) 1.1f else 1f)
+                                .clickable { onClick() }
+                                .focusable(),
+                shape = CircleShape,
+                color =
+                        if (isFocused) Color.White.copy(alpha = 0.9f)
+                        else if (selected) MaterialTheme.colorScheme.primaryContainer
+                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        ) {
+                Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                ) {
+                        if (icon != null) {
+                                Icon(
+                                        icon,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp),
+                                        tint =
+                                                if (isFocused) Color.Black
+                                                else MaterialTheme.colorScheme.onSurface
+                                )
+                                if (label != null) {
+                                        Spacer(Modifier.width(8.dp))
+                                }
+                        }
+                        if (label != null) {
+                                Text(
+                                        label,
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color =
+                                                if (isFocused) Color.Black
+                                                else MaterialTheme.colorScheme.onSurface
+                                )
+                        }
+                }
+        }
 }

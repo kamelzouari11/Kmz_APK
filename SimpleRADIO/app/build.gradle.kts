@@ -91,6 +91,10 @@ dependencies {
     implementation("com.google.android.gms:play-services-cast-framework:21.4.0")
     implementation("androidx.mediarouter:mediarouter:1.7.0")
 
+    // UPnP/DLNA (Cling)
+    implementation("org.fourthline.cling:cling-core:2.1.2")
+    implementation("org.fourthline.cling:cling-support:2.1.2")
+
     // Coil pour charger les logos des chaînes
     implementation("io.coil-kt:coil-compose:2.5.0")
 

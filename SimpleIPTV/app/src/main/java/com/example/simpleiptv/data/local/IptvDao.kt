@@ -38,6 +38,12 @@ interface IptvDao {
     @Query("DELETE FROM channels WHERE profileId = :profileId")
     suspend fun clearChannels(profileId: Int)
 
+    @Query("SELECT stream_id FROM channels WHERE profileId = :profileId")
+    suspend fun getChannelIds(profileId: Int): List<String>
+
+    @Query("DELETE FROM channels WHERE profileId = :profileId AND stream_id IN (:ids)")
+    suspend fun deleteChannelsByIds(profileId: Int, ids: List<String>)
+
     @Query("DELETE FROM channel_category_links WHERE profileId = :profileId")
     suspend fun clearChannelCategoryLinks(profileId: Int)
 

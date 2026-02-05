@@ -14,121 +14,141 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 
 class PlaybackService : MediaSessionService() {
-    private var mediaSession: MediaSession? = null
-    private var wifiLock: WifiManager.WifiLock? = null
-    private var wakeLock: PowerManager.WakeLock? = null
+        private var mediaSession: MediaSession? = null
+        private var wifiLock: WifiManager.WifiLock? = null
+        private var wakeLock: PowerManager.WakeLock? = null
 
-    @OptIn(UnstableApi::class)
-    override fun onCreate() {
-        super.onCreate()
-        val httpDataSourceFactory =
-                androidx.media3.datasource.DefaultHttpDataSource.Factory()
-                        .setUserAgent(
-                                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-                        )
-                        .setAllowCrossProtocolRedirects(true)
-
-        // Optimize buffering for IPTV (high bitrate/unstable network)
-        val loadControl =
-                androidx.media3.exoplayer.DefaultLoadControl.Builder()
-                        .setBufferDurationsMs(
-                                30_000, // minBufferMs: Higher value prevents frequent buffering
-                                60_000, // maxBufferMs
-                                2_000, // bufferForPlaybackMs: Quick start
-                                5_000 // bufferForPlaybackAfterRebufferMs: Wait for more data before
-                                // resuming
+        @OptIn(UnstableApi::class)
+        override fun onCreate() {
+                super.onCreate()
+                val httpDataSourceFactory =
+                        androidx.media3.datasource.DefaultHttpDataSource.Factory()
+                                .setUserAgent(
+                                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
                                 )
-                        .build()
+                                .setAllowCrossProtocolRedirects(true)
 
-        val player =
-                ExoPlayer.Builder(this)
-                        .setMediaSourceFactory(
-                                androidx.media3.exoplayer.source.DefaultMediaSourceFactory(this)
-                                        .setDataSourceFactory(httpDataSourceFactory)
-                        )
-                        .setLoadControl(loadControl)
-                        .setAudioAttributes(androidx.media3.common.AudioAttributes.DEFAULT, true)
-                        .setHandleAudioBecomingNoisy(true)
-                        .setWakeMode(androidx.media3.common.C.WAKE_MODE_NETWORK)
-                        .build()
+                // Optimize buffering for IPTV (high bitrate/unstable network)
+                // Optimize for Fast Zapping + Stability
+                val loadControl =
+                        androidx.media3.exoplayer.DefaultLoadControl.Builder()
+                                .setBufferDurationsMs(
+                                        10_000, // minBufferMs: Lower for faster seek/start
+                                        // capability
+                                        50_000, // maxBufferMs: High top-end for stability
+                                        1_000, // bufferForPlaybackMs: START FAST (1s instead of 2s)
+                                        2_000 // bufferForPlaybackAfterRebufferMs: Resume fairly
+                                        // quickly
+                                        )
+                                .setPrioritizeTimeOverSizeThresholds(
+                                        true
+                                ) // Ensure time rules override byte size rules
+                                .build()
 
-        val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-        val lockType =
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    WifiManager.WIFI_MODE_FULL_LOW_LATENCY
-                } else {
-                    @Suppress("DEPRECATION") WifiManager.WIFI_MODE_FULL_HIGH_PERF
-                }
-
-        wifiLock = wifiManager.createWifiLock(lockType, "SimpleIPTV:WifiLock")
-
-        wakeLock =
-                (getSystemService(Context.POWER_SERVICE) as PowerManager).newWakeLock(
-                        PowerManager.PARTIAL_WAKE_LOCK,
-                        "SimpleIPTV:WakeLock"
-                )
-
-        mediaSession =
-                MediaSession.Builder(this, player)
-                        .setCallback(
-                                object : MediaSession.Callback {
-                                    override fun onConnect(
-                                            session: MediaSession,
-                                            controller: MediaSession.ControllerInfo
-                                    ): MediaSession.ConnectionResult {
-                                        val connectionResult = super.onConnect(session, controller)
-                                        val availablePlayerCommands =
-                                                connectionResult
-                                                        .availablePlayerCommands
-                                                        .buildUpon()
-                                                        .add(9) // Player.COMMAND_SKIP_TO_NEXT
-                                                        .add(8) // Player.COMMAND_SKIP_TO_PREVIOUS
-                                                        .build()
-                                        return MediaSession.ConnectionResult.AcceptedResultBuilder(
-                                                        session
+                val player =
+                        ExoPlayer.Builder(this)
+                                .setMediaSourceFactory(
+                                        androidx.media3.exoplayer.source.DefaultMediaSourceFactory(
+                                                        this
                                                 )
-                                                .setAvailablePlayerCommands(availablePlayerCommands)
-                                                .build()
-                                    }
-                                }
-                        )
-                        .build()
+                                                .setDataSourceFactory(httpDataSourceFactory)
+                                )
+                                .setLoadControl(loadControl)
+                                .setAudioAttributes(
+                                        androidx.media3.common.AudioAttributes.DEFAULT,
+                                        true
+                                )
+                                .setHandleAudioBecomingNoisy(true)
+                                .setWakeMode(androidx.media3.common.C.WAKE_MODE_NETWORK)
+                                .build()
 
-        player.addListener(
-                object : Player.Listener {
-                    override fun onIsPlayingChanged(isPlaying: Boolean) {
-                        if (isPlaying) {
-                            if (wifiLock?.isHeld == false) wifiLock?.acquire()
-                            if (wakeLock?.isHeld == false) wakeLock?.acquire()
+                val wifiManager =
+                        applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+                val lockType =
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                WifiManager.WIFI_MODE_FULL_LOW_LATENCY
+                        } else {
+                                @Suppress("DEPRECATION") WifiManager.WIFI_MODE_FULL_HIGH_PERF
                         }
-                    }
 
-                    override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-                        if (wifiLock?.isHeld == false) wifiLock?.acquire()
-                        if (wakeLock?.isHeld == false) wakeLock?.acquire()
-                    }
-                }
-        )
-    }
+                wifiLock = wifiManager.createWifiLock(lockType, "SimpleIPTV:WifiLock")
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        super.onStartCommand(intent, flags, startId)
-        return START_STICKY
-    }
+                wakeLock =
+                        (getSystemService(Context.POWER_SERVICE) as PowerManager).newWakeLock(
+                                PowerManager.PARTIAL_WAKE_LOCK,
+                                "SimpleIPTV:WakeLock"
+                        )
 
-    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
-        return mediaSession
-    }
+                mediaSession =
+                        MediaSession.Builder(this, player)
+                                .setCallback(
+                                        object : MediaSession.Callback {
+                                                override fun onConnect(
+                                                        session: MediaSession,
+                                                        controller: MediaSession.ControllerInfo
+                                                ): MediaSession.ConnectionResult {
+                                                        val connectionResult =
+                                                                super.onConnect(session, controller)
+                                                        val availablePlayerCommands =
+                                                                connectionResult
+                                                                        .availablePlayerCommands
+                                                                        .buildUpon()
+                                                                        .add(
+                                                                                9
+                                                                        ) // Player.COMMAND_SKIP_TO_NEXT
+                                                                        .add(
+                                                                                8
+                                                                        ) // Player.COMMAND_SKIP_TO_PREVIOUS
+                                                                        .build()
+                                                        return MediaSession.ConnectionResult
+                                                                .AcceptedResultBuilder(session)
+                                                                .setAvailablePlayerCommands(
+                                                                        availablePlayerCommands
+                                                                )
+                                                                .build()
+                                                }
+                                        }
+                                )
+                                .build()
 
-    override fun onDestroy() {
-        mediaSession?.run {
-            if (player.isPlaying) player.pause()
-            player.release()
-            release()
-            mediaSession = null
+                player.addListener(
+                        object : Player.Listener {
+                                override fun onIsPlayingChanged(isPlaying: Boolean) {
+                                        if (isPlaying) {
+                                                if (wifiLock?.isHeld == false) wifiLock?.acquire()
+                                                if (wakeLock?.isHeld == false) wakeLock?.acquire()
+                                        }
+                                }
+
+                                override fun onMediaItemTransition(
+                                        mediaItem: MediaItem?,
+                                        reason: Int
+                                ) {
+                                        if (wifiLock?.isHeld == false) wifiLock?.acquire()
+                                        if (wakeLock?.isHeld == false) wakeLock?.acquire()
+                                }
+                        }
+                )
         }
-        if (wifiLock?.isHeld == true) wifiLock?.release()
-        if (wakeLock?.isHeld == true) wakeLock?.release()
-        super.onDestroy()
-    }
+
+        override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+                super.onStartCommand(intent, flags, startId)
+                return START_STICKY
+        }
+
+        override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
+                return mediaSession
+        }
+
+        override fun onDestroy() {
+                mediaSession?.run {
+                        if (player.isPlaying) player.pause()
+                        player.release()
+                        release()
+                        mediaSession = null
+                }
+                if (wifiLock?.isHeld == true) wifiLock?.release()
+                if (wakeLock?.isHeld == true) wakeLock?.release()
+                super.onDestroy()
+        }
 }

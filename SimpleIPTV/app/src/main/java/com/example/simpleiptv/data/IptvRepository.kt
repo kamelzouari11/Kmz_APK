@@ -7,6 +7,9 @@ import com.example.simpleiptv.data.local.entities.*
 import com.example.simpleiptv.data.model.*
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 
@@ -285,24 +288,44 @@ class IptvRepository(private val api: XtreamApi, private val dao: IptvDao) {
         if (!globalFetchSuccess) {
 
             // ... (existing per-genre loop) ...
-            categoryEntities.forEach { category ->
-                try {
-                    val channelsResponse = api.getChannels(token, category.category_id)
-                    val rawData = channelsResponse.js
-                    val genreList =
-                            when (rawData) {
-                                is List<*> -> rawData.filterIsInstance<Map<String, Any?>>()
-                                is Map<*, *> -> rawData.values.filterIsInstance<Map<String, Any?>>()
-                                else -> emptyList()
+            // OPTIMIZED: Parallel fetching of categories
+            // Instead of fetching one by one, we launch all requests simultaneously
+            kotlinx.coroutines.coroutineScope {
+                val deferredResults =
+                        categoryEntities.map { category ->
+                            async {
+                                try {
+                                    val channelsResponse =
+                                            api.getChannels(token, category.category_id)
+                                    val rawData = channelsResponse.js
+                                    val genreList =
+                                            when (rawData) {
+                                                is List<*> ->
+                                                        rawData.filterIsInstance<
+                                                                Map<String, Any?>>()
+                                                is Map<*, *> ->
+                                                        rawData.values.filterIsInstance<
+                                                                Map<String, Any?>>()
+                                                else -> emptyList()
+                                            }
+
+                                    if (genreList.isNotEmpty()) {
+                                        // Enrich with genre ID
+                                        genreList.map {
+                                            it + ("tv_genre_id" to category.category_id)
+                                        }
+                                    } else {
+                                        emptyList()
+                                    }
+                                } catch (e: Exception) {
+                                    emptyList<Map<String, Any?>>()
+                                }
                             }
-                    if (genreList.isNotEmpty()) {
-                        val enrichedList =
-                                genreList.map { it + ("tv_genre_id" to category.category_id) }
-                        channelsData.addAll(enrichedList)
-                    }
-                } catch (e: Exception) {
-                    // Ignore error for single category
-                }
+                        }
+                // Wait for all requests to finish and merge results
+                val allResults: List<List<Map<String, Any?>>> = deferredResults.awaitAll()
+                val allFetched = allResults.flatten()
+                channelsData.addAll(allFetched)
             }
         } else {}
 
@@ -345,8 +368,22 @@ class IptvRepository(private val api: XtreamApi, private val dao: IptvDao) {
             channels: List<ChannelEntity>,
             links: List<ChannelCategoryCrossRef>
     ) {
+        // 1. Purge Categories and Links (Full Reset for these to handle renaming/moving)
         dao.clearChannelCategoryLinks(profileId)
+        dao.clearCategories(profileId)
         dao.insertCategories(categories)
+
+        // 2. Smart Sync Channels: Delete only orphaned channels (ghosts), Upsert the rest
+        // This preserves favorites if the channel ID still exists in the new scan
+        val currentIds = dao.getChannelIds(profileId).toSet()
+        val newIds = channels.map { it.stream_id }.toSet()
+        val idsToDelete = currentIds.minus(newIds).toList()
+
+        if (idsToDelete.isNotEmpty()) {
+            // Chunking to avoid SQLite parameter limit (999 usually)
+            idsToDelete.chunked(900).forEach { chunk -> dao.deleteChannelsByIds(profileId, chunk) }
+        }
+
         dao.insertChannels(channels)
         dao.insertChannelCategoryLinks(links)
     }
