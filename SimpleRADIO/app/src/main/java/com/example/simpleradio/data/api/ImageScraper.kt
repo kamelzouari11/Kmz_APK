@@ -8,58 +8,22 @@ import kotlinx.coroutines.withContext
 
 object ImageScraper {
 
-    /** Tente de trouver des logos HD via plusieurs sources en cascade. */
+    /** Trouve des logos HD via Google Images Large. */
     suspend fun findLogos(radioName: String, country: String?, streamUrl: String?): List<String> =
             withContext(Dispatchers.IO) {
-                val logos = mutableListOf<String>()
-
-                // 1. Priorité 1 : Recherche par domaine (Clearbit)
-                val domain = streamUrl?.let { extractDomain(it) }
-                if (domain != null) {
-                    val clearbitUrl = "https://logo.clearbit.com/$domain"
-                    if (isUrlValid(clearbitUrl)) {
-                        logos.add(clearbitUrl)
-                    }
-                }
-
-                // 2. Priorité 2 : Recherche Google Images (Fallback)
+                // Recherche exclusive sur Google Images en taille LARGE
                 val query = "$radioName logo ${country ?: ""}"
                 val googleLogos = searchGoogleLogos(query)
-                logos.addAll(googleLogos)
-
-                return@withContext logos.distinct().take(5)
+                // On retire les SVG car souvent problématiques à l'affichage direct dans certaines
+                // vues
+                return@withContext googleLogos
+                        .filter { !it.endsWith(".svg", ignoreCase = true) }
+                        .distinct()
+                        .take(5)
             }
 
     suspend fun findBestLogo(radioName: String, country: String?, streamUrl: String?): String? {
         return findLogos(radioName, country, streamUrl).firstOrNull()
-    }
-
-    private fun extractDomain(url: String): String? {
-        return try {
-            val uri = URL(url)
-            val host = uri.host.lowercase()
-            // On enlève les sous-domaines techniques type 'streaming', 'edge', 'shoutcast'
-            val parts = host.split(".")
-            if (parts.size >= 2) {
-                // On garde les deux derniers segments (ex: mosaiquefm.net)
-                parts.takeLast(2).joinToString(".")
-            } else host
-        } catch (e: Exception) {
-            null
-        }
-    }
-
-    private fun isUrlValid(urlStr: String): Boolean {
-        return try {
-            val conn = URL(urlStr).openConnection() as HttpURLConnection
-            conn.requestMethod = "HEAD"
-            conn.connectTimeout = 2000
-            conn.readTimeout = 2000
-            val code = conn.responseCode
-            code == 200
-        } catch (e: Exception) {
-            false
-        }
     }
 
     suspend fun searchGoogleLogos(query: String): List<String> =
