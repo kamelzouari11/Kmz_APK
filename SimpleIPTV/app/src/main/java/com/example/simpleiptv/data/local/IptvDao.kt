@@ -11,7 +11,7 @@ interface IptvDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertCategories(categories: List<CategoryEntity>)
 
-    @Query("SELECT * FROM categories WHERE profileId = :profileId")
+    @Query("SELECT * FROM categories WHERE profileId = :profileId ORDER BY sortOrder ASC")
     fun getAllCategories(profileId: Int): Flow<List<CategoryEntity>>
 
     @Query("DELETE FROM categories WHERE profileId = :profileId")
@@ -31,6 +31,7 @@ interface IptvDao {
             channels.stream_id = channel_category_links.channelId AND 
             channels.profileId = channel_category_links.profileId
         WHERE channel_category_links.categoryId = :categoryId AND channels.profileId = :profileId
+        ORDER BY channels.sortOrder ASC
     """
     )
     fun getChannelsByCategory(categoryId: String, profileId: Int): Flow<List<ChannelEntity>>

@@ -4,7 +4,12 @@ import androidx.room.*
 
 // --- IPTV ---
 @Entity(tableName = "categories", primaryKeys = ["category_id", "profileId"])
-data class CategoryEntity(val category_id: String, val category_name: String, val profileId: Int)
+data class CategoryEntity(
+        val category_id: String,
+        val category_name: String,
+        val profileId: Int,
+        val sortOrder: Int = 0
+)
 
 @Entity(tableName = "channels", primaryKeys = ["stream_id", "profileId"])
 data class ChannelEntity(
@@ -12,7 +17,8 @@ data class ChannelEntity(
         val name: String,
         val stream_icon: String?,
         val profileId: Int,
-        val extraParams: String? = null
+        val extraParams: String? = null,
+        val sortOrder: Int = 0
 )
 
 @Entity(
