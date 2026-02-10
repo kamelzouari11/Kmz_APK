@@ -3,7 +3,11 @@ package com.example.simpleiptv.data.local.entities
 import androidx.room.*
 
 // --- IPTV ---
-@Entity(tableName = "categories", primaryKeys = ["category_id", "profileId"])
+@Entity(
+        tableName = "categories",
+        primaryKeys = ["category_id", "profileId"],
+        indices = [Index(value = ["profileId"])]
+)
 data class CategoryEntity(
         val category_id: String,
         val category_name: String,
@@ -11,7 +15,11 @@ data class CategoryEntity(
         val sortOrder: Int = 0
 )
 
-@Entity(tableName = "channels", primaryKeys = ["stream_id", "profileId"])
+@Entity(
+        tableName = "channels",
+        primaryKeys = ["stream_id", "profileId"],
+        indices = [Index(value = ["profileId"]), Index(value = ["name"])]
+)
 data class ChannelEntity(
         val stream_id: String,
         val name: String,
@@ -23,7 +31,8 @@ data class ChannelEntity(
 
 @Entity(
         tableName = "channel_category_links",
-        primaryKeys = ["channelId", "categoryId", "profileId"]
+        primaryKeys = ["channelId", "categoryId", "profileId"],
+        indices = [Index(value = ["categoryId", "profileId"]), Index(value = ["profileId"])]
 )
 data class ChannelCategoryCrossRef(
         val channelId: String,
@@ -31,14 +40,18 @@ data class ChannelCategoryCrossRef(
         val profileId: Int
 )
 
-@Entity(tableName = "favorite_lists")
+@Entity(tableName = "favorite_lists", indices = [Index(value = ["profileId"])])
 data class FavoriteListEntity(
         @PrimaryKey(autoGenerate = true) val id: Int = 0,
         val name: String,
         val profileId: Int
 )
 
-@Entity(tableName = "channel_favorites", primaryKeys = ["channelId", "listId", "profileId"])
+@Entity(
+        tableName = "channel_favorites",
+        primaryKeys = ["channelId", "listId", "profileId"],
+        indices = [Index(value = ["listId", "profileId"]), Index(value = ["profileId"])]
+)
 data class ChannelFavoriteCrossRef(
         val channelId: String,
         val listId: Int,
@@ -46,7 +59,11 @@ data class ChannelFavoriteCrossRef(
         val sortPosition: Int = 0
 )
 
-@Entity(tableName = "recent_channels", primaryKeys = ["channelId", "profileId"])
+@Entity(
+        tableName = "recent_channels",
+        primaryKeys = ["channelId", "profileId"],
+        indices = [Index(value = ["profileId"])]
+)
 data class RecentChannelEntity(val channelId: String, val timestamp: Long, val profileId: Int)
 
 @Entity(tableName = "profiles")

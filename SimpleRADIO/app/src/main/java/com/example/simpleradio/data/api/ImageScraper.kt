@@ -9,30 +9,68 @@ import kotlinx.coroutines.withContext
 
 object ImageScraper {
 
-    private const val DEFAULT_MIN_SIZE = 300
+    private const val DEFAULT_MIN_SIZE = 500
     private const val METADATA_MIN_SIZE = 600
     private const val MAX_FILE_SIZE = 4 * 600 * 600 // 4MB maximum
     private const val CONNECTION_TIMEOUT = 5000
     private const val READ_TIMEOUT = 5000
 
-    /** Trouve des logos radio (600p) avec validation. */
+    /** Trouve des logos radio avec stratégie progressive (zéro résultat vide). */
     suspend fun findLogos(radioName: String, country: String?, streamUrl: String?): List<String> =
             withContext(Dispatchers.IO) {
-                val query = "$radioName ${country ?: ""} logo radio (all format images)"
-                val googleLogos =
-                        searchGoogleLogos(query, null) // Pas de filtre 'Large' pour les logos
-                val filteredLogos =
-                        googleLogos.filter { !it.endsWith(".svg", ignoreCase = true) }.distinct()
+                // Stratégie progressive en 4 niveaux (s'arrête dès qu'on a ≥1 résultat valide)
+                val queries = buildProgressiveQueries(radioName, country)
 
-                val validatedLogos = mutableListOf<String>()
-                for (url in filteredLogos) {
-                    if (validatedLogos.size >= 5) break
-                    if (isValidImage(url, DEFAULT_MIN_SIZE, DEFAULT_MIN_SIZE)) {
-                        validatedLogos.add(url)
+                for (query in queries) {
+                    val googleLogos = searchGoogleLogos(query, null)
+                    val filteredLogos = googleLogos.distinct()
+
+                    val validatedLogos = mutableListOf<String>()
+                    for (url in filteredLogos) {
+                        if (validatedLogos.size >= 5) break
+                        // Accepter tous les formats (SVG, PNG, WEBP, JPG, ICO)
+                        // Filtrage après download : taille ≥ 256px (Android TV minimum)
+                        if (isValidImage(url, 256, 256)) {
+                            validatedLogos.add(url)
+                        }
+                    }
+
+                    // Dès qu'on a au moins 1 logo valide, on s'arrête
+                    if (validatedLogos.isNotEmpty()) {
+                        return@withContext validatedLogos
                     }
                 }
-                return@withContext validatedLogos
+
+                // Si aucun résultat après tous les niveaux, retourner liste vide
+                return@withContext emptyList()
             }
+
+    /** Construit les requêtes progressives (du plus précis au plus large). */
+    private fun buildProgressiveQueries(radioName: String, country: String?): List<String> {
+        val queries = mutableListOf<String>()
+
+        // Niveau 1 – Requête principale (très large mais pertinente)
+        if (!country.isNullOrBlank()) {
+            queries.add(
+                    "\"$radioName\" \"$country\" (logo OR icon OR branding OR \"station logo\")"
+            )
+        }
+
+        // Niveau 2 – Avec formats acceptés (guide Google sans bloquer)
+        if (!country.isNullOrBlank()) {
+            queries.add(
+                    "\"$radioName\" \"$country\" (logo OR icon OR branding) (png OR svg OR jpg OR jpeg OR webp)"
+            )
+        }
+
+        // Niveau 3 – Requête tolérante (radio peu connue)
+        queries.add("\"$radioName\" (radio OR fm OR webradio) logo")
+
+        // Niveau 4 – Full open (très peu de radios n'ont aucun logo)
+        queries.add("\"$radioName\" logo")
+
+        return queries
+    }
 
     /** Trouve une liste de pochettes d'albums HD (1024p) avec validation. */
     suspend fun findArtworks(artist: String, title: String?): List<String> =
@@ -63,10 +101,20 @@ object ImageScraper {
                 return@withContext results.distinct()
             }
 
-    /** Valide qu'une image respecte les dimensions minimales. */
+    /**
+     * Valide qu'une image respecte les dimensions minimales (accepte SVG sans validation de
+     * taille).
+     */
     private suspend fun isValidImage(imageUrl: String, minWidth: Int, minHeight: Int): Boolean =
             withContext(Dispatchers.IO) {
                 try {
+                    // SVG : accepter directement (vectoriel, pas de contrainte de taille)
+                    if (imageUrl.endsWith(".svg", ignoreCase = true) ||
+                                    imageUrl.contains("/svg", ignoreCase = true)
+                    ) {
+                        return@withContext true
+                    }
+
                     val url = URL(imageUrl)
                     val connection = url.openConnection() as HttpURLConnection
                     connection.instanceFollowRedirects = true
@@ -84,6 +132,13 @@ object ImageScraper {
                     }
 
                     val contentType = connection.contentType?.lowercase() ?: ""
+
+                    // Accepter SVG via content-type
+                    if (contentType.contains("svg")) {
+                        connection.disconnect()
+                        return@withContext true
+                    }
+
                     if (!contentType.startsWith("image/")) {
                         connection.disconnect()
                         return@withContext false
@@ -137,9 +192,9 @@ object ImageScraper {
                 val cleanHtml =
                         html.replace("\\/", "/").replace("\\u003d", "=").replace("\\u0026", "&")
 
-                // Regex pour capturer les URLs HD dans le JSON de Google
+                // Regex pour capturer les URLs HD dans le JSON de Google (tous formats)
                 val jsonImageUrlPattern =
-                        "[\"'](https?://[^\"'<>\\s,]+?\\.(?:png|jpg|jpeg|webp|svg)[^\"'<>\\s,]*?)[\"']\\s*,\\s*\\d+\\s*,\\s*\\d+".toRegex(
+                        "[\"'](https?://[^\"'<>\\s,]+?\\.(?:png|jpg|jpeg|webp|svg|ico|avif|gif)[^\"'<>\\s,]*?)[\"']\\s*,\\s*\\d+\\s*,\\s*\\d+".toRegex(
                                 RegexOption.IGNORE_CASE
                         )
 
@@ -154,9 +209,9 @@ object ImageScraper {
                 }
 
                 if (images.size < 10) {
-                    // Fallback direct links
+                    // Fallback direct links (tous formats)
                     val directImagePattern =
-                            "[\"'](https?://[^\"'<>\\s,]+?\\.(?:png|jpg|jpeg|webp|svg)[^\"'<>\\s,]*?)[\"']".toRegex(
+                            "[\"'](https?://[^\"'<>\\s,]+?\\.(?:png|jpg|jpeg|webp|svg|ico|avif|gif)[^\"'<>\\s,]*?)[\"']".toRegex(
                                     RegexOption.IGNORE_CASE
                             )
                     val directMatches = directImagePattern.findAll(cleanHtml)

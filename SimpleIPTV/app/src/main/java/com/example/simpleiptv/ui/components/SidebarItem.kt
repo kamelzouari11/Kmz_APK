@@ -77,6 +77,7 @@ fun SidebarItem(
                                 Text(
                                         text = text,
                                         maxLines = 1,
+                                        style = MaterialTheme.typography.titleLarge,
                                         color =
                                                 if (isItemFocused) Color.Black
                                                 else Color.Unspecified

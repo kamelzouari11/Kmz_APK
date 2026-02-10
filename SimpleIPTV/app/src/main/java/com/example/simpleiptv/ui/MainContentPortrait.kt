@@ -63,7 +63,8 @@ fun MainContentPortrait(viewModel: MainViewModel, onChannelClick: (ChannelEntity
                                 modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 4.dp)
                         )
                     }
-                    items(viewModel.countryFilters.filter { it != "ALL" }) { country ->
+                    items(viewModel.countryFilters.filter { it != "ALL" }, key = { it }) { country
+                        ->
                         SidebarItem(
                                 text = country,
                                 icon = null,
@@ -125,7 +126,7 @@ fun MainContentPortrait(viewModel: MainViewModel, onChannelClick: (ChannelEntity
                                 }
                             }
                         }
-                        items(viewModel.favoriteLists) { list ->
+                        items(viewModel.favoriteLists, key = { it.id }) { list ->
                             SidebarItem(
                                     text = list.name,
                                     icon = Icons.Default.Star,
@@ -153,7 +154,7 @@ fun MainContentPortrait(viewModel: MainViewModel, onChannelClick: (ChannelEntity
                                 modifier = Modifier.padding(start = 8.dp, top = 8.dp, bottom = 4.dp)
                         )
                     }
-                    items(viewModel.filteredCategories) { category ->
+                    items(viewModel.filteredCategories, key = { it.category_id }) { category ->
                         SidebarItem(
                                 text = category.category_name,
                                 icon = null,
@@ -215,7 +216,7 @@ fun MainContentPortrait(viewModel: MainViewModel, onChannelClick: (ChannelEntity
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp)
                 ) {
-                    items(viewModel.channels) { channel ->
+                    items(viewModel.channels, key = { it.stream_id }) { channel ->
                         val isPlaying = viewModel.playingChannel?.stream_id == channel.stream_id
                         ChannelItem(
                                 channel = channel,

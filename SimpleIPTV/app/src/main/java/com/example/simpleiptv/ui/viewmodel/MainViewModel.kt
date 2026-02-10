@@ -88,15 +88,18 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
             categoriesJob = launch {
                 repository.getCategories(id).collect { cats ->
                     categories = cats
-                    val groups =
-                            cats
-                                    .mapNotNull {
-                                        if (it.category_name.length >= 3)
-                                                it.category_name.substring(0, 3).uppercase()
-                                        else null
-                                    }
-                                    .distinct()
-                    countryFilters = listOf("ALL") + groups
+                    // Process filters off the main thread for better fluidity
+                    viewModelScope.launch(kotlinx.coroutines.Dispatchers.Default) {
+                        val groups =
+                                cats
+                                        .mapNotNull {
+                                            if (it.category_name.length >= 3)
+                                                    it.category_name.substring(0, 3).uppercase()
+                                            else null
+                                        }
+                                        .distinct()
+                        countryFilters = listOf("ALL") + groups
+                    }
                 }
             }
 
@@ -109,31 +112,44 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
         }
     }
 
-    fun refreshChannels() {
+    private var searchDebounceJob: kotlinx.coroutines.Job? = null
+
+    fun refreshChannels(debounce: Boolean = false) {
         if (activeProfileId == -1) return
 
         channelsJob?.cancel()
+        searchDebounceJob?.cancel()
+
         channelsJob =
                 viewModelScope.launch {
-                    val flow =
-                            when (lastGeneratorType) {
-                                GeneratorType.SEARCH ->
-                                        repository.searchChannels(searchQuery, activeProfileId)
-                                GeneratorType.RECENTS ->
-                                        repository.getRecentChannels(activeProfileId)
-                                GeneratorType.FAVORITES ->
-                                        repository.getChannelsByFavoriteList(
-                                                selectedFavoriteListId,
-                                                activeProfileId
-                                        )
-                                GeneratorType.CATEGORY ->
-                                        repository.getChannelsByCategory(
-                                                selectedCategoryId ?: "",
-                                                activeProfileId
-                                        )
-                            }
-                    flow.collect { channels = it }
+                    if (debounce && lastGeneratorType == GeneratorType.SEARCH) {
+                        searchDebounceJob = launch {
+                            kotlinx.coroutines.delay(300)
+                            executeRefresh()
+                        }
+                    } else {
+                        executeRefresh()
+                    }
                 }
+    }
+
+    private suspend fun executeRefresh() {
+        val flow =
+                when (lastGeneratorType) {
+                    GeneratorType.SEARCH -> repository.searchChannels(searchQuery, activeProfileId)
+                    GeneratorType.RECENTS -> repository.getRecentChannels(activeProfileId)
+                    GeneratorType.FAVORITES ->
+                            repository.getChannelsByFavoriteList(
+                                    selectedFavoriteListId,
+                                    activeProfileId
+                            )
+                    GeneratorType.CATEGORY ->
+                            repository.getChannelsByCategory(
+                                    selectedCategoryId ?: "",
+                                    activeProfileId
+                            )
+                }
+        flow.collect { channels = it }
     }
 
     fun deleteProfile(profile: ProfileEntity) {

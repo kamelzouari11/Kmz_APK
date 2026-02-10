@@ -1,0 +1,22 @@
+{
+    "UserAgent": "aws-amplify-cli/0.1.0",
+    "Version": "0.1.0",
+    "IdentityManager": {
+        "Default": {}
+    },
+    "CredentialsProvider": {
+        "CognitoIdentity": {
+            "Default": {
+                "PoolId": "us-east-1:91ed071d-3b2b-4924-b311-7e8e8b6f9fb5",
+                "Region": "us-east-1"
+            }
+        }
+    },
+    "Lex": {
+        "BookTrip_test": {
+            "Name": "BookTrip_test",
+            "Alias": "$LATEST",
+            "Region": "us-east-1"
+        }
+    }
+}

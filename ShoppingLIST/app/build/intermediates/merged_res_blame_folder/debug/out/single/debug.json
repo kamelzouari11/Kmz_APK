@@ -16,6 +16,10 @@
         "source": "com.kmz.shoppinglist.app-main-60:/xml/backup_rules.xml"
     },
     {
+        "merged": "com.kmz.shoppinglist.app-merged_res-58:/drawable_liste_courses.png.flat",
+        "source": "com.kmz.shoppinglist.app-main-60:/drawable/liste_courses.png"
+    },
+    {
         "merged": "com.kmz.shoppinglist.app-merged_res-58:/drawable_ic_launcher_foreground.xml.flat",
         "source": "com.kmz.shoppinglist.app-main-60:/drawable/ic_launcher_foreground.xml"
     },

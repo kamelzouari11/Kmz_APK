@@ -2,27 +2,24 @@ package com.kmz.shoppinglist.ui.screens
 
 import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.kmz.shoppinglist.data.Category
-import com.kmz.shoppinglist.data.DataManager
-import com.kmz.shoppinglist.ui.components.CategoryCard
-import com.kmz.shoppinglist.ui.components.EditCategoryDialog
+import com.kmz.shoppinglist.data.*
+import com.kmz.shoppinglist.ui.components.*
 import com.kmz.shoppinglist.ui.theme.*
 
 /** Écran niveau 1 : Liste des catégories */
@@ -38,9 +35,13 @@ fun CategoriesScreen(
         var showAddDialog by remember { mutableStateOf(false) }
         var categoryToEdit by remember { mutableStateOf<Category?>(null) }
         var showEditDialog by remember { mutableStateOf(false) }
+        var filterPriority by remember { mutableStateOf(Priority.OPTIONAL) }
 
-        // Nombre total d'articles non achetés
-        val totalUnbought = dataManager.getArticles().count { !it.isBought }
+        // Nombre total d'articles non achetés filtrés
+        val totalUnbought =
+                dataManager.getArticles().count {
+                        !it.isBought && it.priority.displayOrder <= filterPriority.displayOrder
+                }
 
         // Rafraîchir les données au retour sur cet écran
         LaunchedEffect(Unit) { categories = dataManager.getCategories() }
@@ -51,32 +52,19 @@ fun CategoriesScreen(
 
         Box(modifier = Modifier.fillMaxSize().background(Black)) {
                 Column(modifier = Modifier.fillMaxSize()) {
-                        // En-tête avec boutons gestionnaire d'icônes et microphone
-                        Box(
-                                modifier =
-                                        Modifier.fillMaxWidth()
-                                                .background(DarkGray)
-                                                .padding(horizontal = 20.dp, vertical = 8.dp)
-                        ) {
+                        Box(modifier = Modifier.fillMaxWidth().background(DarkGray).padding(8.dp)) {
                                 Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                        Column {
-                                                Text(
-                                                        text = "🛒 Ma Liste",
-                                                        color = White,
-                                                        fontSize = 28.sp,
-                                                        fontWeight = FontWeight.Bold
-                                                )
-                                                Text(
-                                                        text =
-                                                                "${categories.size} catégorie${if (categories.size > 1) "s" else ""}",
-                                                        color = TextGray,
-                                                        fontSize = 14.sp
-                                                )
-                                        }
+                                        Text(
+                                                text = "🛒 Ma Liste",
+                                                color = White,
+                                                fontSize = 22.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.padding(start = 8.dp)
+                                        )
 
                                         // Boutons à droite
                                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -127,41 +115,47 @@ fun CategoriesScreen(
                                                         )
                                                 }
 
-                                                Spacer(modifier = Modifier.width(8.dp))
-
-                                                // Bouton gestionnaire d'icônes (roue blanche)
-                                                IconButton(onClick = onIconManagerClick) {
+                                                // Bouton gestionnaire d'icônes (Stylo blanc sur
+                                                // cercle bleu)
+                                                IconButton(
+                                                        onClick = onIconManagerClick,
+                                                        modifier =
+                                                                Modifier.size(40.dp)
+                                                                        .background(
+                                                                                AccentViolet,
+                                                                                CircleShape
+                                                                        )
+                                                ) {
                                                         Icon(
-                                                                imageVector =
-                                                                        Icons.Default.Settings,
+                                                                imageVector = Icons.Default.Edit,
                                                                 contentDescription =
                                                                         "Gérer les icônes",
                                                                 tint = White,
-                                                                modifier = Modifier.size(28.dp)
-                                                        )
-                                                }
-
-                                                // Bouton microphone (saisie vocale)
-                                                IconButton(onClick = onMicClick) {
-                                                        Icon(
-                                                                imageVector = Icons.Default.Mic,
-                                                                contentDescription =
-                                                                        "Saisie vocale",
-                                                                tint = AccentBlue,
-                                                                modifier = Modifier.size(28.dp)
+                                                                modifier = Modifier.size(22.dp)
                                                         )
                                                 }
                                         }
                                 }
                         }
 
-                        // Liste des catégories
-                        LazyColumn(
+                        // Liste des catégories en grille 2x2
+                        val margin = (LocalConfiguration.current.screenWidthDp * 0.02f).dp
+
+                        LazyVerticalGrid(
+                                columns = GridCells.Fixed(2),
                                 modifier = Modifier.weight(1f).fillMaxWidth(),
-                                contentPadding = PaddingValues(top = 4.dp, bottom = 80.dp)
+                                contentPadding =
+                                        PaddingValues(
+                                                start = margin,
+                                                end = margin,
+                                                top = 12.dp,
+                                                bottom = 80.dp
+                                        ),
+                                horizontalArrangement = Arrangement.spacedBy(margin),
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
                                 // Carte "Toutes" en première position
-                                item(key = "all_articles") {
+                                item {
                                         AllArticlesCard(
                                                 unboughtCount = totalUnbought,
                                                 onClick = onAllArticlesClick
@@ -171,37 +165,32 @@ fun CategoriesScreen(
                                 // Autres catégories
                                 items(categories, key = { it.id }) { category ->
                                         val unboughtCount =
-                                                dataManager.getUnboughtCountByCategory(category.id)
+                                                dataManager.getArticles().count {
+                                                        it.categoryId == category.id &&
+                                                                !it.isBought &&
+                                                                it.priority.displayOrder <=
+                                                                        filterPriority.displayOrder
+                                                }
                                         CategoryCard(
                                                 category = category,
                                                 unboughtCount = unboughtCount,
-                                                onClick = { onCategoryClick(category) },
-                                                onEditClick = {
-                                                        categoryToEdit = category
-                                                        showEditDialog = true
-                                                }
+                                                onClick = { onCategoryClick(category) }
                                         )
                                 }
                         }
                 }
 
-                // Bouton flottant d'ajout
-                FloatingActionButton(
-                        onClick = {
+                // Barres de boutons d'action (Filtre, Micro, Ajout)
+                com.kmz.shoppinglist.ui.components.BottomActionButtons(
+                        onFilterClick = { priority -> filterPriority = priority },
+                        onMicClick = onMicClick,
+                        onAddClick = {
                                 categoryToEdit = null
                                 showAddDialog = true
                         },
-                        modifier = Modifier.align(Alignment.BottomEnd).padding(24.dp),
-                        containerColor = AccentBlue,
-                        contentColor = White,
-                        shape = CircleShape
-                ) {
-                        Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = "Ajouter une catégorie",
-                                modifier = Modifier.size(28.dp)
-                        )
-                }
+                        filterPriority = filterPriority,
+                        modifier = Modifier.align(Alignment.BottomCenter)
+                )
         }
 
         // Dialog d'ajout de catégorie (nouveau)
@@ -261,69 +250,5 @@ fun CategoriesScreen(
                                 categoryToEdit = null
                         }
                 )
-        }
-}
-
-/** Carte spéciale "Toutes" pour voir tous les articles à acheter */
-@Composable
-fun AllArticlesCard(unboughtCount: Int, onClick: () -> Unit) {
-        Card(
-                modifier =
-                        Modifier.fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 6.dp)
-                                .clickable(onClick = onClick),
-                colors = CardDefaults.cardColors(containerColor = AccentBlue.copy(alpha = 0.15f)),
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-        ) {
-                Row(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                ) {
-                        // Icône
-                        Box(
-                                modifier =
-                                        Modifier.size(48.dp)
-                                                .clip(RoundedCornerShape(12.dp))
-                                                .background(AccentBlue),
-                                contentAlignment = Alignment.Center
-                        ) {
-                                Icon(
-                                        imageVector = Icons.Default.List,
-                                        contentDescription = null,
-                                        tint = White,
-                                        modifier = Modifier.size(28.dp)
-                                )
-                        }
-
-                        Spacer(modifier = Modifier.width(16.dp))
-
-                        // Nom
-                        Text(
-                                text = "📋 Toutes",
-                                color = White,
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.weight(1f)
-                        )
-
-                        // Badge nombre d'articles non achetés
-                        if (unboughtCount > 0) {
-                                Box(
-                                        modifier =
-                                                Modifier.size(32.dp)
-                                                        .clip(CircleShape)
-                                                        .background(AccentBlue),
-                                        contentAlignment = Alignment.Center
-                                ) {
-                                        Text(
-                                                text = unboughtCount.toString(),
-                                                color = White,
-                                                fontSize = 14.sp,
-                                                fontWeight = FontWeight.Bold
-                                        )
-                                }
-                        }
-                }
         }
 }

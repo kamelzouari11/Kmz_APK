@@ -21,24 +21,24 @@ fun HeaderIconButton(
         modifier: Modifier = Modifier,
         tintNormal: Color = MaterialTheme.colorScheme.primary
 ) {
-    var isFocused by remember { mutableStateOf(false) }
-    IconButton(
-            onClick = onClick,
-            modifier =
-                    modifier.size(40.dp)
-                            .onFocusChanged { state -> isFocused = state.isFocused }
-                            .scale(if (isFocused) 1.1f else 1f)
-                            .background(
-                                    if (isFocused) Color.White.copy(alpha = 0.2f)
-                                    else Color.Transparent,
-                                    MaterialTheme.shapes.small
-                            )
-    ) {
-        Icon(
-                icon,
-                desc,
-                tint = if (isFocused) Color.White else tintNormal,
-                modifier = Modifier.size(24.dp)
-        )
-    }
+        var isFocused by remember { mutableStateOf(false) }
+        IconButton(
+                onClick = onClick,
+                modifier =
+                        modifier.size(60.dp)
+                                .onFocusChanged { state -> isFocused = state.isFocused }
+                                .scale(if (isFocused) 1.05f else 1f)
+                                .background(
+                                        if (isFocused) Color.White.copy(alpha = 0.2f)
+                                        else Color.Transparent,
+                                        MaterialTheme.shapes.small
+                                )
+        ) {
+                Icon(
+                        icon,
+                        desc,
+                        tint = if (isFocused) Color.White else tintNormal,
+                        modifier = Modifier.size(48.dp)
+                )
+        }
 }

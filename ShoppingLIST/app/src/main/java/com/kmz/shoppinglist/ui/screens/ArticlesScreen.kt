@@ -5,42 +5,47 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
-import com.kmz.shoppinglist.data.Article
-import com.kmz.shoppinglist.data.Category
-import com.kmz.shoppinglist.data.DataManager
-import com.kmz.shoppinglist.data.LocalIconProvider
-import com.kmz.shoppinglist.data.Priority
-import com.kmz.shoppinglist.ui.components.ArticleCard
-import com.kmz.shoppinglist.ui.components.EditArticleDialog
+import com.kmz.shoppinglist.data.*
+import com.kmz.shoppinglist.ui.components.*
 import com.kmz.shoppinglist.ui.theme.*
 
-/** Écran niveau 2 : Liste des articles d'une catégorie */
+/** Écran niveau 2 : Liste des articles d'une catégorie. Strictly identical to AllArticlesScreen. */
 @Composable
-fun ArticlesScreen(category: Category, dataManager: DataManager, onBackClick: () -> Unit) {
+fun ArticlesScreen(
+        category: Category,
+        dataManager: DataManager,
+        onBackClick: () -> Unit,
+        onMicClick: () -> Unit
+) {
     var articles by remember { mutableStateOf(dataManager.getArticlesByCategory(category.id)) }
     var showAddDialog by remember { mutableStateOf(false) }
     var articleToEdit by remember { mutableStateOf<Article?>(null) }
     var showEditDialog by remember { mutableStateOf(false) }
+    var isIconMode by remember { mutableStateOf(false) }
+    var filterPriority by remember { mutableStateOf(Priority.OPTIONAL) }
 
     val categories = remember { dataManager.getCategories() }
 
-    // Séparer les articles achetés et non achetés
-    val toBuyArticles = articles.filter { !it.isBought }
+    // Filtrer les articles par priorité sélectionnée
+    val filteredArticles =
+            articles.filter { it.priority.displayOrder <= filterPriority.displayOrder }
+
+    // Séparer les articles achetés et non achetés (unbought filtrés, bought non filtrés car souvent
+    // non priorisés)
+    val unboughtArticles = filteredArticles.filter { !it.isBought }
     val boughtArticles = articles.filter { it.isBought }
+
+    var currentAddCategoryId by remember(category) { mutableLongStateOf(category.id) }
+    var addDialogKey by remember { mutableIntStateOf(0) }
 
     fun refreshArticles() {
         articles = dataManager.getArticlesByCategory(category.id)
@@ -48,52 +53,55 @@ fun ArticlesScreen(category: Category, dataManager: DataManager, onBackClick: ()
 
     Box(modifier = Modifier.fillMaxSize().background(Black)) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // En-tête avec bouton retour et icône de catégorie
-            Box(modifier = Modifier.fillMaxWidth().background(DarkGray).padding(16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                                imageVector = Icons.Default.ArrowBack,
-                                contentDescription = "Retour",
-                                tint = White
-                        )
+            Box(
+                    modifier =
+                            Modifier.fillMaxWidth()
+                                    .background(DarkGray)
+                                    .padding(vertical = 8.dp, horizontal = 16.dp)
+            ) {
+                Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = onBackClick) {
+                            Icon(
+                                    Icons.Default.ArrowBack,
+                                    contentDescription = "Retour",
+                                    tint = White
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(4.dp))
+
+                        Column {
+                            Text(
+                                    text = category.name,
+                                    color = White,
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                    text = "${unboughtArticles.size} à acheter",
+                                    color = TextGray,
+                                    fontSize = 11.sp
+                            )
+                        }
                     }
 
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    // Icône de catégorie
-                    val context = LocalContext.current
-                    val iconProvider = remember { LocalIconProvider(context) }
-                    val iconUrl = iconProvider.getIconPath(category.getIconIdSafe())
-
-                    Box(
-                            modifier =
-                                    Modifier.size(64.dp)
-                                            .clip(RoundedCornerShape(14.dp))
-                                            .background(MediumGray),
-                            contentAlignment = Alignment.Center
+                    // Bouton Toggle Large Bleu au maximum
+                    IconButton(
+                            onClick = { isIconMode = !isIconMode },
+                            modifier = Modifier.size(56.dp).background(AccentBlue, CircleShape)
                     ) {
-                        AsyncImage(
-                                model = iconUrl ?: "",
-                                contentDescription = null,
-                                modifier = Modifier.size(60.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    Column {
-                        Text(
-                                text = category.name,
-                                color = White,
-                                fontSize = 22.sp,
-                                fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                                text =
-                                        "${toBuyArticles.size} à acheter • ${boughtArticles.size} acheté${if (boughtArticles.size > 1) "s" else ""}",
-                                color = TextGray,
-                                fontSize = 13.sp
+                        Icon(
+                                imageVector =
+                                        if (isIconMode) Icons.Default.List
+                                        else Icons.Default.ShoppingCart,
+                                contentDescription = "Changer de vue",
+                                tint = White,
+                                modifier = Modifier.size(36.dp)
                         )
                     }
                 }
@@ -102,60 +110,121 @@ fun ArticlesScreen(category: Category, dataManager: DataManager, onBackClick: ()
             // Liste des articles
             LazyColumn(
                     modifier = Modifier.weight(1f).fillMaxWidth(),
-                    contentPadding = PaddingValues(vertical = 12.dp)
+                    contentPadding = PaddingValues(top = 12.dp, bottom = 80.dp)
             ) {
-                // Section "À acheter"
-                if (toBuyArticles.isNotEmpty()) {
-                    item { SectionHeader(title = "À acheter", count = toBuyArticles.size) }
-                    items(toBuyArticles, key = { it.id }) { article ->
-                        ArticleCard(
-                                article = article,
-                                onToggleBought = {
-                                    dataManager.toggleArticleBought(article.id)
-                                    refreshArticles()
-                                },
-                                onPriorityChange = { priority ->
-                                    dataManager.updateArticlePriority(article.id, priority)
-                                    refreshArticles()
-                                },
-                                onEditClick = {
-                                    articleToEdit = article
-                                    showEditDialog = true
+                // Articles non achetés (Grille 2 colonnes comme AllArticlesScreen)
+                val chunkedArticles = unboughtArticles.chunked(2)
+                items(chunkedArticles) { rowArticles ->
+                    Row(
+                            modifier =
+                                    Modifier.fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        rowArticles.forEach { article ->
+                            Box(modifier = Modifier.weight(1f)) {
+                                if (isIconMode) {
+                                    ArticleIconItem(
+                                            article = article,
+                                            onClick = {
+                                                dataManager.toggleArticleBought(article.id)
+                                                refreshArticles()
+                                            },
+                                            onLongClick = {
+                                                articleToEdit = article
+                                                showEditDialog = true
+                                            },
+                                            onPriorityChange = { priority ->
+                                                dataManager.updateArticle(
+                                                        article.copy(priority = priority)
+                                                )
+                                                refreshArticles()
+                                            }
+                                    )
+                                } else {
+                                    ArticleTextItem(
+                                            article = article,
+                                            onClick = {
+                                                dataManager.toggleArticleBought(article.id)
+                                                refreshArticles()
+                                            },
+                                            onLongClick = {
+                                                articleToEdit = article
+                                                showEditDialog = true
+                                            },
+                                            onPriorityChange = { priority ->
+                                                dataManager.updateArticle(
+                                                        article.copy(priority = priority)
+                                                )
+                                                refreshArticles()
+                                            }
+                                    )
                                 }
-                        )
+                            }
+                        }
+                        if (rowArticles.size == 1) Spacer(modifier = Modifier.weight(1f))
                     }
                 }
 
                 // Section "Achetés"
                 if (boughtArticles.isNotEmpty()) {
                     item {
+                        Spacer(modifier = Modifier.height(32.dp))
+                        Row(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                    modifier =
+                                            Modifier.weight(1f)
+                                                    .height(1.dp)
+                                                    .background(TextDarkGray)
+                            )
+                            Text(
+                                    text = " ARTICLES ACHETÉS ",
+                                    color = TextGray,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold
+                            )
+                            Box(
+                                    modifier =
+                                            Modifier.weight(1f)
+                                                    .height(1.dp)
+                                                    .background(TextDarkGray)
+                            )
+                        }
                         Spacer(modifier = Modifier.height(16.dp))
-                        SectionHeader(
-                                title = "Achetés",
-                                count = boughtArticles.size,
-                                isBought = true
-                        )
                     }
-                    items(boughtArticles, key = { it.id }) { article ->
-                        ArticleCard(
-                                article = article,
-                                onToggleBought = {
-                                    dataManager.toggleArticleBought(article.id)
-                                    refreshArticles()
-                                },
-                                onPriorityChange = { priority ->
-                                    dataManager.updateArticlePriority(article.id, priority)
-                                    refreshArticles()
-                                },
-                                onEditClick = {
-                                    articleToEdit = article
-                                    showEditDialog = true
+
+                    val chunkedBought = boughtArticles.chunked(2)
+                    items(chunkedBought) { rowArticles ->
+                        Row(
+                                modifier =
+                                        Modifier.fillMaxWidth()
+                                                .padding(horizontal = 16.dp, vertical = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            rowArticles.forEach { article ->
+                                Box(modifier = Modifier.weight(1f)) {
+                                    BoughtArticleTextItem(
+                                            article = article,
+                                            onClick = {
+                                                dataManager.toggleArticleBought(article.id)
+                                                refreshArticles()
+                                            },
+                                            onLongClick = {
+                                                articleToEdit = article
+                                                showEditDialog = true
+                                            }
+                                    )
                                 }
-                        )
+                            }
+                            if (rowArticles.size == 1) Spacer(modifier = Modifier.weight(1f))
+                        }
                     }
                 }
 
-                // Message si la liste est vide
+                // Message vide
                 if (articles.isEmpty()) {
                     item {
                         Box(
@@ -166,11 +235,6 @@ fun ArticlesScreen(category: Category, dataManager: DataManager, onBackClick: ()
                                 Text(text = "📝", fontSize = 48.sp)
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Text(text = "Aucun article", color = TextGray, fontSize = 18.sp)
-                                Text(
-                                        text = "Appuyez sur + pour ajouter un article",
-                                        color = TextDarkGray,
-                                        fontSize = 14.sp
-                                )
                             }
                         }
                     }
@@ -178,56 +242,55 @@ fun ArticlesScreen(category: Category, dataManager: DataManager, onBackClick: ()
             }
         }
 
-        // Bouton flottant d'ajout
-        FloatingActionButton(
-                onClick = {
+        // Barres de boutons d'action (Filtre, Micro, Ajout)
+        BottomActionButtons(
+                onFilterClick = { priority -> filterPriority = priority },
+                onMicClick = onMicClick,
+                onAddClick = {
                     articleToEdit = null
+                    currentAddCategoryId = category.id
                     showAddDialog = true
                 },
-                modifier = Modifier.align(Alignment.BottomEnd).padding(24.dp),
-                containerColor = AccentBlue,
-                contentColor = White,
-                shape = CircleShape
-        ) {
-            Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Ajouter un article",
-                    modifier = Modifier.size(28.dp)
+                filterPriority = filterPriority,
+                modifier = Modifier.align(Alignment.BottomCenter)
+        )
+    }
+
+    // Dialog d'ajout
+    if (showAddDialog) {
+        key(addDialogKey) {
+            EditArticleDialog(
+                    article = null,
+                    categories = categories,
+                    currentCategoryId = currentAddCategoryId,
+                    onSave = { name, frenchName, iconId, categoryId ->
+                        dataManager.addArticle(
+                                Article(
+                                        name = name,
+                                        frenchName = frenchName,
+                                        iconId = iconId,
+                                        categoryId = categoryId
+                                )
+                        )
+                        refreshArticles()
+                        showAddDialog = false
+                    },
+                    onDelete = {},
+                    onCreateNew = { categoryId ->
+                        currentAddCategoryId = categoryId
+                        addDialogKey++
+                    },
+                    onDismiss = { showAddDialog = false }
             )
         }
     }
 
-    // Dialog d'ajout d'article (nouveau)
-    if (showAddDialog) {
-        EditArticleDialog(
-                article = null,
-                categories = categories,
-                currentCategoryId = category.id,
-                onSave = { name, frenchName, iconId, categoryId ->
-                    val newArticle =
-                            Article(
-                                    name = name,
-                                    frenchName = frenchName,
-                                    iconId = iconId,
-                                    categoryId = categoryId,
-                                    priority = Priority.NORMAL
-                            )
-                    dataManager.addArticle(newArticle)
-                    refreshArticles()
-                    showAddDialog = false
-                },
-                onDelete = {},
-                onCreateNew = {},
-                onDismiss = { showAddDialog = false }
-        )
-    }
-
-    // Dialog d'édition d'article
+    // Dialog d'édition
     if (showEditDialog && articleToEdit != null) {
         EditArticleDialog(
                 article = articleToEdit,
                 categories = categories,
-                currentCategoryId = category.id,
+                currentCategoryId = articleToEdit?.categoryId ?: category.id,
                 onSave = { name, frenchName, iconId, categoryId ->
                     articleToEdit?.let { article ->
                         dataManager.updateArticle(
@@ -249,9 +312,10 @@ fun ArticlesScreen(category: Category, dataManager: DataManager, onBackClick: ()
                     showEditDialog = false
                     articleToEdit = null
                 },
-                onCreateNew = {
+                onCreateNew = { categoryId ->
                     showEditDialog = false
                     articleToEdit = null
+                    currentAddCategoryId = categoryId
                     showAddDialog = true
                 },
                 onDismiss = {
@@ -259,22 +323,5 @@ fun ArticlesScreen(category: Category, dataManager: DataManager, onBackClick: ()
                     articleToEdit = null
                 }
         )
-    }
-}
-
-@Composable
-fun SectionHeader(title: String, count: Int, isBought: Boolean = false) {
-    Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-                text = title,
-                color = if (isBought) TextGray else White,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(text = "($count)", color = TextDarkGray, fontSize = 14.sp)
     }
 }

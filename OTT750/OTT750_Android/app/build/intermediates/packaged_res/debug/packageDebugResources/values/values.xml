@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="btn_connect_text">#FFFFFFFF</color>
+    <color name="channel_name_text">#FF4CAF50</color>
+    <color name="connect_button">#FF4CAF50</color>
+    <color name="disconnect_button">#FFFF5722</color>
+    <color name="fav_text">#FFAAAAAA</color>
+    <color name="ic_launcher_background">#33007ACC</color>
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="selected_background">#33007ACC</color>
+    <color name="selected_text">#FF64B5F6</color>
+    <color name="status_connected">#FF4CAF50</color>
+    <color name="status_connecting">#FFFFC107</color>
+    <color name="status_disconnected">#FFFF5722</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="zapping_bar_background">#1A4CAF50</color>
+    <color name="zapping_channel_name">#FFFFFFFF</color>
+    <color name="zapping_fav_text">#FF81C784</color>
+    <string name="action_export">Exporter DB</string>
+    <string name="action_manage_favs">★ Gérer Favoris</string>
+    <string name="action_zapping_mode">📺 Zap</string>
+    <string name="app_name">OTT750 Editor</string>
+    <string name="btn_add">Ajouter</string>
+    <string name="btn_connect">Connecter</string>
+    <string name="btn_disconnect">Déconnecter</string>
+    <string name="btn_remove">Retirer</string>
+    <string name="dialog_connect_auto">Recherche automatique</string>
+    <string name="dialog_connect_manual">Entrer IP manuellement</string>
+    <string name="dialog_connect_title">Connexion au récepteur</string>
+    <string name="dialog_fav_title">Gestion Favoris</string>
+    <string name="hint_ip_address">Adresse IP (ex: 192.168.1.100)</string>
+    <string name="hint_search">Filtre (ex: *xyz*)</string>
+    <string name="msg_error_db">Erreur DB: %s</string>
+    <string name="msg_select_channels">Veuillez sélectionner des chaînes</string>
+    <string name="msg_stb_not_found">Récepteur non trouvé sur le réseau</string>
+    <string name="msg_success_export">Export terminé dans Download/database_new.db</string>
+    <string name="msg_zap_failed">Échec du zap</string>
+    <string name="msg_zap_success">Zap vers: %s</string>
+    <string name="msg_zapping_disabled">Mode Zapping désactivé</string>
+    <string name="msg_zapping_enabled">Mode Zapping activé - Appuyez sur une chaîne pour zapper</string>
+    <string name="prompt_satellite">Satellite</string>
+    <string name="zapping_connected">📡 Connecté: %s</string>
+    <string name="zapping_connecting">📡 Recherche…</string>
+    <string name="zapping_disconnected">📡 Non connecté</string>
+    <style name="Theme.OTT750Editor" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
+        
+        <item name="colorPrimary">#BB86FC</item>
+        <item name="colorPrimaryVariant">#3700B3</item>
+        <item name="colorOnPrimary">#000000</item>
+        
+        <item name="colorSecondary">#03DAC6</item>
+        <item name="colorSecondaryVariant">#018786</item>
+        <item name="colorOnSecondary">#000000</item>
+        
+        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
+        
+    </style>
+</resources>

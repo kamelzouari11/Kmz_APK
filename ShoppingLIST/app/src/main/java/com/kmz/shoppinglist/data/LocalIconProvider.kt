@@ -84,7 +84,14 @@ class LocalIconProvider(private val context: Context) {
         thread {
             try {
                 val normalizedName = normalizeName(frenchName)
-                val targetFile = File(ICONS_PATH, "$normalizedName.png")
+                val ext =
+                        when {
+                            urlStr.lowercase().contains(".webp") -> "webp"
+                            urlStr.lowercase().contains(".jpg") ||
+                                    urlStr.lowercase().contains(".jpeg") -> "jpg"
+                            else -> "png"
+                        }
+                val targetFile = File(ICONS_PATH, "$normalizedName.$ext")
 
                 val connection = URL(urlStr).openConnection()
                 connection.connectTimeout = 10000

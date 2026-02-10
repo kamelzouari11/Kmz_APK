@@ -1,5 +1,6 @@
 package com.example.simpleradio.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -14,9 +15,12 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SignalCellularAlt
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.simpleradio.data.local.entities.RadioStationEntity
 import com.example.simpleradio.data.model.RadioCountry
@@ -99,15 +103,29 @@ fun BrowseScreen(
                                     horizontalArrangement = Arrangement.SpaceEvenly
                             ) {
                                 listOf(64, 128, 192, 320).forEach { kbps ->
+                                    var isFocused by remember { mutableStateOf(false) }
                                     Button(
                                             onClick = {
                                                 onBitrateSelected(kbps)
                                                 onToggleQualityExpanded()
                                             },
+                                            modifier =
+                                                    Modifier.weight(1f)
+                                                            .padding(horizontal = 2.dp)
+                                                            .onFocusChanged {
+                                                                isFocused = it.isFocused
+                                                            },
+                                            contentPadding =
+                                                    PaddingValues(
+                                                            horizontal = 4.dp,
+                                                            vertical = 8.dp
+                                                    ),
                                             colors =
                                                     ButtonDefaults.buttonColors(
                                                             containerColor =
-                                                                    if (selectedRadioBitrate == kbps
+                                                                    if (isFocused) Color.White
+                                                                    else if (selectedRadioBitrate ==
+                                                                                    kbps
                                                                     )
                                                                             MaterialTheme
                                                                                     .colorScheme
@@ -117,7 +135,9 @@ fun BrowseScreen(
                                                                                     .colorScheme
                                                                                     .surfaceVariant,
                                                             contentColor =
-                                                                    if (selectedRadioBitrate == kbps
+                                                                    if (isFocused) Color.Black
+                                                                    else if (selectedRadioBitrate ==
+                                                                                    kbps
                                                                     )
                                                                             MaterialTheme
                                                                                     .colorScheme
@@ -127,7 +147,7 @@ fun BrowseScreen(
                                                                                     .colorScheme
                                                                                     .onSurfaceVariant
                                                     )
-                                    ) { Text("$kbps") }
+                                    ) { Text("$kbps", maxLines = 1) }
                                 }
                             }
                         }
@@ -198,13 +218,47 @@ fun BrowseScreen(
                         }
                     }
 
-                    // Bouton Filtrer liste
+                    // Bouton Filtrer liste (VERT)
+                    item {
+                        var isFocused by remember { mutableStateOf(false) }
+                        Card(
+                                modifier =
+                                        Modifier.fillMaxWidth()
+                                                .onFocusChanged { isFocused = it.isFocused }
+                                                .clickable { onApplyFilters() },
+                                colors =
+                                        CardDefaults.cardColors(
+                                                containerColor =
+                                                        if (isFocused) Color.White
+                                                        else Color(0xFF4CAF50) // Vert
+                                        )
+                        ) {
+                            Row(
+                                    modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                        Icons.Default.FilterList,
+                                        null,
+                                        tint = if (isFocused) Color.Black else Color.White
+                                )
+                                Spacer(Modifier.width(12.dp))
+                                Text(
+                                        "Filtrer liste",
+                                        color = if (isFocused) Color.Black else Color.White,
+                                        maxLines = 1
+                                )
+                            }
+                        }
+                    }
+
+                    // Bouton Réinitialiser
                     item {
                         SidebarItem(
-                                text = "Filtrer liste",
-                                icon = Icons.Default.FilterList,
+                                text = "Réinitialiser",
+                                icon = Icons.Default.Clear,
                                 isSelected = false,
-                                onClick = onApplyFilters
+                                onClick = onResetFilters
                         )
                     }
 
@@ -220,19 +274,12 @@ fun BrowseScreen(
                     ) {
                         Button(
                                 onClick = { onToggleViewingResults(false) },
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.fillMaxWidth()
                         ) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
                             Spacer(Modifier.width(8.dp))
                             Text("Retour aux catégories")
                         }
-                        Button(
-                                onClick = onResetFilters,
-                                colors =
-                                        ButtonDefaults.buttonColors(
-                                                containerColor = MaterialTheme.colorScheme.error
-                                        )
-                        ) { Icon(Icons.Default.Clear, "Reset") }
                     }
                     LazyColumn(
                             state = resultsListState,
@@ -300,15 +347,29 @@ fun BrowseScreen(
                                     horizontalArrangement = Arrangement.SpaceEvenly
                             ) {
                                 listOf(64, 128, 192, 320).forEach { kbps ->
+                                    var isFocused by remember { mutableStateOf(false) }
                                     Button(
                                             onClick = {
                                                 onBitrateSelected(kbps)
                                                 onToggleQualityExpanded()
                                             },
+                                            modifier =
+                                                    Modifier.weight(1f)
+                                                            .padding(horizontal = 2.dp)
+                                                            .onFocusChanged {
+                                                                isFocused = it.isFocused
+                                                            },
+                                            contentPadding =
+                                                    PaddingValues(
+                                                            horizontal = 4.dp,
+                                                            vertical = 8.dp
+                                                    ),
                                             colors =
                                                     ButtonDefaults.buttonColors(
                                                             containerColor =
-                                                                    if (selectedRadioBitrate == kbps
+                                                                    if (isFocused) Color.White
+                                                                    else if (selectedRadioBitrate ==
+                                                                                    kbps
                                                                     )
                                                                             MaterialTheme
                                                                                     .colorScheme
@@ -318,7 +379,9 @@ fun BrowseScreen(
                                                                                     .colorScheme
                                                                                     .surfaceVariant,
                                                             contentColor =
-                                                                    if (selectedRadioBitrate == kbps
+                                                                    if (isFocused) Color.Black
+                                                                    else if (selectedRadioBitrate ==
+                                                                                    kbps
                                                                     )
                                                                             MaterialTheme
                                                                                     .colorScheme
@@ -328,7 +391,7 @@ fun BrowseScreen(
                                                                                     .colorScheme
                                                                                     .onSurfaceVariant
                                                     )
-                                    ) { Text("$kbps") }
+                                    ) { Text("$kbps", maxLines = 1) }
                                 }
                             }
                         }
@@ -397,13 +460,47 @@ fun BrowseScreen(
                         }
                     }
 
-                    // Bouton Filtrer liste
+                    // Bouton Filtrer liste (VERT)
+                    item {
+                        var isFocused by remember { mutableStateOf(false) }
+                        Card(
+                                modifier =
+                                        Modifier.fillMaxWidth()
+                                                .onFocusChanged { isFocused = it.isFocused }
+                                                .clickable { onApplyFilters() },
+                                colors =
+                                        CardDefaults.cardColors(
+                                                containerColor =
+                                                        if (isFocused) Color.White
+                                                        else Color(0xFF4CAF50) // Vert
+                                        )
+                        ) {
+                            Row(
+                                    modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                        Icons.Default.FilterList,
+                                        null,
+                                        tint = if (isFocused) Color.Black else Color.White
+                                )
+                                Spacer(Modifier.width(12.dp))
+                                Text(
+                                        "Filtrer liste",
+                                        color = if (isFocused) Color.Black else Color.White,
+                                        maxLines = 1
+                                )
+                            }
+                        }
+                    }
+
+                    // Bouton Réinitialiser
                     item {
                         SidebarItem(
-                                text = "Filtrer liste",
-                                icon = Icons.Default.FilterList,
+                                text = "Réinitialiser",
+                                icon = Icons.Default.Clear,
                                 isSelected = false,
-                                onClick = onApplyFilters
+                                onClick = onResetFilters
                         )
                     }
 
@@ -413,18 +510,6 @@ fun BrowseScreen(
 
             // RIGHT LIST
             Column(modifier = Modifier.weight(0.7f).fillMaxHeight().padding(8.dp)) {
-                Button(
-                        onClick = onResetFilters,
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                        colors =
-                                ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.error
-                                )
-                ) {
-                    Icon(Icons.Default.Clear, null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("RÉINITIALISER")
-                }
                 LazyColumn(
                         state = resultsListState,
                         modifier = Modifier.fillMaxSize().focusRequester(listFocusRequester),

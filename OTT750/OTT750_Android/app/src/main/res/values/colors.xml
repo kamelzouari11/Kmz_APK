@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">#33007ACC</color>
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    
+    <!-- Couleurs Mode Normal (fond sombre) -->
+    <color name="channel_name_text">#FF4CAF50</color>
+    <color name="fav_text">#FFAAAAAA</color>
+    <color name="selected_background">#33007ACC</color>
+    <color name="selected_text">#FF64B5F6</color>
+    
+    <!-- Couleurs Mode Zapping -->
+    <color name="zapping_channel_name">#FFFFFFFF</color>
+    <color name="zapping_fav_text">#FF81C784</color>
+    
+    <!-- Couleurs de la barre de statut Zapping -->
+    <color name="zapping_bar_background">#1A4CAF50</color>
+    <color name="status_connected">#FF4CAF50</color>
+    <color name="status_disconnected">#FFFF5722</color>
+    <color name="status_connecting">#FFFFC107</color>
+    
+    <!-- Boutons -->
+    <color name="btn_connect_text">#FFFFFFFF</color>
+    <color name="connect_button">#FF4CAF50</color>
+    <color name="disconnect_button">#FFFF5722</color>
+</resources>

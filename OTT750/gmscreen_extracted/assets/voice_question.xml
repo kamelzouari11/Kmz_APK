@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<commands>
+    <command>
+        <id>1002</id>
+        <title>How to wake up voice robot?</title>
+        <introduce>speak "Blueberry"
+You can also click the button to wake up</introduce>
+    </command>
+
+    <command>
+        <id>1012</id>
+        <title>Unable to wake up voice robot</title>
+        <introduce>May be playing music or microphone
+without permission</introduce>
+    </command>
+</commands>

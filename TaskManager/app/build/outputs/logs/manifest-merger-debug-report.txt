@@ -1,0 +1,379 @@
+-- Merging decision tree log ---
+manifest
+ADDED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml:2:1-32:12
+INJECTED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml:2:1-32:12
+INJECTED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml:2:1-32:12
+INJECTED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml:2:1-32:12
+MERGED from [androidx.compose.material3:material3-android:1.3.1] /home/kamel/.gradle/caches/8.11.1/transforms/9bced260c861c69e4dbec456f57bd29d/transformed/material3-release/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.compose.material:material-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/249e3caf9c3fb0dfe4629795906190e0/transformed/material-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.foundation:foundation-layout-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/82cc29cb4836bdb250177af69a807c3b/transformed/foundation-layout-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.material:material-ripple-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/66de10034b6d19591bd6b3eed2c6c145/transformed/material-ripple-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.foundation:foundation-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/f3f2b2206caca3842393858ec2886be7/transformed/foundation-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.animation:animation-core-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/4d79f2ee49edb9dd68c5152ddfd132b8/transformed/animation-core-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.animation:animation-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/a214d8aaffc784447ba3f99a0ab79e93/transformed/animation-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-tooling-data-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/35ac94e9a63d116b83b3c429b64fad47/transformed/ui-tooling-data-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-unit-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/aa6a3632e131e0ed32ebeb723ecf8ab8/transformed/ui-unit-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-text-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/952ba828b75d9cc6d94db7f51eb47960/transformed/ui-text-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-util-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/344d77ad6d2ac86074aaf9aff8982572/transformed/ui-util-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-geometry-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/98159303db86c4cccc2b57aab2099d3b/transformed/ui-geometry-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-tooling-preview-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/4277ad70e27eb3859ba4f99428e9d58f/transformed/ui-tooling-preview-release/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.compose.ui:ui-graphics-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/0faeb0ec61ce571b865cdcd2e0e1fbce/transformed/ui-graphics-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-tooling-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/972c51465fb22318e97b600e5ff647d1/transformed/ui-tooling-release/AndroidManifest.xml:17:1-28:12
+MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] /home/kamel/.gradle/caches/8.11.1/transforms/e938efc396eced41efa11aabecb94dd7/transformed/savedstate-ktx-1.2.1/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.savedstate:savedstate:1.2.1] /home/kamel/.gradle/caches/8.11.1/transforms/06705b4fd5f18fdf788a1a43ec6ff21c/transformed/savedstate-1.2.1/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.emoji2:emoji2:1.3.0] /home/kamel/.gradle/caches/8.11.1/transforms/c5da4135b6289657ec4426ee046f0279/transformed/emoji2-1.3.0/AndroidManifest.xml:17:1-35:12
+MERGED from [androidx.autofill:autofill:1.0.0] /home/kamel/.gradle/caches/8.11.1/transforms/53df00ad38b05481c18c6682c21fa340/transformed/autofill-1.0.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.graphics:graphics-path:1.0.1] /home/kamel/.gradle/caches/8.11.1/transforms/9152445a0d373b235ba732c865e6cf89/transformed/graphics-path-1.0.1/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.core:core:1.15.0] /home/kamel/.gradle/caches/8.11.1/transforms/0a00aa110824608cf2a936bf92ccda4d/transformed/core-1.15.0/AndroidManifest.xml:17:1-30:12
+MERGED from [androidx.lifecycle:lifecycle-runtime-compose-android:2.8.7] /home/kamel/.gradle/caches/8.11.1/transforms/d54a462c598ca1a2c7d1a7ebf802661d/transformed/lifecycle-runtime-compose-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-process:2.8.7] /home/kamel/.gradle/caches/8.11.1/transforms/eca63474fc29fc5d37c426edb588accb/transformed/lifecycle-process-2.8.7/AndroidManifest.xml:17:1-35:12
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.8.7] /home/kamel/.gradle/caches/8.11.1/transforms/a0b4e54384b748f12311a098b5d413bc/transformed/lifecycle-livedata-core-2.8.7/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-runtime-android:2.8.7] /home/kamel/.gradle/caches/8.11.1/transforms/17ded0d535e874767843cfd8dfcfc4fc/transformed/lifecycle-runtime-release/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.7] /home/kamel/.gradle/caches/8.11.1/transforms/13ff24b2f0759e1219c84fe46e7cc8df/transformed/lifecycle-viewmodel-savedstate-2.8.7/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-android:2.8.7] /home/kamel/.gradle/caches/8.11.1/transforms/0f5cb6eeeb409cb64ac0b4c815d9d06e/transformed/lifecycle-viewmodel-release/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-runtime-ktx-android:2.8.7] /home/kamel/.gradle/caches/8.11.1/transforms/aebbeb8dc51a537f76de3ff022213a38/transformed/lifecycle-runtime-ktx-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7] /home/kamel/.gradle/caches/8.11.1/transforms/a056699da07242e35308d12243428484/transformed/lifecycle-viewmodel-ktx-2.8.7/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-compose-android:2.8.7] /home/kamel/.gradle/caches/8.11.1/transforms/0ff380b0a2125f3a0c517f2bb13976ab/transformed/lifecycle-viewmodel-compose-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.material:material-icons-extended-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/f4f9bd983a64e427ee9ae630bf40a773/transformed/material-icons-extended-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.material:material-icons-core-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/6682e7b01019c4a84b6f0f32df2bd9df/transformed/material-icons-core-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/12ebefb9e150af1c4ae97ab16fc66bd2/transformed/ui-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-test-manifest:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/90fbeb8a86e27a38ae88837708fe3978/transformed/ui-test-manifest-1.7.7/AndroidManifest.xml:17:1-28:12
+MERGED from [androidx.activity:activity:1.10.0] /home/kamel/.gradle/caches/8.11.1/transforms/92e77fdaa44d7677c62591f02b027f10/transformed/activity-1.10.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.activity:activity-ktx:1.10.0] /home/kamel/.gradle/caches/8.11.1/transforms/60b0fd18470cc30e691c1b7fd96cbc7d/transformed/activity-ktx-1.10.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.activity:activity-compose:1.10.0] /home/kamel/.gradle/caches/8.11.1/transforms/e0235798cb5856f341f3336c71c424e7/transformed/activity-compose-1.10.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] /home/kamel/.gradle/caches/8.11.1/transforms/71cec82eb5753ea8310712b868bdd78e/transformed/customview-poolingcontainer-1.0.0/AndroidManifest.xml:17:1-23:12
+MERGED from [androidx.core:core-ktx:1.15.0] /home/kamel/.gradle/caches/8.11.1/transforms/8f268cbe576e229f89d06659fb17dd4c/transformed/core-ktx-1.15.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.room:room-runtime:2.6.1] /home/kamel/.gradle/caches/8.11.1/transforms/58da6206b1d526068a756affdfb52658/transformed/room-runtime-2.6.1/AndroidManifest.xml:17:1-31:12
+MERGED from [androidx.room:room-ktx:2.6.1] /home/kamel/.gradle/caches/8.11.1/transforms/833443cde9f36ee8ec2974c3c504659e/transformed/room-ktx-2.6.1/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.compose.runtime:runtime-saveable-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/070679f4e6fa569f9d16f5ce530f8cb3/transformed/runtime-saveable-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.runtime:runtime-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/78fd1229e24a1a7ac08ff9eb2c700629/transformed/runtime-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.sqlite:sqlite-framework:2.4.0] /home/kamel/.gradle/caches/8.11.1/transforms/89eb999c514dd2f74087af80ea28c463/transformed/sqlite-framework-2.4.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.sqlite:sqlite:2.4.0] /home/kamel/.gradle/caches/8.11.1/transforms/e790d0249580ce02bf28ee6197b2c7eb/transformed/sqlite-2.4.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.arch.core:core-runtime:2.2.0] /home/kamel/.gradle/caches/8.11.1/transforms/94e3ebc663d3a05c7e35d30ce7420355/transformed/core-runtime-2.2.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.interpolator:interpolator:1.0.0] /home/kamel/.gradle/caches/8.11.1/transforms/06bf041aa82818b047a72ff79795812b/transformed/interpolator-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kamel/.gradle/caches/8.11.1/transforms/cd0f54ca7e2f5c082d3cac448edab4e8/transformed/profileinstaller-1.4.0/AndroidManifest.xml:17:1-55:12
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/kamel/.gradle/caches/8.11.1/transforms/de5123ebad3262b6ae5605e497776b98/transformed/startup-runtime-1.1.1/AndroidManifest.xml:17:1-33:12
+MERGED from [androidx.tracing:tracing:1.2.0] /home/kamel/.gradle/caches/8.11.1/transforms/ce0522d8e9aeb6bf824175355d3ec947/transformed/tracing-1.2.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/kamel/.gradle/caches/8.11.1/transforms/5671171e87b5c9028dd94cc278a24ebc/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:17:1-27:12
+MERGED from [androidx.annotation:annotation-experimental:1.4.1] /home/kamel/.gradle/caches/8.11.1/transforms/87613f8781be9e24980ff0e34de387ce/transformed/annotation-experimental-1.4.1/AndroidManifest.xml:2:1-7:12
+	package
+		INJECTED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml
+	android:versionName
+		INJECTED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml
+	android:versionCode
+		INJECTED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml
+	xmlns:android
+		ADDED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml:2:11-69
+uses-permission#android.permission.SCHEDULE_EXACT_ALARM
+ADDED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml:4:5-79
+	android:name
+		ADDED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml:4:22-76
+uses-permission#android.permission.POST_NOTIFICATIONS
+ADDED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml:5:5-77
+	android:name
+		ADDED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml:5:22-74
+uses-permission#android.permission.RECEIVE_BOOT_COMPLETED
+ADDED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml:6:5-81
+	android:name
+		ADDED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml:6:22-78
+uses-permission#android.permission.WAKE_LOCK
+ADDED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml:7:5-68
+	android:name
+		ADDED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml:7:22-65
+uses-permission#android.permission.READ_EXTERNAL_STORAGE
+ADDED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml:8:5-107
+	android:maxSdkVersion
+		ADDED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml:8:78-104
+	android:name
+		ADDED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml:8:22-77
+uses-permission#android.permission.WRITE_EXTERNAL_STORAGE
+ADDED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml:9:5-108
+	android:maxSdkVersion
+		ADDED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml:9:79-105
+	android:name
+		ADDED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml:9:22-78
+application
+ADDED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml:11:5-30:19
+INJECTED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml:11:5-30:19
+MERGED from [androidx.compose.ui:ui-tooling-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/972c51465fb22318e97b600e5ff647d1/transformed/ui-tooling-release/AndroidManifest.xml:22:5-26:19
+MERGED from [androidx.compose.ui:ui-tooling-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/972c51465fb22318e97b600e5ff647d1/transformed/ui-tooling-release/AndroidManifest.xml:22:5-26:19
+MERGED from [androidx.emoji2:emoji2:1.3.0] /home/kamel/.gradle/caches/8.11.1/transforms/c5da4135b6289657ec4426ee046f0279/transformed/emoji2-1.3.0/AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.emoji2:emoji2:1.3.0] /home/kamel/.gradle/caches/8.11.1/transforms/c5da4135b6289657ec4426ee046f0279/transformed/emoji2-1.3.0/AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.core:core:1.15.0] /home/kamel/.gradle/caches/8.11.1/transforms/0a00aa110824608cf2a936bf92ccda4d/transformed/core-1.15.0/AndroidManifest.xml:28:5-89
+MERGED from [androidx.core:core:1.15.0] /home/kamel/.gradle/caches/8.11.1/transforms/0a00aa110824608cf2a936bf92ccda4d/transformed/core-1.15.0/AndroidManifest.xml:28:5-89
+MERGED from [androidx.lifecycle:lifecycle-process:2.8.7] /home/kamel/.gradle/caches/8.11.1/transforms/eca63474fc29fc5d37c426edb588accb/transformed/lifecycle-process-2.8.7/AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.lifecycle:lifecycle-process:2.8.7] /home/kamel/.gradle/caches/8.11.1/transforms/eca63474fc29fc5d37c426edb588accb/transformed/lifecycle-process-2.8.7/AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.compose.ui:ui-test-manifest:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/90fbeb8a86e27a38ae88837708fe3978/transformed/ui-test-manifest-1.7.7/AndroidManifest.xml:22:5-26:19
+MERGED from [androidx.compose.ui:ui-test-manifest:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/90fbeb8a86e27a38ae88837708fe3978/transformed/ui-test-manifest-1.7.7/AndroidManifest.xml:22:5-26:19
+MERGED from [androidx.room:room-runtime:2.6.1] /home/kamel/.gradle/caches/8.11.1/transforms/58da6206b1d526068a756affdfb52658/transformed/room-runtime-2.6.1/AndroidManifest.xml:23:5-29:19
+MERGED from [androidx.room:room-runtime:2.6.1] /home/kamel/.gradle/caches/8.11.1/transforms/58da6206b1d526068a756affdfb52658/transformed/room-runtime-2.6.1/AndroidManifest.xml:23:5-29:19
+MERGED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kamel/.gradle/caches/8.11.1/transforms/cd0f54ca7e2f5c082d3cac448edab4e8/transformed/profileinstaller-1.4.0/AndroidManifest.xml:23:5-53:19
+MERGED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kamel/.gradle/caches/8.11.1/transforms/cd0f54ca7e2f5c082d3cac448edab4e8/transformed/profileinstaller-1.4.0/AndroidManifest.xml:23:5-53:19
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/kamel/.gradle/caches/8.11.1/transforms/de5123ebad3262b6ae5605e497776b98/transformed/startup-runtime-1.1.1/AndroidManifest.xml:25:5-31:19
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/kamel/.gradle/caches/8.11.1/transforms/de5123ebad3262b6ae5605e497776b98/transformed/startup-runtime-1.1.1/AndroidManifest.xml:25:5-31:19
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/kamel/.gradle/caches/8.11.1/transforms/5671171e87b5c9028dd94cc278a24ebc/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:24:5-25:19
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/kamel/.gradle/caches/8.11.1/transforms/5671171e87b5c9028dd94cc278a24ebc/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:24:5-25:19
+	android:extractNativeLibs
+		INJECTED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml
+	android:appComponentFactory
+		ADDED from [androidx.core:core:1.15.0] /home/kamel/.gradle/caches/8.11.1/transforms/0a00aa110824608cf2a936bf92ccda4d/transformed/core-1.15.0/AndroidManifest.xml:28:18-86
+	android:supportsRtl
+		ADDED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml:16:9-35
+	android:label
+		ADDED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml:14:9-41
+	android:roundIcon
+		ADDED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml:15:9-54
+	android:icon
+		ADDED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml:13:9-43
+	android:allowBackup
+		ADDED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml:12:9-35
+	android:theme
+		ADDED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml:17:9-49
+receiver#com.kmz.taskmanager.util.TaskReminderReceiver
+ADDED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml:19:9-88
+	android:exported
+		ADDED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml:19:61-85
+	android:name
+		ADDED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml:19:19-60
+activity#com.kmz.taskmanager.MainActivity
+ADDED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml:21:9-29:20
+	android:exported
+		ADDED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml:23:13-36
+	android:theme
+		ADDED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml:24:13-53
+	android:name
+		ADDED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml:22:13-41
+intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
+ADDED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml:25:13-28:29
+action#android.intent.action.MAIN
+ADDED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml:26:17-69
+	android:name
+		ADDED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml:26:25-66
+category#android.intent.category.LAUNCHER
+ADDED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml:27:17-77
+	android:name
+		ADDED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml:27:27-74
+uses-sdk
+INJECTED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml
+INJECTED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml
+MERGED from [androidx.compose.material3:material3-android:1.3.1] /home/kamel/.gradle/caches/8.11.1/transforms/9bced260c861c69e4dbec456f57bd29d/transformed/material3-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.material3:material3-android:1.3.1] /home/kamel/.gradle/caches/8.11.1/transforms/9bced260c861c69e4dbec456f57bd29d/transformed/material3-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.material:material-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/249e3caf9c3fb0dfe4629795906190e0/transformed/material-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/249e3caf9c3fb0dfe4629795906190e0/transformed/material-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.foundation:foundation-layout-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/82cc29cb4836bdb250177af69a807c3b/transformed/foundation-layout-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.foundation:foundation-layout-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/82cc29cb4836bdb250177af69a807c3b/transformed/foundation-layout-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-ripple-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/66de10034b6d19591bd6b3eed2c6c145/transformed/material-ripple-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-ripple-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/66de10034b6d19591bd6b3eed2c6c145/transformed/material-ripple-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.foundation:foundation-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/f3f2b2206caca3842393858ec2886be7/transformed/foundation-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.foundation:foundation-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/f3f2b2206caca3842393858ec2886be7/transformed/foundation-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.animation:animation-core-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/4d79f2ee49edb9dd68c5152ddfd132b8/transformed/animation-core-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.animation:animation-core-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/4d79f2ee49edb9dd68c5152ddfd132b8/transformed/animation-core-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.animation:animation-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/a214d8aaffc784447ba3f99a0ab79e93/transformed/animation-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.animation:animation-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/a214d8aaffc784447ba3f99a0ab79e93/transformed/animation-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-tooling-data-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/35ac94e9a63d116b83b3c429b64fad47/transformed/ui-tooling-data-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-tooling-data-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/35ac94e9a63d116b83b3c429b64fad47/transformed/ui-tooling-data-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-unit-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/aa6a3632e131e0ed32ebeb723ecf8ab8/transformed/ui-unit-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-unit-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/aa6a3632e131e0ed32ebeb723ecf8ab8/transformed/ui-unit-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-text-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/952ba828b75d9cc6d94db7f51eb47960/transformed/ui-text-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-text-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/952ba828b75d9cc6d94db7f51eb47960/transformed/ui-text-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-util-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/344d77ad6d2ac86074aaf9aff8982572/transformed/ui-util-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-util-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/344d77ad6d2ac86074aaf9aff8982572/transformed/ui-util-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-geometry-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/98159303db86c4cccc2b57aab2099d3b/transformed/ui-geometry-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-geometry-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/98159303db86c4cccc2b57aab2099d3b/transformed/ui-geometry-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-tooling-preview-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/4277ad70e27eb3859ba4f99428e9d58f/transformed/ui-tooling-preview-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.ui:ui-tooling-preview-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/4277ad70e27eb3859ba4f99428e9d58f/transformed/ui-tooling-preview-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.ui:ui-graphics-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/0faeb0ec61ce571b865cdcd2e0e1fbce/transformed/ui-graphics-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-graphics-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/0faeb0ec61ce571b865cdcd2e0e1fbce/transformed/ui-graphics-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-tooling-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/972c51465fb22318e97b600e5ff647d1/transformed/ui-tooling-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.ui:ui-tooling-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/972c51465fb22318e97b600e5ff647d1/transformed/ui-tooling-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] /home/kamel/.gradle/caches/8.11.1/transforms/e938efc396eced41efa11aabecb94dd7/transformed/savedstate-ktx-1.2.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] /home/kamel/.gradle/caches/8.11.1/transforms/e938efc396eced41efa11aabecb94dd7/transformed/savedstate-ktx-1.2.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate:1.2.1] /home/kamel/.gradle/caches/8.11.1/transforms/06705b4fd5f18fdf788a1a43ec6ff21c/transformed/savedstate-1.2.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate:1.2.1] /home/kamel/.gradle/caches/8.11.1/transforms/06705b4fd5f18fdf788a1a43ec6ff21c/transformed/savedstate-1.2.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.emoji2:emoji2:1.3.0] /home/kamel/.gradle/caches/8.11.1/transforms/c5da4135b6289657ec4426ee046f0279/transformed/emoji2-1.3.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.emoji2:emoji2:1.3.0] /home/kamel/.gradle/caches/8.11.1/transforms/c5da4135b6289657ec4426ee046f0279/transformed/emoji2-1.3.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.autofill:autofill:1.0.0] /home/kamel/.gradle/caches/8.11.1/transforms/53df00ad38b05481c18c6682c21fa340/transformed/autofill-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.autofill:autofill:1.0.0] /home/kamel/.gradle/caches/8.11.1/transforms/53df00ad38b05481c18c6682c21fa340/transformed/autofill-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.graphics:graphics-path:1.0.1] /home/kamel/.gradle/caches/8.11.1/transforms/9152445a0d373b235ba732c865e6cf89/transformed/graphics-path-1.0.1/AndroidManifest.xml:5:5-44
+MERGED from [androidx.graphics:graphics-path:1.0.1] /home/kamel/.gradle/caches/8.11.1/transforms/9152445a0d373b235ba732c865e6cf89/transformed/graphics-path-1.0.1/AndroidManifest.xml:5:5-44
+MERGED from [androidx.core:core:1.15.0] /home/kamel/.gradle/caches/8.11.1/transforms/0a00aa110824608cf2a936bf92ccda4d/transformed/core-1.15.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.core:core:1.15.0] /home/kamel/.gradle/caches/8.11.1/transforms/0a00aa110824608cf2a936bf92ccda4d/transformed/core-1.15.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-compose-android:2.8.7] /home/kamel/.gradle/caches/8.11.1/transforms/d54a462c598ca1a2c7d1a7ebf802661d/transformed/lifecycle-runtime-compose-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-compose-android:2.8.7] /home/kamel/.gradle/caches/8.11.1/transforms/d54a462c598ca1a2c7d1a7ebf802661d/transformed/lifecycle-runtime-compose-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-process:2.8.7] /home/kamel/.gradle/caches/8.11.1/transforms/eca63474fc29fc5d37c426edb588accb/transformed/lifecycle-process-2.8.7/AndroidManifest.xml:21:5-44
+MERGED from [androidx.lifecycle:lifecycle-process:2.8.7] /home/kamel/.gradle/caches/8.11.1/transforms/eca63474fc29fc5d37c426edb588accb/transformed/lifecycle-process-2.8.7/AndroidManifest.xml:21:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.8.7] /home/kamel/.gradle/caches/8.11.1/transforms/a0b4e54384b748f12311a098b5d413bc/transformed/lifecycle-livedata-core-2.8.7/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.8.7] /home/kamel/.gradle/caches/8.11.1/transforms/a0b4e54384b748f12311a098b5d413bc/transformed/lifecycle-livedata-core-2.8.7/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-android:2.8.7] /home/kamel/.gradle/caches/8.11.1/transforms/17ded0d535e874767843cfd8dfcfc4fc/transformed/lifecycle-runtime-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-android:2.8.7] /home/kamel/.gradle/caches/8.11.1/transforms/17ded0d535e874767843cfd8dfcfc4fc/transformed/lifecycle-runtime-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.7] /home/kamel/.gradle/caches/8.11.1/transforms/13ff24b2f0759e1219c84fe46e7cc8df/transformed/lifecycle-viewmodel-savedstate-2.8.7/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.7] /home/kamel/.gradle/caches/8.11.1/transforms/13ff24b2f0759e1219c84fe46e7cc8df/transformed/lifecycle-viewmodel-savedstate-2.8.7/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-android:2.8.7] /home/kamel/.gradle/caches/8.11.1/transforms/0f5cb6eeeb409cb64ac0b4c815d9d06e/transformed/lifecycle-viewmodel-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-android:2.8.7] /home/kamel/.gradle/caches/8.11.1/transforms/0f5cb6eeeb409cb64ac0b4c815d9d06e/transformed/lifecycle-viewmodel-release/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-ktx-android:2.8.7] /home/kamel/.gradle/caches/8.11.1/transforms/aebbeb8dc51a537f76de3ff022213a38/transformed/lifecycle-runtime-ktx-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-ktx-android:2.8.7] /home/kamel/.gradle/caches/8.11.1/transforms/aebbeb8dc51a537f76de3ff022213a38/transformed/lifecycle-runtime-ktx-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7] /home/kamel/.gradle/caches/8.11.1/transforms/a056699da07242e35308d12243428484/transformed/lifecycle-viewmodel-ktx-2.8.7/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7] /home/kamel/.gradle/caches/8.11.1/transforms/a056699da07242e35308d12243428484/transformed/lifecycle-viewmodel-ktx-2.8.7/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-compose-android:2.8.7] /home/kamel/.gradle/caches/8.11.1/transforms/0ff380b0a2125f3a0c517f2bb13976ab/transformed/lifecycle-viewmodel-compose-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-compose-android:2.8.7] /home/kamel/.gradle/caches/8.11.1/transforms/0ff380b0a2125f3a0c517f2bb13976ab/transformed/lifecycle-viewmodel-compose-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-icons-extended-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/f4f9bd983a64e427ee9ae630bf40a773/transformed/material-icons-extended-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-icons-extended-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/f4f9bd983a64e427ee9ae630bf40a773/transformed/material-icons-extended-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-icons-core-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/6682e7b01019c4a84b6f0f32df2bd9df/transformed/material-icons-core-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-icons-core-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/6682e7b01019c4a84b6f0f32df2bd9df/transformed/material-icons-core-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/12ebefb9e150af1c4ae97ab16fc66bd2/transformed/ui-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/12ebefb9e150af1c4ae97ab16fc66bd2/transformed/ui-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-test-manifest:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/90fbeb8a86e27a38ae88837708fe3978/transformed/ui-test-manifest-1.7.7/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.ui:ui-test-manifest:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/90fbeb8a86e27a38ae88837708fe3978/transformed/ui-test-manifest-1.7.7/AndroidManifest.xml:20:5-44
+MERGED from [androidx.activity:activity:1.10.0] /home/kamel/.gradle/caches/8.11.1/transforms/92e77fdaa44d7677c62591f02b027f10/transformed/activity-1.10.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.activity:activity:1.10.0] /home/kamel/.gradle/caches/8.11.1/transforms/92e77fdaa44d7677c62591f02b027f10/transformed/activity-1.10.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.activity:activity-ktx:1.10.0] /home/kamel/.gradle/caches/8.11.1/transforms/60b0fd18470cc30e691c1b7fd96cbc7d/transformed/activity-ktx-1.10.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.activity:activity-ktx:1.10.0] /home/kamel/.gradle/caches/8.11.1/transforms/60b0fd18470cc30e691c1b7fd96cbc7d/transformed/activity-ktx-1.10.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.activity:activity-compose:1.10.0] /home/kamel/.gradle/caches/8.11.1/transforms/e0235798cb5856f341f3336c71c424e7/transformed/activity-compose-1.10.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.activity:activity-compose:1.10.0] /home/kamel/.gradle/caches/8.11.1/transforms/e0235798cb5856f341f3336c71c424e7/transformed/activity-compose-1.10.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] /home/kamel/.gradle/caches/8.11.1/transforms/71cec82eb5753ea8310712b868bdd78e/transformed/customview-poolingcontainer-1.0.0/AndroidManifest.xml:20:5-21:38
+MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] /home/kamel/.gradle/caches/8.11.1/transforms/71cec82eb5753ea8310712b868bdd78e/transformed/customview-poolingcontainer-1.0.0/AndroidManifest.xml:20:5-21:38
+MERGED from [androidx.core:core-ktx:1.15.0] /home/kamel/.gradle/caches/8.11.1/transforms/8f268cbe576e229f89d06659fb17dd4c/transformed/core-ktx-1.15.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.core:core-ktx:1.15.0] /home/kamel/.gradle/caches/8.11.1/transforms/8f268cbe576e229f89d06659fb17dd4c/transformed/core-ktx-1.15.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.room:room-runtime:2.6.1] /home/kamel/.gradle/caches/8.11.1/transforms/58da6206b1d526068a756affdfb52658/transformed/room-runtime-2.6.1/AndroidManifest.xml:21:5-44
+MERGED from [androidx.room:room-runtime:2.6.1] /home/kamel/.gradle/caches/8.11.1/transforms/58da6206b1d526068a756affdfb52658/transformed/room-runtime-2.6.1/AndroidManifest.xml:21:5-44
+MERGED from [androidx.room:room-ktx:2.6.1] /home/kamel/.gradle/caches/8.11.1/transforms/833443cde9f36ee8ec2974c3c504659e/transformed/room-ktx-2.6.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.room:room-ktx:2.6.1] /home/kamel/.gradle/caches/8.11.1/transforms/833443cde9f36ee8ec2974c3c504659e/transformed/room-ktx-2.6.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.runtime:runtime-saveable-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/070679f4e6fa569f9d16f5ce530f8cb3/transformed/runtime-saveable-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-saveable-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/070679f4e6fa569f9d16f5ce530f8cb3/transformed/runtime-saveable-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/78fd1229e24a1a7ac08ff9eb2c700629/transformed/runtime-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/78fd1229e24a1a7ac08ff9eb2c700629/transformed/runtime-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.sqlite:sqlite-framework:2.4.0] /home/kamel/.gradle/caches/8.11.1/transforms/89eb999c514dd2f74087af80ea28c463/transformed/sqlite-framework-2.4.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.sqlite:sqlite-framework:2.4.0] /home/kamel/.gradle/caches/8.11.1/transforms/89eb999c514dd2f74087af80ea28c463/transformed/sqlite-framework-2.4.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.sqlite:sqlite:2.4.0] /home/kamel/.gradle/caches/8.11.1/transforms/e790d0249580ce02bf28ee6197b2c7eb/transformed/sqlite-2.4.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.sqlite:sqlite:2.4.0] /home/kamel/.gradle/caches/8.11.1/transforms/e790d0249580ce02bf28ee6197b2c7eb/transformed/sqlite-2.4.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.arch.core:core-runtime:2.2.0] /home/kamel/.gradle/caches/8.11.1/transforms/94e3ebc663d3a05c7e35d30ce7420355/transformed/core-runtime-2.2.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.arch.core:core-runtime:2.2.0] /home/kamel/.gradle/caches/8.11.1/transforms/94e3ebc663d3a05c7e35d30ce7420355/transformed/core-runtime-2.2.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.interpolator:interpolator:1.0.0] /home/kamel/.gradle/caches/8.11.1/transforms/06bf041aa82818b047a72ff79795812b/transformed/interpolator-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.interpolator:interpolator:1.0.0] /home/kamel/.gradle/caches/8.11.1/transforms/06bf041aa82818b047a72ff79795812b/transformed/interpolator-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kamel/.gradle/caches/8.11.1/transforms/cd0f54ca7e2f5c082d3cac448edab4e8/transformed/profileinstaller-1.4.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kamel/.gradle/caches/8.11.1/transforms/cd0f54ca7e2f5c082d3cac448edab4e8/transformed/profileinstaller-1.4.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/kamel/.gradle/caches/8.11.1/transforms/de5123ebad3262b6ae5605e497776b98/transformed/startup-runtime-1.1.1/AndroidManifest.xml:21:5-23:41
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/kamel/.gradle/caches/8.11.1/transforms/de5123ebad3262b6ae5605e497776b98/transformed/startup-runtime-1.1.1/AndroidManifest.xml:21:5-23:41
+MERGED from [androidx.tracing:tracing:1.2.0] /home/kamel/.gradle/caches/8.11.1/transforms/ce0522d8e9aeb6bf824175355d3ec947/transformed/tracing-1.2.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.tracing:tracing:1.2.0] /home/kamel/.gradle/caches/8.11.1/transforms/ce0522d8e9aeb6bf824175355d3ec947/transformed/tracing-1.2.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/kamel/.gradle/caches/8.11.1/transforms/5671171e87b5c9028dd94cc278a24ebc/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/kamel/.gradle/caches/8.11.1/transforms/5671171e87b5c9028dd94cc278a24ebc/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.annotation:annotation-experimental:1.4.1] /home/kamel/.gradle/caches/8.11.1/transforms/87613f8781be9e24980ff0e34de387ce/transformed/annotation-experimental-1.4.1/AndroidManifest.xml:5:5-44
+MERGED from [androidx.annotation:annotation-experimental:1.4.1] /home/kamel/.gradle/caches/8.11.1/transforms/87613f8781be9e24980ff0e34de387ce/transformed/annotation-experimental-1.4.1/AndroidManifest.xml:5:5-44
+	android:targetSdkVersion
+		INJECTED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from /media/kamel/DATA/KmzAPK/TaskManager/app/src/main/AndroidManifest.xml
+activity#androidx.compose.ui.tooling.PreviewActivity
+ADDED from [androidx.compose.ui:ui-tooling-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/972c51465fb22318e97b600e5ff647d1/transformed/ui-tooling-release/AndroidManifest.xml:23:9-25:39
+	android:exported
+		ADDED from [androidx.compose.ui:ui-tooling-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/972c51465fb22318e97b600e5ff647d1/transformed/ui-tooling-release/AndroidManifest.xml:25:13-36
+	android:name
+		ADDED from [androidx.compose.ui:ui-tooling-android:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/972c51465fb22318e97b600e5ff647d1/transformed/ui-tooling-release/AndroidManifest.xml:24:13-71
+provider#androidx.startup.InitializationProvider
+ADDED from [androidx.emoji2:emoji2:1.3.0] /home/kamel/.gradle/caches/8.11.1/transforms/c5da4135b6289657ec4426ee046f0279/transformed/emoji2-1.3.0/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.lifecycle:lifecycle-process:2.8.7] /home/kamel/.gradle/caches/8.11.1/transforms/eca63474fc29fc5d37c426edb588accb/transformed/lifecycle-process-2.8.7/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.lifecycle:lifecycle-process:2.8.7] /home/kamel/.gradle/caches/8.11.1/transforms/eca63474fc29fc5d37c426edb588accb/transformed/lifecycle-process-2.8.7/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kamel/.gradle/caches/8.11.1/transforms/cd0f54ca7e2f5c082d3cac448edab4e8/transformed/profileinstaller-1.4.0/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kamel/.gradle/caches/8.11.1/transforms/cd0f54ca7e2f5c082d3cac448edab4e8/transformed/profileinstaller-1.4.0/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/kamel/.gradle/caches/8.11.1/transforms/de5123ebad3262b6ae5605e497776b98/transformed/startup-runtime-1.1.1/AndroidManifest.xml:26:9-30:34
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/kamel/.gradle/caches/8.11.1/transforms/de5123ebad3262b6ae5605e497776b98/transformed/startup-runtime-1.1.1/AndroidManifest.xml:26:9-30:34
+	tools:node
+		ADDED from [androidx.emoji2:emoji2:1.3.0] /home/kamel/.gradle/caches/8.11.1/transforms/c5da4135b6289657ec4426ee046f0279/transformed/emoji2-1.3.0/AndroidManifest.xml:28:13-31
+	android:authorities
+		ADDED from [androidx.emoji2:emoji2:1.3.0] /home/kamel/.gradle/caches/8.11.1/transforms/c5da4135b6289657ec4426ee046f0279/transformed/emoji2-1.3.0/AndroidManifest.xml:26:13-68
+	android:exported
+		ADDED from [androidx.emoji2:emoji2:1.3.0] /home/kamel/.gradle/caches/8.11.1/transforms/c5da4135b6289657ec4426ee046f0279/transformed/emoji2-1.3.0/AndroidManifest.xml:27:13-37
+	android:name
+		ADDED from [androidx.emoji2:emoji2:1.3.0] /home/kamel/.gradle/caches/8.11.1/transforms/c5da4135b6289657ec4426ee046f0279/transformed/emoji2-1.3.0/AndroidManifest.xml:25:13-67
+meta-data#androidx.emoji2.text.EmojiCompatInitializer
+ADDED from [androidx.emoji2:emoji2:1.3.0] /home/kamel/.gradle/caches/8.11.1/transforms/c5da4135b6289657ec4426ee046f0279/transformed/emoji2-1.3.0/AndroidManifest.xml:29:13-31:52
+	android:value
+		ADDED from [androidx.emoji2:emoji2:1.3.0] /home/kamel/.gradle/caches/8.11.1/transforms/c5da4135b6289657ec4426ee046f0279/transformed/emoji2-1.3.0/AndroidManifest.xml:31:17-49
+	android:name
+		ADDED from [androidx.emoji2:emoji2:1.3.0] /home/kamel/.gradle/caches/8.11.1/transforms/c5da4135b6289657ec4426ee046f0279/transformed/emoji2-1.3.0/AndroidManifest.xml:30:17-75
+permission#${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.15.0] /home/kamel/.gradle/caches/8.11.1/transforms/0a00aa110824608cf2a936bf92ccda4d/transformed/core-1.15.0/AndroidManifest.xml:22:5-24:47
+	android:protectionLevel
+		ADDED from [androidx.core:core:1.15.0] /home/kamel/.gradle/caches/8.11.1/transforms/0a00aa110824608cf2a936bf92ccda4d/transformed/core-1.15.0/AndroidManifest.xml:24:9-44
+	android:name
+		ADDED from [androidx.core:core:1.15.0] /home/kamel/.gradle/caches/8.11.1/transforms/0a00aa110824608cf2a936bf92ccda4d/transformed/core-1.15.0/AndroidManifest.xml:23:9-81
+permission#com.kmz.taskmanager.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.15.0] /home/kamel/.gradle/caches/8.11.1/transforms/0a00aa110824608cf2a936bf92ccda4d/transformed/core-1.15.0/AndroidManifest.xml:22:5-24:47
+	android:protectionLevel
+		ADDED from [androidx.core:core:1.15.0] /home/kamel/.gradle/caches/8.11.1/transforms/0a00aa110824608cf2a936bf92ccda4d/transformed/core-1.15.0/AndroidManifest.xml:24:9-44
+	android:name
+		ADDED from [androidx.core:core:1.15.0] /home/kamel/.gradle/caches/8.11.1/transforms/0a00aa110824608cf2a936bf92ccda4d/transformed/core-1.15.0/AndroidManifest.xml:23:9-81
+uses-permission#${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.15.0] /home/kamel/.gradle/caches/8.11.1/transforms/0a00aa110824608cf2a936bf92ccda4d/transformed/core-1.15.0/AndroidManifest.xml:26:5-97
+	android:name
+		ADDED from [androidx.core:core:1.15.0] /home/kamel/.gradle/caches/8.11.1/transforms/0a00aa110824608cf2a936bf92ccda4d/transformed/core-1.15.0/AndroidManifest.xml:26:22-94
+uses-permission#com.kmz.taskmanager.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.15.0] /home/kamel/.gradle/caches/8.11.1/transforms/0a00aa110824608cf2a936bf92ccda4d/transformed/core-1.15.0/AndroidManifest.xml:26:5-97
+	android:name
+		ADDED from [androidx.core:core:1.15.0] /home/kamel/.gradle/caches/8.11.1/transforms/0a00aa110824608cf2a936bf92ccda4d/transformed/core-1.15.0/AndroidManifest.xml:26:22-94
+meta-data#androidx.lifecycle.ProcessLifecycleInitializer
+ADDED from [androidx.lifecycle:lifecycle-process:2.8.7] /home/kamel/.gradle/caches/8.11.1/transforms/eca63474fc29fc5d37c426edb588accb/transformed/lifecycle-process-2.8.7/AndroidManifest.xml:29:13-31:52
+	android:value
+		ADDED from [androidx.lifecycle:lifecycle-process:2.8.7] /home/kamel/.gradle/caches/8.11.1/transforms/eca63474fc29fc5d37c426edb588accb/transformed/lifecycle-process-2.8.7/AndroidManifest.xml:31:17-49
+	android:name
+		ADDED from [androidx.lifecycle:lifecycle-process:2.8.7] /home/kamel/.gradle/caches/8.11.1/transforms/eca63474fc29fc5d37c426edb588accb/transformed/lifecycle-process-2.8.7/AndroidManifest.xml:30:17-78
+activity#androidx.activity.ComponentActivity
+ADDED from [androidx.compose.ui:ui-test-manifest:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/90fbeb8a86e27a38ae88837708fe3978/transformed/ui-test-manifest-1.7.7/AndroidManifest.xml:23:9-25:39
+	android:exported
+		ADDED from [androidx.compose.ui:ui-test-manifest:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/90fbeb8a86e27a38ae88837708fe3978/transformed/ui-test-manifest-1.7.7/AndroidManifest.xml:25:13-36
+	android:name
+		ADDED from [androidx.compose.ui:ui-test-manifest:1.7.7] /home/kamel/.gradle/caches/8.11.1/transforms/90fbeb8a86e27a38ae88837708fe3978/transformed/ui-test-manifest-1.7.7/AndroidManifest.xml:24:13-63
+service#androidx.room.MultiInstanceInvalidationService
+ADDED from [androidx.room:room-runtime:2.6.1] /home/kamel/.gradle/caches/8.11.1/transforms/58da6206b1d526068a756affdfb52658/transformed/room-runtime-2.6.1/AndroidManifest.xml:24:9-28:63
+	android:exported
+		ADDED from [androidx.room:room-runtime:2.6.1] /home/kamel/.gradle/caches/8.11.1/transforms/58da6206b1d526068a756affdfb52658/transformed/room-runtime-2.6.1/AndroidManifest.xml:27:13-37
+	tools:ignore
+		ADDED from [androidx.room:room-runtime:2.6.1] /home/kamel/.gradle/caches/8.11.1/transforms/58da6206b1d526068a756affdfb52658/transformed/room-runtime-2.6.1/AndroidManifest.xml:28:13-60
+	android:directBootAware
+		ADDED from [androidx.room:room-runtime:2.6.1] /home/kamel/.gradle/caches/8.11.1/transforms/58da6206b1d526068a756affdfb52658/transformed/room-runtime-2.6.1/AndroidManifest.xml:26:13-43
+	android:name
+		ADDED from [androidx.room:room-runtime:2.6.1] /home/kamel/.gradle/caches/8.11.1/transforms/58da6206b1d526068a756affdfb52658/transformed/room-runtime-2.6.1/AndroidManifest.xml:25:13-74
+meta-data#androidx.profileinstaller.ProfileInstallerInitializer
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kamel/.gradle/caches/8.11.1/transforms/cd0f54ca7e2f5c082d3cac448edab4e8/transformed/profileinstaller-1.4.0/AndroidManifest.xml:29:13-31:52
+	android:value
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kamel/.gradle/caches/8.11.1/transforms/cd0f54ca7e2f5c082d3cac448edab4e8/transformed/profileinstaller-1.4.0/AndroidManifest.xml:31:17-49
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kamel/.gradle/caches/8.11.1/transforms/cd0f54ca7e2f5c082d3cac448edab4e8/transformed/profileinstaller-1.4.0/AndroidManifest.xml:30:17-85
+receiver#androidx.profileinstaller.ProfileInstallReceiver
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kamel/.gradle/caches/8.11.1/transforms/cd0f54ca7e2f5c082d3cac448edab4e8/transformed/profileinstaller-1.4.0/AndroidManifest.xml:34:9-52:20
+	android:enabled
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kamel/.gradle/caches/8.11.1/transforms/cd0f54ca7e2f5c082d3cac448edab4e8/transformed/profileinstaller-1.4.0/AndroidManifest.xml:37:13-35
+	android:exported
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kamel/.gradle/caches/8.11.1/transforms/cd0f54ca7e2f5c082d3cac448edab4e8/transformed/profileinstaller-1.4.0/AndroidManifest.xml:38:13-36
+	android:permission
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kamel/.gradle/caches/8.11.1/transforms/cd0f54ca7e2f5c082d3cac448edab4e8/transformed/profileinstaller-1.4.0/AndroidManifest.xml:39:13-57
+	android:directBootAware
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kamel/.gradle/caches/8.11.1/transforms/cd0f54ca7e2f5c082d3cac448edab4e8/transformed/profileinstaller-1.4.0/AndroidManifest.xml:36:13-44
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kamel/.gradle/caches/8.11.1/transforms/cd0f54ca7e2f5c082d3cac448edab4e8/transformed/profileinstaller-1.4.0/AndroidManifest.xml:35:13-76
+intent-filter#action:name:androidx.profileinstaller.action.INSTALL_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kamel/.gradle/caches/8.11.1/transforms/cd0f54ca7e2f5c082d3cac448edab4e8/transformed/profileinstaller-1.4.0/AndroidManifest.xml:40:13-42:29
+action#androidx.profileinstaller.action.INSTALL_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kamel/.gradle/caches/8.11.1/transforms/cd0f54ca7e2f5c082d3cac448edab4e8/transformed/profileinstaller-1.4.0/AndroidManifest.xml:41:17-91
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kamel/.gradle/caches/8.11.1/transforms/cd0f54ca7e2f5c082d3cac448edab4e8/transformed/profileinstaller-1.4.0/AndroidManifest.xml:41:25-88
+intent-filter#action:name:androidx.profileinstaller.action.SKIP_FILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kamel/.gradle/caches/8.11.1/transforms/cd0f54ca7e2f5c082d3cac448edab4e8/transformed/profileinstaller-1.4.0/AndroidManifest.xml:43:13-45:29
+action#androidx.profileinstaller.action.SKIP_FILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kamel/.gradle/caches/8.11.1/transforms/cd0f54ca7e2f5c082d3cac448edab4e8/transformed/profileinstaller-1.4.0/AndroidManifest.xml:44:17-85
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kamel/.gradle/caches/8.11.1/transforms/cd0f54ca7e2f5c082d3cac448edab4e8/transformed/profileinstaller-1.4.0/AndroidManifest.xml:44:25-82
+intent-filter#action:name:androidx.profileinstaller.action.SAVE_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kamel/.gradle/caches/8.11.1/transforms/cd0f54ca7e2f5c082d3cac448edab4e8/transformed/profileinstaller-1.4.0/AndroidManifest.xml:46:13-48:29
+action#androidx.profileinstaller.action.SAVE_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kamel/.gradle/caches/8.11.1/transforms/cd0f54ca7e2f5c082d3cac448edab4e8/transformed/profileinstaller-1.4.0/AndroidManifest.xml:47:17-88
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kamel/.gradle/caches/8.11.1/transforms/cd0f54ca7e2f5c082d3cac448edab4e8/transformed/profileinstaller-1.4.0/AndroidManifest.xml:47:25-85
+intent-filter#action:name:androidx.profileinstaller.action.BENCHMARK_OPERATION
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kamel/.gradle/caches/8.11.1/transforms/cd0f54ca7e2f5c082d3cac448edab4e8/transformed/profileinstaller-1.4.0/AndroidManifest.xml:49:13-51:29
+action#androidx.profileinstaller.action.BENCHMARK_OPERATION
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kamel/.gradle/caches/8.11.1/transforms/cd0f54ca7e2f5c082d3cac448edab4e8/transformed/profileinstaller-1.4.0/AndroidManifest.xml:50:17-95
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kamel/.gradle/caches/8.11.1/transforms/cd0f54ca7e2f5c082d3cac448edab4e8/transformed/profileinstaller-1.4.0/AndroidManifest.xml:50:25-92

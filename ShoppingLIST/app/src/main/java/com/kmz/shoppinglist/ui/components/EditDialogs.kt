@@ -1,18 +1,14 @@
 package com.kmz.shoppinglist.ui.components
 
-import android.content.ClipboardManager
-import android.content.Context
-import android.content.Intent
+import android.content.*
 import android.net.Uri
 import android.widget.Toast
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.*
+import androidx.compose.foundation.shape.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -20,6 +16,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.*
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -40,7 +38,7 @@ fun EditArticleDialog(
         currentCategoryId: Long,
         onSave: (name: String, frenchName: String, iconId: String, categoryId: Long) -> Unit,
         onDelete: () -> Unit,
-        onCreateNew: () -> Unit,
+        onCreateNew: (categoryId: Long) -> Unit,
         onDismiss: () -> Unit
 ) {
         val context = LocalContext.current
@@ -55,13 +53,41 @@ fun EditArticleDialog(
         var showCategorySelector by remember { mutableStateOf(false) }
         var iconSearchResults by remember { mutableStateOf(iconProvider.getAllIcons().take(20)) }
 
+        val imagePickerLauncher =
+                rememberLauncherForActivityResult(
+                        contract = ActivityResultContracts.GetContent()
+                ) { uri: Uri? ->
+                        if (uri != null && frenchName.isNotBlank()) {
+                                val result = iconProvider.saveIconFromUri(uri, frenchName)
+                                if (result.first != null) {
+                                        iconId = result.first!!
+                                        val s = iconProvider.searchIcons(frenchName)
+                                        iconSearchResults =
+                                                listOf(iconId) + s.filter { it != iconId }
+                                        Toast.makeText(
+                                                        context,
+                                                        "✓ Icône importée !",
+                                                        Toast.LENGTH_SHORT
+                                                )
+                                                .show()
+                                } else {
+                                        Toast.makeText(
+                                                        context,
+                                                        "❌ ${result.second}",
+                                                        Toast.LENGTH_LONG
+                                                )
+                                                .show()
+                                }
+                        }
+                }
+
         // Trouver la catégorie sélectionnée
         val selectedCategory = categories.find { it.id == selectedCategoryId }
 
         Dialog(onDismissRequest = onDismiss) {
                 Card(
                         modifier = Modifier.fillMaxWidth().padding(8.dp),
-                        colors = CardDefaults.cardColors(containerColor = DarkGray),
+                        colors = CardDefaults.cardColors(containerColor = BlueNoir),
                         shape = RoundedCornerShape(20.dp)
                 ) {
                         Column(modifier = Modifier.padding(20.dp)) {
@@ -100,46 +126,8 @@ fun EditArticleDialog(
                                                 fontWeight = FontWeight.Bold
                                         )
 
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                                IconButton(
-                                                        onClick = {
-                                                                if (name.isNotBlank()) {
-                                                                        onSave(
-                                                                                name.trim(),
-                                                                                frenchName.trim(),
-                                                                                iconId,
-                                                                                selectedCategoryId
-                                                                        )
-                                                                }
-                                                        },
-                                                        enabled = name.isNotBlank(),
-                                                        modifier =
-                                                                Modifier.size(40.dp)
-                                                                        .clip(CircleShape)
-                                                                        .background(
-                                                                                if (name.isNotBlank()
-                                                                                )
-                                                                                        AccentGreen
-                                                                                else MediumGray
-                                                                        )
-                                                ) {
-                                                        Icon(
-                                                                Icons.Default.Save,
-                                                                null,
-                                                                tint = White,
-                                                                modifier = Modifier.size(24.dp)
-                                                        )
-                                                }
-
-                                                Spacer(modifier = Modifier.width(8.dp))
-
-                                                IconButton(onClick = onDismiss) {
-                                                        Icon(
-                                                                Icons.Default.Close,
-                                                                null,
-                                                                tint = TextGray
-                                                        )
-                                                }
+                                        IconButton(onClick = onDismiss) {
+                                                Icon(Icons.Default.Close, null, tint = TextGray)
                                         }
                                 }
 
@@ -166,264 +154,299 @@ fun EditArticleDialog(
 
                                 // Traduction française avec bouton globe pour recherche Google
                                 // Nom en français et buttons (Globe + Coller)
+                                // Nom en français
+                                OutlinedTextField(
+                                        value = frenchName,
+                                        onValueChange = {
+                                                if (it.length <= 40) {
+                                                        frenchName = it
+                                                        // Recherche d'icônes en temps réel
+                                                        iconSearchResults =
+                                                                if (it.isNotBlank()) {
+                                                                        iconProvider.searchIcons(it)
+                                                                } else {
+                                                                        iconProvider
+                                                                                .getAllIcons()
+                                                                                .take(20)
+                                                                }
+                                                }
+                                        },
+                                        label = { Text("Nom en français", color = TextGray) },
+                                        colors =
+                                                OutlinedTextFieldDefaults.colors(
+                                                        focusedTextColor = White,
+                                                        unfocusedTextColor = White,
+                                                        focusedBorderColor = AccentBlue,
+                                                        unfocusedBorderColor = MediumGray,
+                                                        cursorColor = AccentBlue
+                                                ),
+                                        singleLine = false,
+                                        maxLines = 2,
+                                        modifier = Modifier.fillMaxWidth()
+                                )
+
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                // Barre d'actions horizontale : Globe, Paste, Folder, Save
                                 Row(
                                         modifier = Modifier.fillMaxWidth(),
-                                        verticalAlignment = Alignment.Top
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                        OutlinedTextField(
-                                                value = frenchName,
-                                                onValueChange = {
-                                                        if (it.length <= 40) {
-                                                                frenchName = it
-                                                                // Recherche d'icônes en temps réel
-                                                                iconSearchResults =
-                                                                        if (it.isNotBlank()) {
-                                                                                iconProvider
-                                                                                        .searchIcons(
-                                                                                                it
-                                                                                        )
-                                                                        } else {
-                                                                                iconProvider
-                                                                                        .getAllIcons()
-                                                                                        .take(20)
-                                                                        }
+                                        // 1. Globe (Recherche Google)
+                                        IconButton(
+                                                onClick = {
+                                                        if (frenchName.isNotBlank()) {
+                                                                val searchQuery =
+                                                                        Uri.encode(
+                                                                                "$frenchName png transparent"
+                                                                        )
+                                                                val url =
+                                                                        "https://www.google.com/search?tbm=isch&q=$searchQuery"
+                                                                val intent =
+                                                                        Intent(
+                                                                                Intent.ACTION_VIEW,
+                                                                                Uri.parse(url)
+                                                                        )
+                                                                context.startActivity(intent)
                                                         }
                                                 },
-                                                label = {
-                                                        Text("Nom en français", color = TextGray)
-                                                },
-                                                colors =
-                                                        OutlinedTextFieldDefaults.colors(
-                                                                focusedTextColor = White,
-                                                                unfocusedTextColor = White,
-                                                                focusedBorderColor = AccentBlue,
-                                                                unfocusedBorderColor = MediumGray,
-                                                                cursorColor = AccentBlue
-                                                        ),
-                                                singleLine = false,
-                                                maxLines = 2,
-                                                modifier = Modifier.weight(1f)
-                                        )
-
-                                        Spacer(modifier = Modifier.width(12.dp))
-
-                                        // Column pour Globe (haut) et Coller (bas)
-                                        Column(
-                                                horizontalAlignment = Alignment.CenterHorizontally,
-                                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                                enabled = frenchName.isNotBlank(),
+                                                modifier =
+                                                        Modifier.size(48.dp)
+                                                                .clip(CircleShape)
+                                                                .background(
+                                                                        if (frenchName.isNotBlank())
+                                                                                AccentBlue
+                                                                        else MediumGray
+                                                                )
                                         ) {
-                                                // Bouton globe pour recherche Google Images
-                                                IconButton(
-                                                        onClick = {
-                                                                if (frenchName.isNotBlank()) {
-                                                                        val searchQuery =
-                                                                                Uri.encode(
-                                                                                        "png $frenchName"
-                                                                                )
-                                                                        val url =
-                                                                                "https://www.google.com/search?tbm=isch&q=$searchQuery"
-                                                                        val intent =
-                                                                                Intent(
-                                                                                        Intent.ACTION_VIEW,
-                                                                                        Uri.parse(
-                                                                                                url
-                                                                                        )
-                                                                                )
-                                                                        context.startActivity(
-                                                                                intent
-                                                                        )
-                                                                }
-                                                        },
-                                                        enabled = frenchName.isNotBlank(),
-                                                        modifier =
-                                                                Modifier.size(44.dp)
-                                                                        .clip(CircleShape)
-                                                                        .background(
-                                                                                if (frenchName
-                                                                                                .isNotBlank()
-                                                                                )
-                                                                                        AccentBlue
-                                                                                else MediumGray
-                                                                        )
-                                                ) {
-                                                        Icon(
-                                                                Icons.Default.Language,
-                                                                contentDescription =
-                                                                        "Google Search",
-                                                                tint = White,
-                                                                modifier = Modifier.size(24.dp)
-                                                        )
-                                                }
+                                                Icon(
+                                                        Icons.Default.Language,
+                                                        contentDescription = "Google Search",
+                                                        tint = White,
+                                                        modifier = Modifier.size(24.dp)
+                                                )
+                                        }
 
-                                                Spacer(modifier = Modifier.width(8.dp))
+                                        // 2. Paste (Depuis le presse-papier)
+                                        IconButton(
+                                                onClick = {
+                                                        if (frenchName.isNotBlank()) {
+                                                                val clipboard =
+                                                                        context.getSystemService(
+                                                                                Context.CLIPBOARD_SERVICE
+                                                                        ) as
+                                                                                ClipboardManager
+                                                                val clip = clipboard.primaryClip
+                                                                if (clip != null &&
+                                                                                clip.itemCount > 0
+                                                                ) {
+                                                                        val item = clip.getItemAt(0)
+                                                                        val imageUri = item.uri
+                                                                        val clipboardText =
+                                                                                item.text
+                                                                                        ?.toString()
 
-                                                // Bouton COLLER depuis le presse-papier
-                                                IconButton(
-                                                        onClick = {
-                                                                if (frenchName.isNotBlank()) {
-                                                                        val clipboard =
-                                                                                context.getSystemService(
-                                                                                        Context.CLIPBOARD_SERVICE
-                                                                                ) as
-                                                                                        ClipboardManager
-                                                                        val clip =
-                                                                                clipboard
-                                                                                        .primaryClip
-                                                                        if (clip != null &&
-                                                                                        clip.itemCount >
-                                                                                                0
-                                                                        ) {
-                                                                                val item =
-                                                                                        clip.getItemAt(
-                                                                                                0
-                                                                                        )
-                                                                                val imageUri =
-                                                                                        item.uri
-                                                                                val clipboardText =
-                                                                                        item.text
-                                                                                                ?.toString()
-
-                                                                                if (imageUri != null
+                                                                        if (imageUri != null) {
+                                                                                val result =
+                                                                                        iconProvider
+                                                                                                .saveIconFromUri(
+                                                                                                        imageUri,
+                                                                                                        frenchName
+                                                                                                )
+                                                                                if (result.first !=
+                                                                                                null
                                                                                 ) {
-                                                                                        val result =
+                                                                                        iconId =
+                                                                                                result.first!!
+                                                                                        val s =
                                                                                                 iconProvider
-                                                                                                        .saveIconFromUri(
-                                                                                                                imageUri,
+                                                                                                        .searchIcons(
                                                                                                                 frenchName
                                                                                                         )
-                                                                                        if (result.first !=
-                                                                                                        null
-                                                                                        ) {
-                                                                                                iconId =
-                                                                                                        result.first!!
-                                                                                                val s =
-                                                                                                        iconProvider
-                                                                                                                .searchIcons(
-                                                                                                                        frenchName
-                                                                                                                )
-                                                                                                iconSearchResults =
-                                                                                                        listOf(
-                                                                                                                iconId
-                                                                                                        ) +
-                                                                                                                s
-                                                                                                                        .filter {
-                                                                                                                                it !=
-                                                                                                                                        iconId
-                                                                                                                        }
-                                                                                                Toast.makeText(
-                                                                                                                context,
-                                                                                                                "✓ Icône créée !",
-                                                                                                                Toast.LENGTH_SHORT
-                                                                                                        )
-                                                                                                        .show()
-                                                                                        } else {
-                                                                                                Toast.makeText(
-                                                                                                                context,
-                                                                                                                "❌ ${result.second}",
-                                                                                                                Toast.LENGTH_LONG
-                                                                                                        )
-                                                                                                        .show()
-                                                                                        }
-                                                                                } else if (clipboardText !=
-                                                                                                null &&
-                                                                                                clipboardText
-                                                                                                        .startsWith(
-                                                                                                                "http"
-                                                                                                        )
-                                                                                ) {
+                                                                                        iconSearchResults =
+                                                                                                listOf(
+                                                                                                        iconId
+                                                                                                ) +
+                                                                                                        s
+                                                                                                                .filter {
+                                                                                                                        it !=
+                                                                                                                                iconId
+                                                                                                                }
                                                                                         Toast.makeText(
                                                                                                         context,
-                                                                                                        "Téléchargement...",
+                                                                                                        "✓ Icône créée !",
                                                                                                         Toast.LENGTH_SHORT
                                                                                                 )
                                                                                                 .show()
-                                                                                        iconProvider
-                                                                                                .saveIconFromUrl(
-                                                                                                        clipboardText,
-                                                                                                        frenchName
-                                                                                                ) {
-                                                                                                        result
-                                                                                                        ->
-                                                                                                        if (result.first !=
-                                                                                                                        null
-                                                                                                        ) {
-                                                                                                                iconId =
-                                                                                                                        result.first!!
-                                                                                                                val s =
-                                                                                                                        iconProvider
-                                                                                                                                .searchIcons(
-                                                                                                                                        frenchName
-                                                                                                                                )
-                                                                                                                iconSearchResults =
-                                                                                                                        listOf(
-                                                                                                                                iconId
-                                                                                                                        ) +
-                                                                                                                                s
-                                                                                                                                        .filter {
-                                                                                                                                                it !=
-                                                                                                                                                        iconId
-                                                                                                                                        }
-                                                                                                                (context as?
-                                                                                                                                android.app.Activity)
-                                                                                                                        ?.runOnUiThread {
-                                                                                                                                Toast.makeText(
-                                                                                                                                                context,
-                                                                                                                                                "✓ Image téléchargée !",
-                                                                                                                                                Toast.LENGTH_SHORT
-                                                                                                                                        )
-                                                                                                                                        .show()
-                                                                                                                        }
-                                                                                                        } else {
-                                                                                                                (context as?
-                                                                                                                                android.app.Activity)
-                                                                                                                        ?.runOnUiThread {
-                                                                                                                                Toast.makeText(
-                                                                                                                                                context,
-                                                                                                                                                "❌ ${result.second}",
-                                                                                                                                                Toast.LENGTH_LONG
-                                                                                                                                        )
-                                                                                                                                        .show()
-                                                                                                                        }
-                                                                                                        }
-                                                                                                }
                                                                                 } else {
                                                                                         Toast.makeText(
                                                                                                         context,
-                                                                                                        "❌ Pas d'image ou de lien valide",
-                                                                                                        Toast.LENGTH_SHORT
+                                                                                                        "❌ ${result.second}",
+                                                                                                        Toast.LENGTH_LONG
                                                                                                 )
                                                                                                 .show()
                                                                                 }
+                                                                        } else if (clipboardText !=
+                                                                                        null &&
+                                                                                        clipboardText
+                                                                                                .startsWith(
+                                                                                                        "http"
+                                                                                                )
+                                                                        ) {
+                                                                                Toast.makeText(
+                                                                                                context,
+                                                                                                "Téléchargement...",
+                                                                                                Toast.LENGTH_SHORT
+                                                                                        )
+                                                                                        .show()
+                                                                                iconProvider
+                                                                                        .saveIconFromUrl(
+                                                                                                clipboardText,
+                                                                                                frenchName
+                                                                                        ) { result
+                                                                                                ->
+                                                                                                if (result.first !=
+                                                                                                                null
+                                                                                                ) {
+                                                                                                        iconId =
+                                                                                                                result.first!!
+                                                                                                        val s =
+                                                                                                                iconProvider
+                                                                                                                        .searchIcons(
+                                                                                                                                frenchName
+                                                                                                                        )
+                                                                                                        iconSearchResults =
+                                                                                                                listOf(
+                                                                                                                        iconId
+                                                                                                                ) +
+                                                                                                                        s
+                                                                                                                                .filter {
+                                                                                                                                        it !=
+                                                                                                                                                iconId
+                                                                                                                                }
+                                                                                                        (context as?
+                                                                                                                        android.app.Activity)
+                                                                                                                ?.runOnUiThread {
+                                                                                                                        Toast.makeText(
+                                                                                                                                        context,
+                                                                                                                                        "✓ Image téléchargée !",
+                                                                                                                                        Toast.LENGTH_SHORT
+                                                                                                                                )
+                                                                                                                                .show()
+                                                                                                                }
+                                                                                                } else {
+                                                                                                        (context as?
+                                                                                                                        android.app.Activity)
+                                                                                                                ?.runOnUiThread {
+                                                                                                                        Toast.makeText(
+                                                                                                                                        context,
+                                                                                                                                        "❌ ${result.second}",
+                                                                                                                                        Toast.LENGTH_LONG
+                                                                                                                                )
+                                                                                                                                .show()
+                                                                                                                }
+                                                                                                }
+                                                                                        }
                                                                         } else {
                                                                                 Toast.makeText(
                                                                                                 context,
-                                                                                                "❌ Presse-papier vide",
+                                                                                                "❌ Pas d'image ou de lien valide",
                                                                                                 Toast.LENGTH_SHORT
                                                                                         )
                                                                                         .show()
                                                                         }
-                                                                }
-                                                        },
-                                                        enabled = frenchName.isNotBlank(),
-                                                        modifier =
-                                                                Modifier.size(48.dp)
-                                                                        .clip(CircleShape)
-                                                                        .background(
-                                                                                if (frenchName
-                                                                                                .isNotBlank()
+                                                                } else {
+                                                                        Toast.makeText(
+                                                                                        context,
+                                                                                        "❌ Presse-papier vide",
+                                                                                        Toast.LENGTH_SHORT
                                                                                 )
-                                                                                        AccentGreen
-                                                                                else MediumGray
+                                                                                .show()
+                                                                }
+                                                        }
+                                                },
+                                                enabled = frenchName.isNotBlank(),
+                                                modifier =
+                                                        Modifier.size(48.dp)
+                                                                .clip(CircleShape)
+                                                                .background(
+                                                                        if (frenchName.isNotBlank())
+                                                                                AccentGreen
+                                                                        else MediumGray
+                                                                )
+                                        ) {
+                                                Icon(
+                                                        Icons.Default.ContentPaste,
+                                                        contentDescription = "Coller l'image",
+                                                        tint = White,
+                                                        modifier = Modifier.size(24.dp)
+                                                )
+                                        }
+
+                                        // 3. Folder (Explorateur de fichiers)
+                                        IconButton(
+                                                onClick = {
+                                                        if (frenchName.isNotBlank()) {
+                                                                imagePickerLauncher.launch(
+                                                                        "image/*"
+                                                                )
+                                                        } else {
+                                                                Toast.makeText(
+                                                                                context,
+                                                                                "Saisissez d'abord le nom français",
+                                                                                Toast.LENGTH_SHORT
                                                                         )
-                                                ) {
-                                                        Icon(
-                                                                Icons.Default.ContentPaste,
-                                                                contentDescription =
-                                                                        "Coller l'image",
-                                                                tint = White,
-                                                                modifier = Modifier.size(24.dp)
-                                                        )
-                                                }
+                                                                        .show()
+                                                        }
+                                                },
+                                                enabled = frenchName.isNotBlank(),
+                                                modifier =
+                                                        Modifier.size(48.dp)
+                                                                .clip(CircleShape)
+                                                                .background(
+                                                                        if (frenchName.isNotBlank())
+                                                                                AccentBlue
+                                                                        else MediumGray
+                                                                )
+                                        ) {
+                                                Icon(
+                                                        Icons.Default.Folder,
+                                                        contentDescription = "Choisir un fichier",
+                                                        tint = White,
+                                                        modifier = Modifier.size(24.dp)
+                                                )
+                                        }
+
+                                        // 4. Save (Disquette Violette)
+                                        IconButton(
+                                                onClick = {
+                                                        if (name.isNotBlank()) {
+                                                                onSave(
+                                                                        name.trim(),
+                                                                        frenchName.trim(),
+                                                                        iconId,
+                                                                        selectedCategoryId
+                                                                )
+                                                        }
+                                                },
+                                                enabled = name.isNotBlank(),
+                                                modifier =
+                                                        Modifier.size(48.dp)
+                                                                .clip(CircleShape)
+                                                                .background(
+                                                                        if (name.isNotBlank())
+                                                                                AccentViolet
+                                                                        else MediumGray
+                                                                )
+                                        ) {
+                                                Icon(
+                                                        Icons.Default.Save,
+                                                        contentDescription = "Enregistrer",
+                                                        tint = White,
+                                                        modifier = Modifier.size(28.dp)
+                                                )
                                         }
                                 }
 
@@ -453,7 +476,8 @@ fun EditArticleDialog(
                                                                                                         alpha =
                                                                                                                 0.3f
                                                                                                 )
-                                                                                else MediumGray
+                                                                                else
+                                                                                        Color.Transparent
                                                                         )
                                                                         .border(
                                                                                 width =
@@ -466,7 +490,7 @@ fun EditArticleDialog(
                                                                                         )
                                                                                                 AccentBlue
                                                                                         else
-                                                                                                MediumGray,
+                                                                                                Color.Transparent,
                                                                                 shape =
                                                                                         RoundedCornerShape(
                                                                                                 8.dp
@@ -480,6 +504,7 @@ fun EditArticleDialog(
                                                         AsyncImage(
                                                                 model = path ?: "",
                                                                 contentDescription = null,
+                                                                contentScale = ContentScale.Fit,
                                                                 modifier = Modifier.size(48.dp)
                                                         )
                                                 }
@@ -558,6 +583,9 @@ fun EditArticleDialog(
                                                                                                         catIconPath,
                                                                                                 contentDescription =
                                                                                                         null,
+                                                                                                contentScale =
+                                                                                                        ContentScale
+                                                                                                                .Fit,
                                                                                                 modifier =
                                                                                                         Modifier.size(
                                                                                                                 24.dp
@@ -617,9 +645,7 @@ fun EditArticleDialog(
 
                                 Spacer(modifier = Modifier.height(24.dp))
 
-                                // Boutons d'action en bas : Poubelle rouge | + bleu | Disquette
-                                // verte
-                                // Tous de même dimension (48dp)
+                                // Boutons d'action en bas : Poubelle rouge | + bleu
                                 Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.Center,
@@ -646,7 +672,9 @@ fun EditArticleDialog(
 
                                                 // Bouton Créer nouveau (+ bleu)
                                                 IconButton(
-                                                        onClick = onCreateNew,
+                                                        onClick = {
+                                                                onCreateNew(selectedCategoryId)
+                                                        },
                                                         modifier =
                                                                 Modifier.size(48.dp)
                                                                         .clip(CircleShape)
@@ -724,10 +752,38 @@ fun EditCategoryDialog(
         var showDeleteConfirm by remember { mutableStateOf(false) }
         var iconSearchResults by remember { mutableStateOf(iconProvider.getAllIcons().take(20)) }
 
+        val imagePickerLauncher =
+                rememberLauncherForActivityResult(
+                        contract = ActivityResultContracts.GetContent()
+                ) { uri: Uri? ->
+                        if (uri != null && frenchName.isNotBlank()) {
+                                val result = iconProvider.saveIconFromUri(uri, frenchName)
+                                if (result.first != null) {
+                                        iconId = result.first!!
+                                        val s = iconProvider.searchIcons(frenchName)
+                                        iconSearchResults =
+                                                listOf(iconId) + s.filter { it != iconId }
+                                        Toast.makeText(
+                                                        context,
+                                                        "✓ Icône importée !",
+                                                        Toast.LENGTH_SHORT
+                                                )
+                                                .show()
+                                } else {
+                                        Toast.makeText(
+                                                        context,
+                                                        "❌ ${result.second}",
+                                                        Toast.LENGTH_LONG
+                                                )
+                                                .show()
+                                }
+                        }
+                }
+
         Dialog(onDismissRequest = onDismiss) {
                 Card(
                         modifier = Modifier.fillMaxWidth().padding(8.dp),
-                        colors = CardDefaults.cardColors(containerColor = DarkGray),
+                        colors = CardDefaults.cardColors(containerColor = BlueNoir),
                         shape = RoundedCornerShape(20.dp)
                 ) {
                         Column(modifier = Modifier.padding(20.dp)) {
@@ -767,45 +823,8 @@ fun EditCategoryDialog(
                                                 fontWeight = FontWeight.Bold
                                         )
 
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                                IconButton(
-                                                        onClick = {
-                                                                if (name.isNotBlank()) {
-                                                                        onSave(
-                                                                                name.trim(),
-                                                                                frenchName.trim(),
-                                                                                iconId
-                                                                        )
-                                                                }
-                                                        },
-                                                        enabled = name.isNotBlank(),
-                                                        modifier =
-                                                                Modifier.size(40.dp)
-                                                                        .clip(CircleShape)
-                                                                        .background(
-                                                                                if (name.isNotBlank()
-                                                                                )
-                                                                                        AccentGreen
-                                                                                else MediumGray
-                                                                        )
-                                                ) {
-                                                        Icon(
-                                                                Icons.Default.Save,
-                                                                null,
-                                                                tint = White,
-                                                                modifier = Modifier.size(24.dp)
-                                                        )
-                                                }
-
-                                                Spacer(modifier = Modifier.width(8.dp))
-
-                                                IconButton(onClick = onDismiss) {
-                                                        Icon(
-                                                                Icons.Default.Close,
-                                                                null,
-                                                                tint = TextGray
-                                                        )
-                                                }
+                                        IconButton(onClick = onDismiss) {
+                                                Icon(Icons.Default.Close, null, tint = TextGray)
                                         }
                                 }
 
@@ -831,263 +850,297 @@ fun EditCategoryDialog(
                                 Spacer(modifier = Modifier.height(12.dp))
 
                                 // Nom en français et buttons (Globe + Coller)
+                                // Nom en français
+                                OutlinedTextField(
+                                        value = frenchName,
+                                        onValueChange = {
+                                                if (it.length <= 40) {
+                                                        frenchName = it
+                                                        iconSearchResults =
+                                                                if (it.isNotBlank()) {
+                                                                        iconProvider.searchIcons(it)
+                                                                } else {
+                                                                        iconProvider
+                                                                                .getAllIcons()
+                                                                                .take(20)
+                                                                }
+                                                }
+                                        },
+                                        label = { Text("Nom en français", color = TextGray) },
+                                        colors =
+                                                OutlinedTextFieldDefaults.colors(
+                                                        focusedTextColor = White,
+                                                        unfocusedTextColor = White,
+                                                        focusedBorderColor = AccentBlue,
+                                                        unfocusedBorderColor = MediumGray,
+                                                        cursorColor = AccentBlue
+                                                ),
+                                        singleLine = false,
+                                        maxLines = 2,
+                                        modifier = Modifier.fillMaxWidth()
+                                )
+
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                // Barre d'actions horizontale : Globe, Paste, Folder, Save
                                 Row(
                                         modifier = Modifier.fillMaxWidth(),
-                                        verticalAlignment = Alignment.Top
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                        OutlinedTextField(
-                                                value = frenchName,
-                                                onValueChange = {
-                                                        if (it.length <= 40) {
-                                                                frenchName = it
-                                                                iconSearchResults =
-                                                                        if (it.isNotBlank()) {
-                                                                                iconProvider
-                                                                                        .searchIcons(
-                                                                                                it
-                                                                                        )
-                                                                        } else {
-                                                                                iconProvider
-                                                                                        .getAllIcons()
-                                                                                        .take(20)
-                                                                        }
+                                        // 1. Globe (Recherche Google)
+                                        IconButton(
+                                                onClick = {
+                                                        if (frenchName.isNotBlank()) {
+                                                                val searchQuery =
+                                                                        Uri.encode(
+                                                                                "$frenchName png transparent"
+                                                                        )
+                                                                val url =
+                                                                        "https://www.google.com/search?tbm=isch&q=$searchQuery"
+                                                                val intent =
+                                                                        Intent(
+                                                                                Intent.ACTION_VIEW,
+                                                                                Uri.parse(url)
+                                                                        )
+                                                                context.startActivity(intent)
                                                         }
                                                 },
-                                                label = {
-                                                        Text("Nom en français", color = TextGray)
-                                                },
-                                                colors =
-                                                        OutlinedTextFieldDefaults.colors(
-                                                                focusedTextColor = White,
-                                                                unfocusedTextColor = White,
-                                                                focusedBorderColor = AccentBlue,
-                                                                unfocusedBorderColor = MediumGray,
-                                                                cursorColor = AccentBlue
-                                                        ),
-                                                singleLine = false,
-                                                maxLines = 2,
-                                                modifier = Modifier.weight(1f)
-                                        )
-
-                                        Spacer(modifier = Modifier.width(12.dp))
-
-                                        // Column pour Globe (haut) et Coller (bas)
-                                        Column(
-                                                horizontalAlignment = Alignment.CenterHorizontally,
-                                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                                enabled = frenchName.isNotBlank(),
+                                                modifier =
+                                                        Modifier.size(48.dp)
+                                                                .clip(CircleShape)
+                                                                .background(
+                                                                        if (frenchName.isNotBlank())
+                                                                                AccentBlue
+                                                                        else MediumGray
+                                                                )
                                         ) {
-                                                // Bouton globe pour recherche Google Images
-                                                IconButton(
-                                                        onClick = {
-                                                                if (frenchName.isNotBlank()) {
-                                                                        val searchQuery =
-                                                                                Uri.encode(
-                                                                                        "png $frenchName"
-                                                                                )
-                                                                        val url =
-                                                                                "https://www.google.com/search?tbm=isch&q=$searchQuery"
-                                                                        val intent =
-                                                                                Intent(
-                                                                                        Intent.ACTION_VIEW,
-                                                                                        Uri.parse(
-                                                                                                url
-                                                                                        )
-                                                                                )
-                                                                        context.startActivity(
-                                                                                intent
-                                                                        )
-                                                                }
-                                                        },
-                                                        enabled = frenchName.isNotBlank(),
-                                                        modifier =
-                                                                Modifier.size(44.dp)
-                                                                        .clip(CircleShape)
-                                                                        .background(
-                                                                                if (frenchName
-                                                                                                .isNotBlank()
-                                                                                )
-                                                                                        AccentBlue
-                                                                                else MediumGray
-                                                                        )
-                                                ) {
-                                                        Icon(
-                                                                Icons.Default.Language,
-                                                                contentDescription =
-                                                                        "Google Search",
-                                                                tint = White,
-                                                                modifier = Modifier.size(24.dp)
-                                                        )
-                                                }
+                                                Icon(
+                                                        Icons.Default.Language,
+                                                        contentDescription = "Google Search",
+                                                        tint = White,
+                                                        modifier = Modifier.size(24.dp)
+                                                )
+                                        }
 
-                                                Spacer(modifier = Modifier.width(8.dp))
+                                        // 2. Paste (Depuis le presse-papier)
+                                        IconButton(
+                                                onClick = {
+                                                        if (frenchName.isNotBlank()) {
+                                                                val clipboard =
+                                                                        context.getSystemService(
+                                                                                Context.CLIPBOARD_SERVICE
+                                                                        ) as
+                                                                                ClipboardManager
+                                                                val clip = clipboard.primaryClip
+                                                                if (clip != null &&
+                                                                                clip.itemCount > 0
+                                                                ) {
+                                                                        val item = clip.getItemAt(0)
+                                                                        val imageUri = item.uri
+                                                                        val clipboardText =
+                                                                                item.text
+                                                                                        ?.toString()
 
-                                                // Bouton COLLER depuis le presse-papier
-                                                IconButton(
-                                                        onClick = {
-                                                                if (frenchName.isNotBlank()) {
-                                                                        val clipboard =
-                                                                                context.getSystemService(
-                                                                                        Context.CLIPBOARD_SERVICE
-                                                                                ) as
-                                                                                        ClipboardManager
-                                                                        val clip =
-                                                                                clipboard
-                                                                                        .primaryClip
-                                                                        if (clip != null &&
-                                                                                        clip.itemCount >
-                                                                                                0
-                                                                        ) {
-                                                                                val item =
-                                                                                        clip.getItemAt(
-                                                                                                0
-                                                                                        )
-                                                                                val imageUri =
-                                                                                        item.uri
-                                                                                val clipboardText =
-                                                                                        item.text
-                                                                                                ?.toString()
-
-                                                                                if (imageUri != null
+                                                                        if (imageUri != null) {
+                                                                                val result =
+                                                                                        iconProvider
+                                                                                                .saveIconFromUri(
+                                                                                                        imageUri,
+                                                                                                        frenchName
+                                                                                                )
+                                                                                if (result.first !=
+                                                                                                null
                                                                                 ) {
-                                                                                        val result =
+                                                                                        iconId =
+                                                                                                result.first!!
+                                                                                        val s =
                                                                                                 iconProvider
-                                                                                                        .saveIconFromUri(
-                                                                                                                imageUri,
+                                                                                                        .searchIcons(
                                                                                                                 frenchName
                                                                                                         )
-                                                                                        if (result.first !=
-                                                                                                        null
-                                                                                        ) {
-                                                                                                iconId =
-                                                                                                        result.first!!
-                                                                                                val s =
-                                                                                                        iconProvider
-                                                                                                                .searchIcons(
-                                                                                                                        frenchName
-                                                                                                                )
-                                                                                                iconSearchResults =
-                                                                                                        listOf(
-                                                                                                                iconId
-                                                                                                        ) +
-                                                                                                                s
-                                                                                                                        .filter {
-                                                                                                                                it !=
-                                                                                                                                        iconId
-                                                                                                                        }
-                                                                                                Toast.makeText(
-                                                                                                                context,
-                                                                                                                "✓ Icône créée !",
-                                                                                                                Toast.LENGTH_SHORT
-                                                                                                        )
-                                                                                                        .show()
-                                                                                        } else {
-                                                                                                Toast.makeText(
-                                                                                                                context,
-                                                                                                                "❌ ${result.second}",
-                                                                                                                Toast.LENGTH_LONG
-                                                                                                        )
-                                                                                                        .show()
-                                                                                        }
-                                                                                } else if (clipboardText !=
-                                                                                                null &&
-                                                                                                clipboardText
-                                                                                                        .startsWith(
-                                                                                                                "http"
-                                                                                                        )
-                                                                                ) {
+                                                                                        iconSearchResults =
+                                                                                                listOf(
+                                                                                                        iconId
+                                                                                                ) +
+                                                                                                        s
+                                                                                                                .filter {
+                                                                                                                        it !=
+                                                                                                                                iconId
+                                                                                                                }
                                                                                         Toast.makeText(
                                                                                                         context,
-                                                                                                        "Téléchargement...",
+                                                                                                        "✓ Icône créée !",
                                                                                                         Toast.LENGTH_SHORT
                                                                                                 )
                                                                                                 .show()
-                                                                                        iconProvider
-                                                                                                .saveIconFromUrl(
-                                                                                                        clipboardText,
-                                                                                                        frenchName
-                                                                                                ) {
-                                                                                                        result
-                                                                                                        ->
-                                                                                                        if (result.first !=
-                                                                                                                        null
-                                                                                                        ) {
-                                                                                                                iconId =
-                                                                                                                        result.first!!
-                                                                                                                val s =
-                                                                                                                        iconProvider
-                                                                                                                                .searchIcons(
-                                                                                                                                        frenchName
-                                                                                                                                )
-                                                                                                                iconSearchResults =
-                                                                                                                        listOf(
-                                                                                                                                iconId
-                                                                                                                        ) +
-                                                                                                                                s
-                                                                                                                                        .filter {
-                                                                                                                                                it !=
-                                                                                                                                                        iconId
-                                                                                                                                        }
-                                                                                                                (context as?
-                                                                                                                                android.app.Activity)
-                                                                                                                        ?.runOnUiThread {
-                                                                                                                                Toast.makeText(
-                                                                                                                                                context,
-                                                                                                                                                "✓ Image téléchargée !",
-                                                                                                                                                Toast.LENGTH_SHORT
-                                                                                                                                        )
-                                                                                                                                        .show()
-                                                                                                                        }
-                                                                                                        } else {
-                                                                                                                (context as?
-                                                                                                                                android.app.Activity)
-                                                                                                                        ?.runOnUiThread {
-                                                                                                                                Toast.makeText(
-                                                                                                                                                context,
-                                                                                                                                                "❌ ${result.second}",
-                                                                                                                                                Toast.LENGTH_LONG
-                                                                                                                                        )
-                                                                                                                                        .show()
-                                                                                                                        }
-                                                                                                        }
-                                                                                                }
                                                                                 } else {
                                                                                         Toast.makeText(
                                                                                                         context,
-                                                                                                        "❌ Pas d'image ou de lien valide",
-                                                                                                        Toast.LENGTH_SHORT
+                                                                                                        "❌ ${result.second}",
+                                                                                                        Toast.LENGTH_LONG
                                                                                                 )
                                                                                                 .show()
                                                                                 }
+                                                                        } else if (clipboardText !=
+                                                                                        null &&
+                                                                                        clipboardText
+                                                                                                .startsWith(
+                                                                                                        "http"
+                                                                                                )
+                                                                        ) {
+                                                                                Toast.makeText(
+                                                                                                context,
+                                                                                                "Téléchargement...",
+                                                                                                Toast.LENGTH_SHORT
+                                                                                        )
+                                                                                        .show()
+                                                                                iconProvider
+                                                                                        .saveIconFromUrl(
+                                                                                                clipboardText,
+                                                                                                frenchName
+                                                                                        ) { result
+                                                                                                ->
+                                                                                                if (result.first !=
+                                                                                                                null
+                                                                                                ) {
+                                                                                                        iconId =
+                                                                                                                result.first!!
+                                                                                                        val s =
+                                                                                                                iconProvider
+                                                                                                                        .searchIcons(
+                                                                                                                                frenchName
+                                                                                                                        )
+                                                                                                        iconSearchResults =
+                                                                                                                listOf(
+                                                                                                                        iconId
+                                                                                                                ) +
+                                                                                                                        s
+                                                                                                                                .filter {
+                                                                                                                                        it !=
+                                                                                                                                                iconId
+                                                                                                                                }
+                                                                                                        (context as?
+                                                                                                                        android.app.Activity)
+                                                                                                                ?.runOnUiThread {
+                                                                                                                        Toast.makeText(
+                                                                                                                                        context,
+                                                                                                                                        "✓ Image téléchargée !",
+                                                                                                                                        Toast.LENGTH_SHORT
+                                                                                                                                )
+                                                                                                                                .show()
+                                                                                                                }
+                                                                                                } else {
+                                                                                                        (context as?
+                                                                                                                        android.app.Activity)
+                                                                                                                ?.runOnUiThread {
+                                                                                                                        Toast.makeText(
+                                                                                                                                        context,
+                                                                                                                                        "❌ ${result.second}",
+                                                                                                                                        Toast.LENGTH_LONG
+                                                                                                                                )
+                                                                                                                                .show()
+                                                                                                                }
+                                                                                                }
+                                                                                        }
                                                                         } else {
                                                                                 Toast.makeText(
                                                                                                 context,
-                                                                                                "❌ Presse-papier vide",
+                                                                                                "❌ Pas d'image ou de lien valide",
                                                                                                 Toast.LENGTH_SHORT
                                                                                         )
                                                                                         .show()
                                                                         }
-                                                                }
-                                                        },
-                                                        enabled = frenchName.isNotBlank(),
-                                                        modifier =
-                                                                Modifier.size(48.dp)
-                                                                        .clip(CircleShape)
-                                                                        .background(
-                                                                                if (frenchName
-                                                                                                .isNotBlank()
+                                                                } else {
+                                                                        Toast.makeText(
+                                                                                        context,
+                                                                                        "❌ Presse-papier vide",
+                                                                                        Toast.LENGTH_SHORT
                                                                                 )
-                                                                                        AccentGreen
-                                                                                else MediumGray
+                                                                                .show()
+                                                                }
+                                                        }
+                                                },
+                                                enabled = frenchName.isNotBlank(),
+                                                modifier =
+                                                        Modifier.size(48.dp)
+                                                                .clip(CircleShape)
+                                                                .background(
+                                                                        if (frenchName.isNotBlank())
+                                                                                AccentGreen
+                                                                        else MediumGray
+                                                                )
+                                        ) {
+                                                Icon(
+                                                        Icons.Default.ContentPaste,
+                                                        contentDescription = "Coller l'image",
+                                                        tint = White,
+                                                        modifier = Modifier.size(24.dp)
+                                                )
+                                        }
+
+                                        // 3. Folder (Explorateur de fichiers)
+                                        IconButton(
+                                                onClick = {
+                                                        if (frenchName.isNotBlank()) {
+                                                                imagePickerLauncher.launch(
+                                                                        "image/*"
+                                                                )
+                                                        } else {
+                                                                Toast.makeText(
+                                                                                context,
+                                                                                "Saisissez d'abord le nom français",
+                                                                                Toast.LENGTH_SHORT
                                                                         )
-                                                ) {
-                                                        Icon(
-                                                                Icons.Default.ContentPaste,
-                                                                contentDescription =
-                                                                        "Coller l'image",
-                                                                tint = White,
-                                                                modifier = Modifier.size(24.dp)
-                                                        )
-                                                }
+                                                                        .show()
+                                                        }
+                                                },
+                                                enabled = frenchName.isNotBlank(),
+                                                modifier =
+                                                        Modifier.size(48.dp)
+                                                                .clip(CircleShape)
+                                                                .background(
+                                                                        if (frenchName.isNotBlank())
+                                                                                AccentBlue
+                                                                        else MediumGray
+                                                                )
+                                        ) {
+                                                Icon(
+                                                        Icons.Default.Folder,
+                                                        contentDescription = "Choisir un fichier",
+                                                        tint = White,
+                                                        modifier = Modifier.size(24.dp)
+                                                )
+                                        }
+
+                                        // 4. Save (Disquette Violette)
+                                        IconButton(
+                                                onClick = {
+                                                        if (name.isNotBlank()) {
+                                                                onSave(
+                                                                        name.trim(),
+                                                                        frenchName.trim(),
+                                                                        iconId
+                                                                )
+                                                        }
+                                                },
+                                                enabled = name.isNotBlank(),
+                                                modifier =
+                                                        Modifier.size(48.dp)
+                                                                .clip(CircleShape)
+                                                                .background(
+                                                                        if (name.isNotBlank())
+                                                                                AccentViolet
+                                                                        else MediumGray
+                                                                )
+                                        ) {
+                                                Icon(
+                                                        Icons.Default.Save,
+                                                        contentDescription = "Enregistrer",
+                                                        tint = White,
+                                                        modifier = Modifier.size(28.dp)
+                                                )
                                         }
                                 }
 
@@ -1117,7 +1170,8 @@ fun EditCategoryDialog(
                                                                                                         alpha =
                                                                                                                 0.3f
                                                                                                 )
-                                                                                else MediumGray
+                                                                                else
+                                                                                        Color.Transparent
                                                                         )
                                                                         .border(
                                                                                 width =
@@ -1130,7 +1184,7 @@ fun EditCategoryDialog(
                                                                                         )
                                                                                                 AccentBlue
                                                                                         else
-                                                                                                MediumGray,
+                                                                                                Color.Transparent,
                                                                                 shape =
                                                                                         RoundedCornerShape(
                                                                                                 8.dp
@@ -1144,6 +1198,7 @@ fun EditCategoryDialog(
                                                         AsyncImage(
                                                                 model = path ?: "",
                                                                 contentDescription = null,
+                                                                contentScale = ContentScale.Fit,
                                                                 modifier = Modifier.size(48.dp)
                                                         )
                                                 }
@@ -1152,9 +1207,7 @@ fun EditCategoryDialog(
 
                                 Spacer(modifier = Modifier.height(24.dp))
 
-                                // Boutons d'action en bas : Poubelle rouge | + bleu | Disquette
-                                // verte
-                                // Tous de même dimension (48dp)
+                                // Boutons d'action en bas : Poubelle rouge | + bleu
                                 Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.Center,

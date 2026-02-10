@@ -467,7 +467,7 @@ fun PortraitPlayerLayout(
                                     .padding(8.dp)
                                     .onFocusChanged { isSyncFocused = it.isFocused }
                                     .background(
-                                            if (isSyncFocused) Color.Black
+                                            if (isSyncFocused) Color.White
                                             else Color.Black.copy(alpha = 0.3f),
                                             CircleShape
                                     )
@@ -476,7 +476,7 @@ fun PortraitPlayerLayout(
                 Icon(
                         Icons.Default.Sync,
                         null,
-                        tint = if (isSyncFocused) Color.White else Color.White.copy(alpha = 0.5f),
+                        tint = if (isSyncFocused) Color.Black else Color.White.copy(alpha = 0.5f),
                         modifier = Modifier.size(20.dp)
                 )
             }
@@ -1008,7 +1008,7 @@ fun LandscapePlayerLayout(
                                             .padding(end = 16.dp, bottom = 48.dp)
                                             .onFocusChanged { isSyncFocused = it.isFocused }
                                             .background(
-                                                    if (isSyncFocused) Color.Black
+                                                    if (isSyncFocused) Color.White
                                                     else Color.Black.copy(alpha = 0.3f),
                                                     CircleShape
                                             )
@@ -1018,7 +1018,7 @@ fun LandscapePlayerLayout(
                                 Icons.Default.Sync,
                                 null,
                                 tint =
-                                        if (isSyncFocused) Color.White
+                                        if (isSyncFocused) Color.Black
                                         else Color.White.copy(alpha = 0.5f),
                                 modifier = Modifier.size(24.dp)
                         )

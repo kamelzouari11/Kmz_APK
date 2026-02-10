@@ -15,8 +15,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.Player
+import coil.compose.AsyncImage
+import com.example.simpleiptv.R
 import com.example.simpleiptv.ui.components.HeaderIconButton
 import com.example.simpleiptv.ui.components.TvInput
+import com.example.simpleiptv.ui.viewmodel.GeneratorType
 import com.example.simpleiptv.ui.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
 
@@ -24,7 +27,7 @@ import kotlinx.coroutines.launch
 fun MainHeader(
         viewModel: MainViewModel,
         isLandscape: Boolean,
-        createLauncher: ActivityResultLauncher<String>?,
+        onSave: () -> Unit,
         openLauncher: ActivityResultLauncher<String>?,
         player: Player?
 ) {
@@ -43,22 +46,29 @@ fun MainHeader(
                 Column {
                         if (isLandscape) {
                                 Row(
-                                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                        modifier = Modifier.fillMaxWidth().padding(8.dp),
                                         verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        horizontalArrangement = Arrangement.spacedBy(25.dp)
                                 ) {
+                                        AsyncImage(
+                                                model = R.drawable.ic_app_logo,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(60.dp)
+                                        )
+
                                         Text(
                                                 text = "SimpleIPTV",
-                                                style = MaterialTheme.typography.headlineSmall,
-                                                color = MaterialTheme.colorScheme.primary
+                                                style = MaterialTheme.typography.titleMedium,
+                                                color = Color.White
                                         )
-                                        Spacer(Modifier.weight(1f))
 
                                         TvInput(
                                                 value = viewModel.searchQuery,
                                                 onValueChange = {
                                                         viewModel.searchQuery = it
-                                                        viewModel.refreshChannels()
+                                                        viewModel.lastGeneratorType =
+                                                                GeneratorType.SEARCH
+                                                        viewModel.refreshChannels(debounce = true)
                                                 },
                                                 label = "Rechercher...",
                                                 focusManager = focusManager,
@@ -79,16 +89,17 @@ fun MainHeader(
                                                 )
                                         }
 
-                                        if (viewModel.playingChannel != null) {
-                                                HeaderIconButton(
-                                                        icon = Icons.Default.PlayArrow,
-                                                        desc = "Retour Player",
-                                                        onClick = {
-                                                                viewModel.isFullScreenPlayer = true
-                                                        },
-                                                        tintNormal = Color.Green
-                                                )
-                                        }
+                                        Spacer(Modifier.weight(1f))
+
+                                        HeaderIconButton(
+                                                icon = Icons.Default.PlayArrow,
+                                                desc = "Player",
+                                                onClick = { viewModel.isFullScreenPlayer = true },
+                                                tintNormal =
+                                                        if (viewModel.playingChannel != null)
+                                                                Color.Green
+                                                        else Color.Gray
+                                        )
 
                                         HeaderIconButton(
                                                 icon = Icons.Default.Person,
@@ -118,11 +129,7 @@ fun MainHeader(
                                         HeaderIconButton(
                                                 icon = Icons.Default.CloudUpload,
                                                 desc = "Sauvegarder",
-                                                onClick = {
-                                                        createLauncher?.launch(
-                                                                "simple_iptv_backup.json"
-                                                        )
-                                                }
+                                                onClick = onSave
                                         )
                                         HeaderIconButton(
                                                 icon = Icons.Default.CloudDownload,
@@ -218,11 +225,7 @@ fun MainHeader(
                                                         HeaderIconButton(
                                                                 icon = Icons.Default.CloudUpload,
                                                                 desc = "Sauvegarder",
-                                                                onClick = {
-                                                                        createLauncher?.launch(
-                                                                                "simple_iptv_backup.json"
-                                                                        )
-                                                                }
+                                                                onClick = onSave
                                                         )
                                                 }
                                                 Box(

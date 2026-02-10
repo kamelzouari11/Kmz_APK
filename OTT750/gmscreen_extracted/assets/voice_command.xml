@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<commands>
+
+    <command>
+        <id>1001</id>
+        <title>User help</title>
+        <content>go to user help</content>
+        <introduce>101</introduce>
+    </command>
+    <command>
+        <id>1002</id>
+        <title>Switch channel</title>
+        <content>101</content>
+        <content>next channel</content>
+        <content>previous channel</content>
+        <introduce>101</introduce>
+    </command>
+    <command>
+        <id>1012</id>
+        <title>Volume control</title>
+        <content>Please loudly</content>
+        <content>Be a little quiet</content>
+        <content>Left/Right</content>
+        <introduce>Volume control</introduce>
+    </command>
+    <command>
+        <id>1001</id>
+        <title>Power on/off</title>
+        <content>Power on</content>
+        <content>Power off</content>
+        <introduce>Power on/off</introduce>
+    </command>
+    <command>
+        <id>1003</id>
+        <title>Switch TV/Radio</title>
+        <content>switch to TV</content>
+        <content>switch to Radio</content>
+        <introduce>TV / Radio</introduce>
+    </command>
+    <command>
+        <id>1004</id>
+        <title>Set mute</title>
+        <content>Please mute</content>
+        <introduce>mute</introduce>
+    </command>
+    <command>
+        <id>1005</id>
+        <title>Open special menu</title>
+        <content>Open sleep/menu/recall</content>
+        <content>Open information bar/OK list/USB</content>
+        <content>Open subtitle/Teletext/satellite</content>
+        <content>Open find/Fav List/EPG</content>
+        <introduce>Open special menu</introduce>
+    </command>
+    <command>
+        <id>1006</id>
+        <title>Player control</title>
+        <content>Stop/Pause/Play/Fast/Slow/Next/Last</content>
+        <introduce>Stop/Pause/Play/Fast/Slow/Next/Last</introduce>
+    </command>
+    <command>
+        <id>1024</id>
+        <title>Page switch</title>
+        <content>Page up</content>
+        <content>Page down</content>
+        <introduce>Page UP/Down</introduce>
+    </command>
+</commands>

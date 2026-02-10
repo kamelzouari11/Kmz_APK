@@ -85,7 +85,7 @@ fun ChannelItem(
                                                         else -> MaterialTheme.colorScheme.onSurface
                                                 },
                                         maxLines = 1,
-                                        style = MaterialTheme.typography.bodyMedium,
+                                        style = MaterialTheme.typography.titleLarge,
                                         modifier = Modifier.weight(1f)
                                 )
                                 if (isPlaying) {

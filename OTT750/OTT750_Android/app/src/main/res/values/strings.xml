@@ -1,0 +1,30 @@
+<resources>
+    <string name="app_name">OTT750 Editor</string>
+    <string name="action_export">Exporter DB</string>
+    <string name="action_manage_favs">★ Gérer Favoris</string>
+    <string name="hint_search">Filtre (ex: *xyz*)</string>
+    <string name="prompt_satellite">Satellite</string>
+    <string name="dialog_fav_title">Gestion Favoris</string>
+    <string name="btn_add">Ajouter</string>
+    <string name="btn_remove">Retirer</string>
+    <string name="msg_select_channels">Veuillez sélectionner des chaînes</string>
+    <string name="msg_success_export">Export terminé dans Download/database_new.db</string>
+    <string name="msg_error_db">Erreur DB: %s</string>
+    
+    <!-- Mode Zapping -->
+    <string name="action_zapping_mode">📺 Zap</string>
+    <string name="zapping_disconnected">📡 Non connecté</string>
+    <string name="zapping_connected">📡 Connecté: %s</string>
+    <string name="zapping_connecting">📡 Recherche…</string>
+    <string name="btn_connect">Connecter</string>
+    <string name="btn_disconnect">Déconnecter</string>
+    <string name="msg_zapping_enabled">Mode Zapping activé - Appuyez sur une chaîne pour zapper</string>
+    <string name="msg_zapping_disabled">Mode Zapping désactivé</string>
+    <string name="msg_zap_success">Zap vers: %s</string>
+    <string name="msg_zap_failed">Échec du zap</string>
+    <string name="msg_stb_not_found">Récepteur non trouvé sur le réseau</string>
+    <string name="dialog_connect_title">Connexion au récepteur</string>
+    <string name="dialog_connect_auto">Recherche automatique</string>
+    <string name="dialog_connect_manual">Entrer IP manuellement</string>
+    <string name="hint_ip_address">Adresse IP (ex: 192.168.1.100)</string>
+</resources>

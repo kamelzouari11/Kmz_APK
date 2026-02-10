@@ -1,0 +1,22 @@
+[
+    {
+        "merged": "/home/kamel/.gradle/daemon/8.11.1/com.kmz.taskmanager.app-debug-53:/drawable_ic_launcher_foreground.png.flat",
+        "source": "/home/kamel/.gradle/daemon/8.11.1/com.kmz.taskmanager.app-main-55:/drawable/ic_launcher_foreground.png"
+    },
+    {
+        "merged": "com.kmz.taskmanager.app-debug-53:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "com.kmz.taskmanager.app-main-55:/mipmap-anydpi-v26/ic_launcher_round.xml"
+    },
+    {
+        "merged": "/home/kamel/.gradle/daemon/8.11.1/com.kmz.taskmanager.app-debug-53:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "/home/kamel/.gradle/daemon/8.11.1/com.kmz.taskmanager.app-main-55:/mipmap-anydpi-v26/ic_launcher_round.xml"
+    },
+    {
+        "merged": "/home/kamel/.gradle/daemon/8.11.1/com.kmz.taskmanager.app-debug-53:/mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "/home/kamel/.gradle/daemon/8.11.1/com.kmz.taskmanager.app-main-55:/mipmap-anydpi-v26/ic_launcher.xml"
+    },
+    {
+        "merged": "com.kmz.taskmanager.app-debug-53:/mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "com.kmz.taskmanager.app-main-55:/mipmap-anydpi-v26/ic_launcher.xml"
+    }
+]

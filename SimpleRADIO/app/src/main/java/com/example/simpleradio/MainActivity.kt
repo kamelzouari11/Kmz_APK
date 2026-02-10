@@ -15,6 +15,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.*
@@ -452,10 +453,8 @@ fun MainScreen(radioRepository: RadioRepository, lrcLibApi: LrcLibApi) {
                         showLyricsGlobal = false
                 } else if (isFullScreenPlayer) {
                         isFullScreenPlayer = false
-                } else if (isViewingRadioResults) {
-                        isViewingRadioResults = false
                 } else {
-                        // Niv 0: Quitter (Background play)
+                        // Niv 0: Quitter (Background play) - La liste ne doit jamais être effacée
                         (context as? Activity)?.moveTaskToBack(true)
                 }
         }
@@ -477,8 +476,7 @@ fun MainScreen(radioRepository: RadioRepository, lrcLibApi: LrcLibApi) {
                 when {
                         selectedRadioFavoriteListId != null -> radioFavStations
                         showRecentRadiosOnly -> recentRadios
-                        isViewingRadioResults -> radioStations
-                        else -> emptyList()
+                        else -> radioStations // Toujours afficher radioStations par défaut
                 }
 
         LaunchedEffect(isViewingRadioResults, playingRadio) {
@@ -661,6 +659,9 @@ fun MainScreen(radioRepository: RadioRepository, lrcLibApi: LrcLibApi) {
                                                                 )
 
                                                                 // Bouton Upload
+                                                                var isUploadFocused by remember {
+                                                                        mutableStateOf(false)
+                                                                }
                                                                 IconButton(
                                                                         onClick = {
                                                                                 dataManagement
@@ -668,16 +669,36 @@ fun MainScreen(radioRepository: RadioRepository, lrcLibApi: LrcLibApi) {
                                                                         },
                                                                         modifier =
                                                                                 Modifier.size(48.dp)
+                                                                                        .onFocusChanged {
+                                                                                                isUploadFocused =
+                                                                                                        it.isFocused
+                                                                                        }
+                                                                                        .background(
+                                                                                                if (isUploadFocused
+                                                                                                )
+                                                                                                        Color.White
+                                                                                                else
+                                                                                                        Color.Transparent,
+                                                                                                CircleShape
+                                                                                        )
                                                                 ) {
                                                                         Icon(
                                                                                 Icons.Default
                                                                                         .CloudUpload,
                                                                                 "Upload",
-                                                                                tint = Color.White
+                                                                                tint =
+                                                                                        if (isUploadFocused
+                                                                                        )
+                                                                                                Color.Black
+                                                                                        else
+                                                                                                Color.White
                                                                         )
                                                                 }
 
                                                                 // Bouton Download
+                                                                var isDownloadFocused by remember {
+                                                                        mutableStateOf(false)
+                                                                }
                                                                 IconButton(
                                                                         onClick = {
                                                                                 dataManagement
@@ -685,16 +706,36 @@ fun MainScreen(radioRepository: RadioRepository, lrcLibApi: LrcLibApi) {
                                                                         },
                                                                         modifier =
                                                                                 Modifier.size(48.dp)
+                                                                                        .onFocusChanged {
+                                                                                                isDownloadFocused =
+                                                                                                        it.isFocused
+                                                                                        }
+                                                                                        .background(
+                                                                                                if (isDownloadFocused
+                                                                                                )
+                                                                                                        Color.White
+                                                                                                else
+                                                                                                        Color.Transparent,
+                                                                                                CircleShape
+                                                                                        )
                                                                 ) {
                                                                         Icon(
                                                                                 Icons.Default
                                                                                         .CloudDownload,
                                                                                 "Download",
-                                                                                tint = Color.White
+                                                                                tint =
+                                                                                        if (isDownloadFocused
+                                                                                        )
+                                                                                                Color.Black
+                                                                                        else
+                                                                                                Color.White
                                                                         )
                                                                 }
 
                                                                 // Bouton Power
+                                                                var isPowerFocused by remember {
+                                                                        mutableStateOf(false)
+                                                                }
                                                                 IconButton(
                                                                         onClick = {
                                                                                 exoPlayer?.stop()
@@ -711,12 +752,29 @@ fun MainScreen(radioRepository: RadioRepository, lrcLibApi: LrcLibApi) {
                                                                         },
                                                                         modifier =
                                                                                 Modifier.size(48.dp)
+                                                                                        .onFocusChanged {
+                                                                                                isPowerFocused =
+                                                                                                        it.isFocused
+                                                                                        }
+                                                                                        .background(
+                                                                                                if (isPowerFocused
+                                                                                                )
+                                                                                                        Color.White
+                                                                                                else
+                                                                                                        Color.Transparent,
+                                                                                                CircleShape
+                                                                                        )
                                                                 ) {
                                                                         Icon(
                                                                                 Icons.Default
                                                                                         .PowerSettingsNew,
                                                                                 "Quitter",
-                                                                                tint = Color.Red
+                                                                                tint =
+                                                                                        if (isPowerFocused
+                                                                                        )
+                                                                                                Color.Red
+                                                                                        else
+                                                                                                Color.Red
                                                                         )
                                                                 }
                                                         }
@@ -836,6 +894,17 @@ fun MainScreen(radioRepository: RadioRepository, lrcLibApi: LrcLibApi) {
                                                                                         isLoading =
                                                                                                 true
                                                                                         try {
+                                                                                                // Réinitialiser tous les filtres
+                                                                                                selectedRadioCountry =
+                                                                                                        null
+                                                                                                selectedRadioTag =
+                                                                                                        null
+                                                                                                selectedRadioBitrate =
+                                                                                                        null
+                                                                                                radioSearchQuery =
+                                                                                                        ""
+
+                                                                                                // Actualiser les pays et tags
                                                                                                 radioCountries =
                                                                                                         radioRepository
                                                                                                                 .getCountries()
@@ -854,29 +923,16 @@ fun MainScreen(radioRepository: RadioRepository, lrcLibApi: LrcLibApi) {
                                                                                                                 .take(
                                                                                                                         100
                                                                                                                 )
-                                                                                                val bitrateMax =
-                                                                                                        when (selectedRadioBitrate
-                                                                                                        ) {
-                                                                                                                0 ->
-                                                                                                                        63
-                                                                                                                64 ->
-                                                                                                                        127
-                                                                                                                128 ->
-                                                                                                                        191
-                                                                                                                else ->
-                                                                                                                        null
-                                                                                                        }
+
+                                                                                                // Charger toutes les stations par popularité
                                                                                                 radioStations =
                                                                                                         radioRepository
                                                                                                                 .searchStations(
-                                                                                                                        selectedRadioCountry,
-                                                                                                                        selectedRadioTag,
-                                                                                                                        radioSearchQuery
-                                                                                                                                .takeIf {
-                                                                                                                                        it.isNotBlank()
-                                                                                                                                },
-                                                                                                                        selectedRadioBitrate,
-                                                                                                                        bitrateMax,
+                                                                                                                        null, // pas de filtre pays
+                                                                                                                        null, // pas de filtre tag
+                                                                                                                        null, // pas de recherche
+                                                                                                                        null, // pas de bitrate min
+                                                                                                                        null, // pas de bitrate max
                                                                                                                         radioSortOrder
                                                                                                                 )
                                                                                                 isViewingRadioResults =
@@ -1150,11 +1206,8 @@ fun MainScreen(radioRepository: RadioRepository, lrcLibApi: LrcLibApi) {
                                         onSearch = { query ->
                                                 radioSearchQuery = query
                                                 showRecentRadiosOnly = false
-                                                // Clear filters for search to work on entire
-                                                // database
-                                                selectedRadioCountry = null
-                                                selectedRadioTag = null
-                                                selectedRadioBitrate = null
+                                                // La recherche conserve les filtres actuels
+                                                // (country, tag, bitrate)
                                                 isViewingRadioResults = true
                                                 searchTrigger++
                                                 showSearchDialog = false

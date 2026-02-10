@@ -157,4 +157,27 @@ interface IptvDao {
     @Query("UPDATE profiles SET isSelected = 0") suspend fun deselectAllProfiles()
 
     @Query("UPDATE profiles SET isSelected = 1 WHERE id = :id") suspend fun selectProfile(id: Int)
+
+    @Transaction
+    suspend fun syncProfileData(
+            profileId: Int,
+            categories: List<CategoryEntity>,
+            channels: List<ChannelEntity>,
+            links: List<ChannelCategoryCrossRef>
+    ) {
+        clearChannelCategoryLinks(profileId)
+        clearCategories(profileId)
+        insertCategories(categories)
+
+        val currentIds = getChannelIds(profileId).toSet()
+        val newIds = channels.map { it.stream_id }.toSet()
+        val idsToDelete = currentIds.minus(newIds).toList()
+
+        if (idsToDelete.isNotEmpty()) {
+            idsToDelete.chunked(900).forEach { chunk -> deleteChannelsByIds(profileId, chunk) }
+        }
+
+        insertChannels(channels)
+        insertChannelCategoryLinks(links)
+    }
 }

@@ -145,7 +145,8 @@ fun VideoPlayerView(
                                                                                 .titleMedium
                                                         )
                                                         LazyColumn(modifier = Modifier.weight(1f)) {
-                                                                items(countries) { country ->
+                                                                items(countries, key = { it }) {
+                                                                        country ->
                                                                         val isSelected =
                                                                                 country ==
                                                                                         selectedCountry
@@ -209,6 +210,10 @@ fun VideoPlayerView(
                                                                                                         Color.Green
                                                                                                 else
                                                                                                         Color.White,
+                                                                                        style =
+                                                                                                MaterialTheme
+                                                                                                        .typography
+                                                                                                        .titleLarge,
                                                                                         maxLines =
                                                                                                 1,
                                                                                         overflow =
@@ -315,6 +320,10 @@ fun VideoPlayerView(
                                                                                                 Color.Green
                                                                                         else
                                                                                                 Color.White,
+                                                                                style =
+                                                                                        MaterialTheme
+                                                                                                .typography
+                                                                                                .titleLarge,
                                                                                 maxLines = 1,
                                                                                 overflow =
                                                                                         TextOverflow
@@ -430,7 +439,7 @@ fun VideoPlayerView(
                                                                         style =
                                                                                 MaterialTheme
                                                                                         .typography
-                                                                                        .bodyMedium,
+                                                                                        .titleLarge,
                                                                         overflow =
                                                                                 TextOverflow
                                                                                         .Ellipsis,

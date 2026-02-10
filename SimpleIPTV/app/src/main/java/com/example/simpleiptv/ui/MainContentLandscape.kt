@@ -28,11 +28,11 @@ fun MainContentLandscape(viewModel: MainViewModel, onChannelClick: (ChannelEntit
         // Width reduced from 0.18f to 0.10f
         LazyColumn(
                 modifier =
-                        Modifier.weight(0.10f)
+                        Modifier.weight(0.15f)
                                 .fillMaxHeight()
                                 .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.05f))
                                 .padding(4.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp) // Harmonized spacing
+                verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             item {
                 SidebarItem(
@@ -50,7 +50,7 @@ fun MainContentLandscape(viewModel: MainViewModel, onChannelClick: (ChannelEntit
                         modifier = Modifier.padding(start = 8.dp, top = 8.dp, bottom = 4.dp)
                 )
             }
-            items(viewModel.countryFilters.filter { it != "ALL" }) { country ->
+            items(viewModel.countryFilters.filter { it != "ALL" }, key = { it }) { country ->
                 SidebarItem(
                         text = country,
                         icon = null,
@@ -69,11 +69,11 @@ fun MainContentLandscape(viewModel: MainViewModel, onChannelClick: (ChannelEntit
         // Width increased from 0.25f to 0.33f (gained from Column 1)
         LazyColumn(
                 modifier =
-                        Modifier.weight(0.33f)
+                        Modifier.weight(0.30f)
                                 .fillMaxHeight()
                                 .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.02f))
                                 .padding(4.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp) // Harmonized spacing
+                verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             if (viewModel.selectedCountryFilter == "ALL") {
                 item {
@@ -116,7 +116,7 @@ fun MainContentLandscape(viewModel: MainViewModel, onChannelClick: (ChannelEntit
                         }
                     }
                 }
-                items(viewModel.favoriteLists) { list ->
+                items(viewModel.favoriteLists, key = { it.id }) { list ->
                     val isSelected = viewModel.selectedFavoriteListId == list.id
                     SidebarItem(
                             text = list.name,
@@ -145,7 +145,7 @@ fun MainContentLandscape(viewModel: MainViewModel, onChannelClick: (ChannelEntit
                         modifier = Modifier.padding(start = 8.dp, top = 8.dp, bottom = 4.dp)
                 )
             }
-            items(viewModel.filteredCategories) { category ->
+            items(viewModel.filteredCategories, key = { it.category_id }) { category ->
                 val isSelected = viewModel.selectedCategoryId == category.category_id
                 SidebarItem(
                         text = category.category_name,
@@ -166,10 +166,10 @@ fun MainContentLandscape(viewModel: MainViewModel, onChannelClick: (ChannelEntit
 
         // --- Column 3: Channels ---
         LazyColumn(
-                modifier = Modifier.weight(0.57f).fillMaxHeight().padding(4.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp) // Harmonized spacing
+                modifier = Modifier.weight(0.55f).fillMaxHeight().padding(4.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(viewModel.channels) { channel ->
+            items(viewModel.channels, key = { it.stream_id }) { channel ->
                 val isPlaying = viewModel.playingChannel?.stream_id == channel.stream_id
                 ChannelItem(
                         channel = channel,

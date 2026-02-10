@@ -154,19 +154,6 @@ class SyncService(private val dao: IptvDao) {
             channels: List<ChannelEntity>,
             links: List<ChannelCategoryCrossRef>
     ) {
-        dao.clearChannelCategoryLinks(profileId)
-        dao.clearCategories(profileId)
-        dao.insertCategories(categories)
-
-        val currentIds = dao.getChannelIds(profileId).toSet()
-        val newIds = channels.map { it.stream_id }.toSet()
-        val idsToDelete = currentIds.minus(newIds).toList()
-
-        if (idsToDelete.isNotEmpty()) {
-            idsToDelete.chunked(900).forEach { chunk -> dao.deleteChannelsByIds(profileId, chunk) }
-        }
-
-        dao.insertChannels(channels)
-        dao.insertChannelCategoryLinks(links)
+        dao.syncProfileData(profileId, categories, channels, links)
     }
 }

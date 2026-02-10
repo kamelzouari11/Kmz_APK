@@ -3,6 +3,7 @@ local
 drawable ic_launcher_background
 drawable ic_launcher_foreground
 drawable ic_launcher_foreground_image
+drawable liste_courses
 mipmap ic_launcher
 mipmap ic_launcher_round
 string add_article

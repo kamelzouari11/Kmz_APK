@@ -103,7 +103,6 @@ sealed class Screen {
 @Composable
 fun ShoppingListApp() {
     val context = LocalContext.current
-    val activity = context as? Activity
     val dataManager = remember { DataManager(context) }
 
     // État de navigation
@@ -269,7 +268,8 @@ fun ShoppingListApp() {
         is Screen.AllArticles -> {
             AllArticlesScreen(
                     dataManager = dataManager,
-                    onBackClick = { currentScreen = Screen.Categories }
+                    onBackClick = { currentScreen = Screen.Categories },
+                    onMicClick = { startVoiceRecognition() }
             )
         }
         is Screen.IconManager -> {
@@ -282,7 +282,8 @@ fun ShoppingListApp() {
             ArticlesScreen(
                     category = screen.category,
                     dataManager = dataManager,
-                    onBackClick = { currentScreen = Screen.Categories }
+                    onBackClick = { currentScreen = Screen.Categories },
+                    onMicClick = { startVoiceRecognition() }
             )
         }
     }

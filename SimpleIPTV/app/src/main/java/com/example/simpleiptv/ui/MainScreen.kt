@@ -1,6 +1,9 @@
 package com.example.simpleiptv.ui
 
+import android.content.ContentValues
 import android.content.res.Configuration
+import android.os.Environment
+import android.provider.MediaStore
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -32,7 +35,9 @@ import com.example.simpleiptv.ui.dialogs.ProfileFormDialog
 import com.example.simpleiptv.ui.dialogs.ProfileManagerDialog
 import com.example.simpleiptv.ui.viewmodel.GeneratorType
 import com.example.simpleiptv.ui.viewmodel.MainViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun MainScreen(
@@ -48,40 +53,72 @@ fun MainScreen(
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     // SAF Launchers
-    val createDocumentLauncher =
-            rememberLauncherForActivityResult(
-                    contract = ActivityResultContracts.CreateDocument("application/json")
-            ) { uri ->
-                uri?.let {
-                    scope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                        try {
-                            val json = exportJson()
-                            context.contentResolver.openOutputStream(it)?.use { stream ->
-                                java.io.OutputStreamWriter(stream).use { writer ->
-                                    writer.write(json)
-                                }
+    // Direct Save to Downloads (Avoids DocumentsUI crash on some TV boxes)
+    val onSave: () -> Unit = {
+        scope.launch(Dispatchers.IO) {
+            try {
+                val json = exportJson()
+                val fileName = "simple_iptv_backup_${System.currentTimeMillis() / 1000}.json"
+                val resolver = context.contentResolver
+
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                    val contentValues =
+                            ContentValues().apply {
+                                put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+                                put(MediaStore.MediaColumns.MIME_TYPE, "application/json")
+                                put(
+                                        MediaStore.MediaColumns.RELATIVE_PATH,
+                                        Environment.DIRECTORY_DOWNLOADS
+                                )
                             }
-                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                                Toast.makeText(
-                                                context,
-                                                "Backup saved successfully",
-                                                Toast.LENGTH_LONG
-                                        )
-                                        .show()
-                            }
-                        } catch (e: Exception) {
-                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                                Toast.makeText(
-                                                context,
-                                                "Export Error: ${e.message}",
-                                                Toast.LENGTH_LONG
-                                        )
-                                        .show()
-                            }
+                    val uri =
+                            resolver.insert(
+                                    MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                                    contentValues
+                            )
+                    uri?.let {
+                        resolver.openOutputStream(it)?.use { stream ->
+                            stream.write(json.toByteArray())
+                        }
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(
+                                            context,
+                                            "Sauvegardé : $fileName dans Téléchargements",
+                                            Toast.LENGTH_LONG
+                                    )
+                                    .show()
                         }
                     }
+                            ?: throw Exception("Erreur création fichier MediaStore")
+                } else {
+                    val downloadsDir =
+                            Environment.getExternalStoragePublicDirectory(
+                                    Environment.DIRECTORY_DOWNLOADS
+                            )
+                    if (!downloadsDir.exists()) downloadsDir.mkdirs()
+                    val file = java.io.File(downloadsDir, fileName)
+                    file.writeText(json)
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                                        context,
+                                        "Sauvegardé : $fileName dans Téléchargements",
+                                        Toast.LENGTH_LONG
+                                )
+                                .show()
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                                    context,
+                                    "Erreur export: ${e.localizedMessage}",
+                                    Toast.LENGTH_LONG
+                            )
+                            .show()
                 }
             }
+        }
+    }
 
     val openDocumentLauncher =
             rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri
@@ -140,6 +177,12 @@ fun MainScreen(
     LaunchedEffect(Unit) {
         if (viewModel.playingChannel != null) {
             viewModel.isFullScreenPlayer = true
+            exoPlayer?.let {
+                if (!it.isPlaying && it.mediaItemCount > 0) {
+                    it.prepare()
+                    it.play()
+                }
+            }
         }
     }
 
@@ -210,7 +253,7 @@ fun MainScreen(
                     MainHeader(
                             viewModel = viewModel,
                             isLandscape = isLandscape,
-                            createLauncher = createDocumentLauncher,
+                            onSave = onSave,
                             openLauncher = openDocumentLauncher,
                             player = exoPlayer
                     )
@@ -254,7 +297,7 @@ fun MobileSearchRow(viewModel: MainViewModel) {
                 value = viewModel.searchQuery,
                 onValueChange = {
                     viewModel.searchQuery = it
-                    viewModel.refreshChannels()
+                    viewModel.refreshChannels(debounce = true)
                 },
                 label = "Filtrer les chaînes...",
                 focusManager = LocalFocusManager.current,
