@@ -12,11 +12,14 @@ class BackupService(private val dao: IptvDao) {
     private val moshi = Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
 
     suspend fun exportFavoritesToJson(profileId: Int): String {
-        val lists = dao.getAllFavoriteLists(profileId).first()
+        val lists =
+                (dao.getAllFavoriteLists(profileId, "LIVE").first() +
+                        dao.getAllFavoriteLists(profileId, "VOD").first())
         val backupLists =
                 lists.map { list ->
-                    val channels = dao.getChannelsByFavoriteList(list.id, profileId).first()
-                    BackupFavoriteList(name = list.name, channels = channels)
+                    val channels =
+                            dao.getChannelsByFavoriteList(list.id, profileId, list.type).first()
+                    BackupFavoriteList(name = list.name, type = list.type, channels = channels)
                 }
         val backup = IptvBackup(favoriteLists = backupLists)
         return moshi.adapter(IptvBackup::class.java).toJson(backup)
@@ -31,12 +34,23 @@ class BackupService(private val dao: IptvDao) {
         val profiles = dao.getAllProfiles().first()
         val profileBackups =
                 profiles.map { profile ->
-                    val lists = dao.getAllFavoriteLists(profile.id).first()
+                    val lists =
+                            (dao.getAllFavoriteLists(profile.id, "LIVE").first() +
+                                    dao.getAllFavoriteLists(profile.id, "VOD").first())
                     val backupLists =
                             lists.map { list ->
                                 val channels =
-                                        dao.getChannelsByFavoriteList(list.id, profile.id).first()
-                                BackupFavoriteList(name = list.name, channels = channels)
+                                        dao.getChannelsByFavoriteList(
+                                                        list.id,
+                                                        profile.id,
+                                                        list.type
+                                                )
+                                                .first()
+                                BackupFavoriteList(
+                                        name = list.name,
+                                        type = list.type,
+                                        channels = channels
+                                )
                             }
                     ProfileBackup(
                             profile = profile.copy(id = 0, isSelected = false),
@@ -65,11 +79,16 @@ class BackupService(private val dao: IptvDao) {
 
     private suspend fun importBackupData(profileId: Int, favoriteLists: List<BackupFavoriteList>) {
         favoriteLists.forEach { backupList ->
+            val mediaType = backupList.type // Use the type from backup
             dao.insertFavoriteList(
-                    FavoriteListEntity(name = backupList.name, profileId = profileId)
+                    FavoriteListEntity(
+                            name = backupList.name,
+                            profileId = profileId,
+                            type = mediaType
+                    )
             )
-            val allLists = dao.getAllFavoriteLists(profileId).first()
-            val targetList = allLists.find { it.name == backupList.name }
+            val allLists = dao.getAllFavoriteLists(profileId, mediaType).first()
+            val targetList = allLists.find { it.name == backupList.name && it.type == mediaType }
 
             if (targetList != null) {
                 backupList.channels.forEach { channel ->
@@ -81,6 +100,7 @@ class BackupService(private val dao: IptvDao) {
                                     channel.stream_id,
                                     targetList.id,
                                     profileId,
+                                    mediaType,
                                     index
                             )
                     )

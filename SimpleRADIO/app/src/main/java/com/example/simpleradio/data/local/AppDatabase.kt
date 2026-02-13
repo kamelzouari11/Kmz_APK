@@ -13,7 +13,7 @@ import com.example.simpleradio.data.local.entities.*
                         RadioFavoriteListEntity::class,
                         RadioFavoriteCrossRef::class,
                         RadioRecentEntity::class],
-        version = 2,
+        version = 3,
         exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

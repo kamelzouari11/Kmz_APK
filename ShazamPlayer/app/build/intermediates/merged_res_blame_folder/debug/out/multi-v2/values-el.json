@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.kmz.shazamplayer.app-mergeDebugResources-46:/values-el/values-el.xml",
+            "outputFile": "com.kmz.shazamplayer.app-mergeDebugResources-47:/values-el/values-el.xml",
             "map": [
                 {
                     "source": "/home/kamel/.gradle/caches/9.0-milestone-1/transforms/c277c5c52f7d5e285039fbc1ed6f8543/transformed/jetified-media3-ui-1.2.1/res/values-el/values-el.xml",

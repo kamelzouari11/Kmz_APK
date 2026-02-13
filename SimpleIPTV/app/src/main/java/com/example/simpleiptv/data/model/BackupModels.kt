@@ -9,7 +9,11 @@ data class IptvBackup(
         val favoriteLists: List<BackupFavoriteList>
 )
 
-data class BackupFavoriteList(val name: String, val channels: List<ChannelEntity>)
+data class BackupFavoriteList(
+        val name: String,
+        val type: String = "LIVE",
+        val channels: List<ChannelEntity>
+)
 
 data class FullDatabaseBackup(
         val version: Int = 2,

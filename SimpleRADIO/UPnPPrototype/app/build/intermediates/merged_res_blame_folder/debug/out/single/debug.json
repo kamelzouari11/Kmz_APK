@@ -1,0 +1,22 @@
+[
+    {
+        "merged": "/home/kamel/.gradle/daemon/8.13/com.prototype.upnpradio.app-merged_res-31:/drawable_device_item_background.xml.flat",
+        "source": "/home/kamel/.gradle/daemon/8.13/com.prototype.upnpradio.app-main-33:/drawable/device_item_background.xml"
+    },
+    {
+        "merged": "com.prototype.upnpradio.app-merged_res-31:/drawable_ic_radio_logo.xml.flat",
+        "source": "com.prototype.upnpradio.app-main-33:/drawable/ic_radio_logo.xml"
+    },
+    {
+        "merged": "/home/kamel/.gradle/daemon/8.13/com.prototype.upnpradio.app-merged_res-31:/layout_activity_main.xml.flat",
+        "source": "/home/kamel/.gradle/daemon/8.13/com.prototype.upnpradio.app-main-33:/layout/activity_main.xml"
+    },
+    {
+        "merged": "/home/kamel/.gradle/daemon/8.13/com.prototype.upnpradio.app-merged_res-31:/drawable_device_item_selected.xml.flat",
+        "source": "/home/kamel/.gradle/daemon/8.13/com.prototype.upnpradio.app-main-33:/drawable/device_item_selected.xml"
+    },
+    {
+        "merged": "/home/kamel/.gradle/daemon/8.13/com.prototype.upnpradio.app-merged_res-31:/drawable_card_background.xml.flat",
+        "source": "/home/kamel/.gradle/daemon/8.13/com.prototype.upnpradio.app-main-33:/drawable/card_background.xml"
+    }
+]

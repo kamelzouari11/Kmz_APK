@@ -12,4 +12,5 @@ val Secondary = Color(0xFF03DAC6)
 val PriorityLow = Color(0xFF757575) // Gris
 val PriorityMedium = Color(0xFFFFFFFF) // Blanc
 val PriorityHigh = Color(0xFFFF1744) // Rouge vif
+val ExpiredTaskBg = Color(0xFF2B0B0B) // Rouge-noir pour tâches échues
 val FolderDefault = Color(0xFF42A5F5)

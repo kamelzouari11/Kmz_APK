@@ -15,8 +15,24 @@ enum class GeneratorType {
     CATEGORY
 }
 
+enum class MediaMode {
+    LIVE,
+    VOD
+}
+
 class MainViewModel(private val repository: IptvRepository) : ViewModel() {
     // UI State
+    var currentMediaMode by mutableStateOf(MediaMode.LIVE)
+
+    fun setMediaMode(mode: MediaMode) {
+        if (currentMediaMode == mode) return
+        currentMediaMode = mode
+        selectedCategoryId = null
+        selectedFavoriteListId = -1
+        lastGeneratorType = GeneratorType.RECENTS
+        searchQuery = ""
+        selectProfile(activeProfileId) // Re-trigger observers for the new mode
+    }
     var profiles by mutableStateOf<List<ProfileEntity>>(emptyList())
         private set
     var categories by mutableStateOf<List<CategoryEntity>>(emptyList())
@@ -36,9 +52,10 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
         private set
 
     val filteredCategories by derivedStateOf {
-        if (selectedCountryFilter == "ALL") categories
+        val nonSeparatorCategories = categories.filter { !it.category_name.startsWith("-") }
+        if (selectedCountryFilter == "ALL") nonSeparatorCategories
         else
-                categories.filter {
+                nonSeparatorCategories.filter {
                     it.category_name.startsWith(selectedCountryFilter, ignoreCase = true)
                 }
     }
@@ -57,6 +74,7 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
     var channelToFavorite by mutableStateOf<ChannelEntity?>(null)
     var showRestoreConfirmDialog by mutableStateOf(false)
     var backupJsonToRestore by mutableStateOf("")
+    var syncError by mutableStateOf<String?>(null)
 
     // Coroutine Jobs to avoid multiple collectors
     private var channelsJob: kotlinx.coroutines.Job? = null
@@ -69,12 +87,16 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
 
     private fun observeProfiles() {
         viewModelScope.launch {
-            repository.allProfiles.collect {
-                profiles = it
-                if (activeProfileId == -1 && it.isNotEmpty()) {
-                    val selected = it.find { p -> p.isSelected } ?: it.first()
-                    selectProfile(selected.id)
+            try {
+                repository.allProfiles.collect {
+                    profiles = it
+                    if (activeProfileId == -1 && it.isNotEmpty()) {
+                        val selected = it.find { p -> p.isSelected } ?: it.first()
+                        selectProfile(selected.id)
+                    }
                 }
+            } catch (e: Throwable) {
+                android.util.Log.e("MainViewModel", "Error observing profiles", e)
             }
         }
     }
@@ -84,17 +106,41 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
         viewModelScope.launch {
             repository.selectProfile(id)
 
+            // Auto-sync if DB is empty for this profile
+            val count = repository.getChannelCount(id)
+            if (count == 0) {
+                val profile = profiles.find { it.id == id }
+                if (profile != null) {
+                    isLoading = true
+                    try {
+                        repository.refreshDatabase(profile)
+                    } catch (e: Exception) {
+                        syncError =
+                                "Erreur d'importation : ${e.localizedMessage ?: "Erreur inconnue"}"
+                    } finally {
+                        isLoading = false
+                    }
+                }
+            }
+
             categoriesJob?.cancel()
             categoriesJob = launch {
-                repository.getCategories(id).collect { cats ->
+                repository.getCategories(id, currentMediaMode.name).collect { cats ->
                     categories = cats
                     // Process filters off the main thread for better fluidity
                     viewModelScope.launch(kotlinx.coroutines.Dispatchers.Default) {
                         val groups =
                                 cats
                                         .mapNotNull {
-                                            if (it.category_name.length >= 3)
-                                                    it.category_name.substring(0, 3).uppercase()
+                                            val name = it.category_name.trim()
+                                            if (name.startsWith("-") || name.isEmpty())
+                                                    return@mapNotNull null
+
+                                            val spaceIndex = name.indexOf(' ')
+                                            val length =
+                                                    if (spaceIndex in 1..4) spaceIndex
+                                                    else minOf(4, name.length)
+                                            if (length > 0) name.substring(0, length).uppercase()
                                             else null
                                         }
                                         .distinct()
@@ -104,7 +150,11 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
             }
 
             favoritesJob?.cancel()
-            favoritesJob = launch { repository.getFavoriteLists(id).collect { favoriteLists = it } }
+            favoritesJob = launch {
+                repository.getFavoriteLists(id, currentMediaMode.name).collect {
+                    favoriteLists = it
+                }
+            }
 
             lastGeneratorType = GeneratorType.RECENTS
             selectedCountryFilter = "ALL"
@@ -136,17 +186,25 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
     private suspend fun executeRefresh() {
         val flow =
                 when (lastGeneratorType) {
-                    GeneratorType.SEARCH -> repository.searchChannels(searchQuery, activeProfileId)
-                    GeneratorType.RECENTS -> repository.getRecentChannels(activeProfileId)
+                    GeneratorType.SEARCH ->
+                            repository.searchChannels(
+                                    searchQuery,
+                                    activeProfileId,
+                                    currentMediaMode.name
+                            )
+                    GeneratorType.RECENTS ->
+                            repository.getRecentChannels(activeProfileId, currentMediaMode.name)
                     GeneratorType.FAVORITES ->
                             repository.getChannelsByFavoriteList(
                                     selectedFavoriteListId,
-                                    activeProfileId
+                                    activeProfileId,
+                                    currentMediaMode.name
                             )
                     GeneratorType.CATEGORY ->
                             repository.getChannelsByCategory(
                                     selectedCategoryId ?: "",
-                                    activeProfileId
+                                    activeProfileId,
+                                    currentMediaMode.name
                             )
                 }
         flow.collect { channels = it }
@@ -166,16 +224,25 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
 
     fun toggleFavorite(streamId: String, listId: Int) {
         viewModelScope.launch {
-            repository.toggleChannelFavorite(streamId, listId, activeProfileId)
+            repository.toggleChannelFavorite(
+                    streamId,
+                    listId,
+                    activeProfileId,
+                    currentMediaMode.name
+            )
         }
     }
 
     fun addToRecents(streamId: String) {
-        viewModelScope.launch { repository.addToRecents(streamId, activeProfileId) }
+        viewModelScope.launch {
+            repository.addToRecents(streamId, activeProfileId, currentMediaMode.name)
+        }
     }
 
     fun addFavoriteList(name: String) {
-        viewModelScope.launch { repository.addFavoriteList(name, activeProfileId) }
+        viewModelScope.launch {
+            repository.addFavoriteList(name, activeProfileId, currentMediaMode.name)
+        }
     }
 
     fun removeFavoriteList(list: FavoriteListEntity) {

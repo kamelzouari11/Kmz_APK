@@ -35,44 +35,21 @@ fun IconManagerScreen(dataManager: DataManager, onBackClick: () -> Unit) {
         var categories by remember { mutableStateOf(dataManager.getCategories()) }
         var articles by remember { mutableStateOf(dataManager.getArticles()) }
 
-        // État pour l'élément sélectionné
         var selectedItem by remember { mutableStateOf<Any?>(null) }
         var searchResults by remember { mutableStateOf<List<String>>(emptyList()) }
         var currentFrenchName by remember { mutableStateOf("") }
-
-        // Tab sélectionné (0 = Catégories, 1 = Articles)
         var selectedTab by remember { mutableStateOf(0) }
-
-        // Catégories repliées (par défaut toutes repliées pour les articles)
         var collapsedCategories by remember { mutableStateOf(categories.map { it.id }.toSet()) }
 
         Box(modifier = Modifier.fillMaxSize().background(BlueNoir)) {
                 Column(modifier = Modifier.fillMaxSize()) {
-                        // En-tête simplifié
-                        Box(modifier = Modifier.fillMaxWidth().background(BlueNoir).padding(8.dp)) {
-                                IconButton(
-                                        onClick = onBackClick,
-                                        modifier = Modifier.align(Alignment.CenterStart)
-                                ) {
-                                        Icon(
-                                                Icons.Default.ArrowBack,
-                                                contentDescription = "Retour",
-                                                tint = White
-                                        )
-                                }
-
-                                Text(
-                                        text = "Modification Création",
-                                        color = White,
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.align(Alignment.Center)
-                                )
-                        }
+                        SimpleScreenHeader(
+                                title = "Modification Création",
+                                onBackClick = onBackClick
+                        )
 
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        // Boutons de sélection Catégories / Articles
                         Row(
                                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -102,7 +79,6 @@ fun IconManagerScreen(dataManager: DataManager, onBackClick: () -> Unit) {
                                 ) { Text("Articles", color = White) }
                         }
 
-                        // Liste des éléments
                         LazyColumn(
                                 modifier = Modifier.weight(1f).fillMaxWidth(),
                                 contentPadding = PaddingValues(vertical = 8.dp)
@@ -145,13 +121,12 @@ fun IconManagerScreen(dataManager: DataManager, onBackClick: () -> Unit) {
                                                                                         .clickable {
                                                                                                 collapsedCategories =
                                                                                                         if (isCollapsed
-                                                                                                        ) {
+                                                                                                        )
                                                                                                                 collapsedCategories -
                                                                                                                         category.id
-                                                                                                        } else {
+                                                                                                        else
                                                                                                                 collapsedCategories +
                                                                                                                         category.id
-                                                                                                        }
                                                                                         }
                                                                                         .padding(
                                                                                                 horizontal =
@@ -247,7 +222,6 @@ fun IconManagerScreen(dataManager: DataManager, onBackClick: () -> Unit) {
                                 }
                         }
 
-                        // Dialogues d'édition C1 et C2 pour une cohérence totale
                         if (selectedItem != null) {
                                 when (val item = selectedItem) {
                                         is Category -> {
@@ -295,24 +269,22 @@ fun IconManagerScreen(dataManager: DataManager, onBackClick: () -> Unit) {
                                                                                 categoryId =
                                                                                         categoryId
                                                                         )
-                                                                if (item.id == -1L) {
+                                                                if (item.id == -1L)
                                                                         dataManager.addArticle(
                                                                                 updatedArticle
                                                                         )
-                                                                } else {
+                                                                else
                                                                         dataManager.updateArticle(
                                                                                 updatedArticle
                                                                         )
-                                                                }
                                                                 articles = dataManager.getArticles()
                                                                 selectedItem = null
                                                         },
                                                         onDelete = {
-                                                                if (item.id != -1L) {
+                                                                if (item.id != -1L)
                                                                         dataManager.deleteArticle(
                                                                                 item.id
                                                                         )
-                                                                }
                                                                 articles = dataManager.getArticles()
                                                                 selectedItem = null
                                                         },
@@ -383,9 +355,7 @@ fun IconItemRow(
                                 AsyncImage(
                                         model =
                                                 ImageRequest.Builder(context)
-                                                        .data(
-                                                                iconUrl ?: ""
-                                                        ) // Fallback géré par l'absence d'image
+                                                        .data(iconUrl ?: "")
                                                         .crossfade(true)
                                                         .build(),
                                         contentDescription = null,
@@ -393,9 +363,7 @@ fun IconItemRow(
                                         contentScale = ContentScale.Fit
                                 )
                         }
-
                         Spacer(modifier = Modifier.width(12.dp))
-
                         Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                         text = name,

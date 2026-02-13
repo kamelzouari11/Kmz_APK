@@ -1,4 +1,4 @@
-#Sun Feb 08 11:52:59 CET 2026
+#Wed Feb 11 18:34:45 CET 2026
 base.0=/media/kamel/DATA/KmzAPK/ShoppingLIST/app/build/intermediates/dex/debug/mergeExtDexDebug/classes.dex
 base.1=/media/kamel/DATA/KmzAPK/ShoppingLIST/app/build/intermediates/dex/debug/mergeProjectDexDebug/0/classes.dex
 base.2=/media/kamel/DATA/KmzAPK/ShoppingLIST/app/build/intermediates/dex/debug/mergeProjectDexDebug/11/classes.dex

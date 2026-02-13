@@ -58,6 +58,14 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel()) {
 
         val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
         val scope = rememberCoroutineScope()
+
+        var currentTime by remember { mutableStateOf(LocalDateTime.now()) }
+        LaunchedEffect(Unit) {
+                while (true) {
+                        kotlinx.coroutines.delay(10000) // Actualisation toutes les 10 secondes
+                        currentTime = LocalDateTime.now()
+                }
+        }
         val snackbarHostState = remember { SnackbarHostState() }
 
         ModalNavigationDrawer(
@@ -432,6 +440,7 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel()) {
                                                         TaskItem(
                                                                 task = task,
                                                                 folders = folders,
+                                                                now = currentTime,
                                                                 isSelected =
                                                                         task.id in selectedTaskIds,
                                                                 onSelect = {
@@ -450,10 +459,10 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel()) {
                                                                         taskViewModel
                                                                                 .toggleTaskDone(it)
                                                                 },
-                                                                onDelete = {
-                                                                        taskViewModel.deleteTask(it)
+                                                                onEdit = {
+                                                                        taskToEdit = it
+                                                                        showAddTaskDialog = true
                                                                 },
-                                                                onEdit = { taskToEdit = it },
                                                                 onPostpone = { t ->
                                                                         val now =
                                                                                 LocalDateTime.now()
@@ -646,14 +655,15 @@ fun MoveTasksDialog(folders: List<Folder>, onDismiss: () -> Unit, onMove: (Long)
         )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskItem(
         task: Task,
         folders: List<Folder> = emptyList(),
+        now: LocalDateTime,
         isSelected: Boolean = false,
         onSelect: (Long) -> Unit,
         onToggle: (Task) -> Unit,
-        onDelete: (Task) -> Unit,
         onEdit: (Task) -> Unit,
         onPostpone: (Task) -> Unit
 ) {
@@ -664,303 +674,304 @@ fun TaskItem(
                         Priority.HIGH -> PriorityHigh
                 }
 
-        var showMenu by remember { mutableStateOf(false) }
+        val isExpired = task.dueDate?.isBefore(now) == true && !task.isDone
 
-        Box {
+        val containerColor =
+                when {
+                        isSelected -> MidnightGreen
+                        isExpired -> ExpiredTaskBg
+                        else -> SurfaceVariant
+                }
+
+        val dismissState =
+                rememberSwipeToDismissBoxState(
+                        confirmValueChange = {
+                                if (it == SwipeToDismissBoxValue.EndToStart) {
+                                        onSelect(task.id)
+                                }
+                                false // Important: Snap back to original position
+                        }
+                )
+
+        SwipeToDismissBox(
+                state = dismissState,
+                enableDismissFromStartToEnd = false,
+                backgroundContent = {
+                        Box(
+                                modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp),
+                                contentAlignment = Alignment.CenterEnd
+                        ) {
+                                val icon =
+                                        if (isSelected) Icons.Default.RemoveCircleOutline
+                                        else Icons.Default.CheckCircle
+                                val color = if (isSelected) Color.Gray else Secondary
+                                Icon(icon, null, tint = color)
+                        }
+                }
+        ) {
                 Card(
                         modifier =
                                 Modifier.fillMaxWidth()
                                         .padding(horizontal = 12.dp, vertical = 4.dp)
                                         .clickable { onToggle(task) },
-                        colors =
-                                CardDefaults.cardColors(
-                                        containerColor =
-                                                if (isSelected || showMenu) MidnightGreen
-                                                else SurfaceVariant
-                                ),
+                        colors = CardDefaults.cardColors(containerColor = containerColor),
                         shape = RoundedCornerShape(12.dp),
                         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                 ) {
-                        Row(
-                                modifier =
-                                        Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                                                .fillMaxWidth()
-                                                .height(IntrinsicSize.Min),
-                                verticalAlignment = Alignment.CenterVertically
-                        ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Text(
-                                                        text = task.label,
-                                                        color =
-                                                                if (task.isDone) Color.Gray
-                                                                else priorityColor,
-                                                        fontSize = 15.sp,
-                                                        fontWeight = FontWeight.Medium,
-                                                        textDecoration =
-                                                                if (task.isDone)
-                                                                        TextDecoration.LineThrough
-                                                                else null,
-                                                        modifier = Modifier.weight(1f, fill = false)
-                                                )
-                                                if (task.alarmLevel != AlarmLevel.MEDIUM) {
-                                                        Spacer(Modifier.width(8.dp))
-                                                        Icon(
-                                                                if (task.alarmLevel ==
-                                                                                AlarmLevel.VERY_HIGH
-                                                                )
-                                                                        Icons.Default
-                                                                                .NotificationsActive
-                                                                else Icons.Default.Notifications,
-                                                                contentDescription = "Alarm",
-                                                                tint =
-                                                                        if (task.alarmLevel ==
-                                                                                        AlarmLevel
-                                                                                                .VERY_HIGH
-                                                                        )
-                                                                                Color.Red
-                                                                        else Color.White,
-                                                                modifier = Modifier.size(14.dp)
+                        Box {
+                                if (isSelected) {
+                                        Icon(
+                                                Icons.Default.CheckCircle,
+                                                contentDescription = null,
+                                                tint = Secondary.copy(alpha = 0.15f),
+                                                modifier =
+                                                        Modifier.align(Alignment.CenterEnd)
+                                                                .padding(end = 12.dp)
+                                                                .size(40.dp)
+                                        )
+                                }
+                                Row(
+                                        modifier =
+                                                Modifier.padding(
+                                                                horizontal = 12.dp,
+                                                                vertical = 6.dp
                                                         )
-                                                }
-                                        }
-                                        if (task.dueDate != null ||
-                                                        task.type == TaskType.REPETITIVE ||
-                                                        task.folderId != 0L
-                                        ) {
+                                                        .fillMaxWidth()
+                                                        .height(IntrinsicSize.Min),
+                                        verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                        Column(modifier = Modifier.weight(1f)) {
                                                 Row(
                                                         verticalAlignment =
-                                                                Alignment.CenterVertically,
-                                                        modifier = Modifier.padding(top = 0.dp)
+                                                                Alignment.CenterVertically
                                                 ) {
-                                                        if (task.dueDate != null) {
+                                                        Text(
+                                                                text = task.label,
+                                                                color =
+                                                                        if (task.isDone) Color.Gray
+                                                                        else priorityColor,
+                                                                fontSize = 15.sp,
+                                                                fontWeight = FontWeight.Medium,
+                                                                textDecoration =
+                                                                        if (task.isDone)
+                                                                                TextDecoration
+                                                                                        .LineThrough
+                                                                        else null,
+                                                                modifier =
+                                                                        Modifier.weight(
+                                                                                1f,
+                                                                                fill = false
+                                                                        )
+                                                        )
+                                                        if (task.alarmLevel != AlarmLevel.MEDIUM) {
+                                                                Spacer(Modifier.width(8.dp))
                                                                 Icon(
-                                                                        Icons.Default.AccessTime,
-                                                                        contentDescription = null,
-                                                                        modifier =
-                                                                                Modifier.size(
-                                                                                        10.dp
-                                                                                ),
-                                                                        tint = Color.Gray
-                                                                )
-                                                                Spacer(Modifier.width(4.dp))
-                                                                val now = LocalDateTime.now()
-                                                                val isToday =
-                                                                        task.dueDate
-                                                                                .toLocalDate() ==
-                                                                                now.toLocalDate()
-                                                                val isPast =
-                                                                        task.dueDate.isBefore(now)
-                                                                val isThisWeek =
-                                                                        task.dueDate.isBefore(
-                                                                                now.plusDays(7)
-                                                                        ) && !isToday
-
-                                                                val dueDateColor =
-                                                                        when {
-                                                                                task.isDone ->
-                                                                                        Color.Gray
-                                                                                isPast -> Color.Red
-                                                                                isToday ->
-                                                                                        Color(
-                                                                                                0xFF4CAF50
-                                                                                        ) // Green
-                                                                                isThisWeek ->
-                                                                                        Color.White
-                                                                                else -> Color.Gray
-                                                                        }
-
-                                                                Text(
-                                                                        text =
-                                                                                task.dueDate.format(
-                                                                                        java.time
-                                                                                                .format
-                                                                                                .DateTimeFormatter
-                                                                                                .ofPattern(
-                                                                                                        "EEEE dd MMM, HH:mm",
-                                                                                                        java.util
-                                                                                                                .Locale
-                                                                                                                .FRENCH
-                                                                                                )
-                                                                                ),
-                                                                        color = dueDateColor,
-                                                                        fontSize = 11.sp
-                                                                )
-                                                        }
-
-                                                        if (task.type == TaskType.REPETITIVE) {
-                                                                Spacer(Modifier.width(6.dp))
-                                                                Icon(
-                                                                        Icons.Default.Sync,
+                                                                        imageVector =
+                                                                                if (task.alarmLevel ==
+                                                                                                AlarmLevel
+                                                                                                        .VERY_HIGH
+                                                                                )
+                                                                                        Icons.Default
+                                                                                                .NotificationsActive
+                                                                                else
+                                                                                        Icons.Default
+                                                                                                .Notifications,
                                                                         contentDescription =
-                                                                                "Répétitive",
-                                                                        modifier =
-                                                                                Modifier.size(
-                                                                                        10.dp
-                                                                                ),
+                                                                                "Alarm",
                                                                         tint =
-                                                                                Color(
-                                                                                        0xFF4CAF50
-                                                                                ) // Vert
+                                                                                if (task.alarmLevel ==
+                                                                                                AlarmLevel
+                                                                                                        .VERY_HIGH
+                                                                                )
+                                                                                        Color.Red
+                                                                                else Color.White,
+                                                                        modifier =
+                                                                                Modifier.size(14.dp)
                                                                 )
                                                         }
+                                                }
+                                                if (task.dueDate != null ||
+                                                                task.type == TaskType.REPETITIVE ||
+                                                                task.folderId != 0L
+                                                ) {
+                                                        Row(
+                                                                verticalAlignment =
+                                                                        Alignment.CenterVertically,
+                                                                modifier =
+                                                                        Modifier.padding(top = 0.dp)
+                                                        ) {
+                                                                if (task.dueDate != null) {
+                                                                        Icon(
+                                                                                Icons.Default
+                                                                                        .AccessTime,
+                                                                                contentDescription =
+                                                                                        null,
+                                                                                modifier =
+                                                                                        Modifier.size(
+                                                                                                10.dp
+                                                                                        ),
+                                                                                tint = Color.Gray
+                                                                        )
+                                                                        Spacer(Modifier.width(4.dp))
+                                                                        val isToday =
+                                                                                task.dueDate
+                                                                                        .toLocalDate() ==
+                                                                                        now.toLocalDate()
+                                                                        val isPast =
+                                                                                task.dueDate
+                                                                                        .isBefore(
+                                                                                                now
+                                                                                        )
+                                                                        val isThisWeek =
+                                                                                task.dueDate
+                                                                                        .isBefore(
+                                                                                                now.plusDays(
+                                                                                                        7
+                                                                                                )
+                                                                                        ) &&
+                                                                                        !isToday
 
-                                                        if (task.folderId != 0L) {
-                                                                val folderName =
-                                                                        folders
-                                                                                .find {
-                                                                                        it.id ==
-                                                                                                task.folderId
+                                                                        val dueDateColor =
+                                                                                when {
+                                                                                        task.isDone ->
+                                                                                                Color.Gray
+                                                                                        isPast ->
+                                                                                                Color.Red
+                                                                                        isToday ->
+                                                                                                Color(
+                                                                                                        0xFF4CAF50
+                                                                                                )
+                                                                                        isThisWeek ->
+                                                                                                Color.White
+                                                                                        else ->
+                                                                                                Color.Gray
                                                                                 }
-                                                                                ?.name
-                                                                                ?: ""
-                                                                if (folderName.isNotBlank()) {
-                                                                        Spacer(Modifier.width(6.dp))
+
                                                                         Text(
                                                                                 text =
-                                                                                        "• $folderName",
-                                                                                color = Secondary,
-                                                                                fontSize = 10.sp,
-                                                                                maxLines = 1,
-                                                                                overflow =
-                                                                                        androidx.compose
-                                                                                                .ui
-                                                                                                .text
-                                                                                                .style
-                                                                                                .TextOverflow
-                                                                                                .Ellipsis,
+                                                                                        task.dueDate
+                                                                                                .format(
+                                                                                                        DateTimeFormatter
+                                                                                                                .ofPattern(
+                                                                                                                        "EEEE dd MMM, HH:mm",
+                                                                                                                        java.util
+                                                                                                                                .Locale
+                                                                                                                                .FRENCH
+                                                                                                                )
+                                                                                                ),
+                                                                                color =
+                                                                                        dueDateColor,
+                                                                                fontSize = 11.sp
+                                                                        )
+                                                                }
+
+                                                                if (task.type == TaskType.REPETITIVE
+                                                                ) {
+                                                                        Spacer(Modifier.width(6.dp))
+                                                                        Icon(
+                                                                                Icons.Default.Sync,
+                                                                                contentDescription =
+                                                                                        "Répétitive",
                                                                                 modifier =
-                                                                                        Modifier.weight(
-                                                                                                1f,
-                                                                                                fill =
-                                                                                                        false
+                                                                                        Modifier.size(
+                                                                                                10.dp
+                                                                                        ),
+                                                                                tint =
+                                                                                        Color(
+                                                                                                0xFF4CAF50
                                                                                         )
                                                                         )
+                                                                }
+
+                                                                if (task.folderId != 0L) {
+                                                                        val folderName =
+                                                                                folders
+                                                                                        .find {
+                                                                                                it.id ==
+                                                                                                        task.folderId
+                                                                                        }
+                                                                                        ?.name
+                                                                                        ?: ""
+                                                                        if (folderName.isNotBlank()
+                                                                        ) {
+                                                                                Spacer(
+                                                                                        Modifier.width(
+                                                                                                6.dp
+                                                                                        )
+                                                                                )
+                                                                                Text(
+                                                                                        text =
+                                                                                                "• $folderName",
+                                                                                        color =
+                                                                                                Secondary,
+                                                                                        fontSize =
+                                                                                                10.sp,
+                                                                                        maxLines =
+                                                                                                1,
+                                                                                        overflow =
+                                                                                                androidx.compose
+                                                                                                        .ui
+                                                                                                        .text
+                                                                                                        .style
+                                                                                                        .TextOverflow
+                                                                                                        .Ellipsis,
+                                                                                        modifier =
+                                                                                                Modifier.weight(
+                                                                                                        1f,
+                                                                                                        fill =
+                                                                                                                false
+                                                                                                )
+                                                                                )
+                                                                        }
                                                                 }
                                                         }
                                                 }
                                         }
-                                }
 
-                                Column(
-                                        modifier =
-                                                Modifier.fillMaxHeight().padding(vertical = 4.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                        Box(
+                                        Column(
                                                 modifier =
-                                                        Modifier.size(32.dp).clickable {
-                                                                onSelect(task.id)
-                                                        },
-                                                contentAlignment = Alignment.TopCenter
+                                                        Modifier.fillMaxHeight()
+                                                                .padding(vertical = 4.dp),
+                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                                verticalArrangement = Arrangement.SpaceBetween
                                         ) {
-                                                Box(
-                                                        modifier =
-                                                                Modifier.size(18.dp)
-                                                                        .border(
-                                                                                1.dp,
-                                                                                if (isSelected)
-                                                                                        Secondary
-                                                                                else
-                                                                                        Color.Gray
-                                                                                                .copy(
-                                                                                                        alpha =
-                                                                                                                0.5f
-                                                                                                ),
-                                                                                CircleShape
-                                                                        ),
-                                                        contentAlignment = Alignment.Center
+                                                IconButton(
+                                                        onClick = { onPostpone(task) },
+                                                        modifier = Modifier.size(24.dp)
                                                 ) {
-                                                        if (isSelected) {
-                                                                Box(
-                                                                        modifier =
-                                                                                Modifier.size(10.dp)
-                                                                                        .background(
-                                                                                                Secondary,
-                                                                                                CircleShape
-                                                                                        )
-                                                                )
-                                                        }
+                                                        Icon(
+                                                                Icons.Default.AccessTime,
+                                                                contentDescription = "Échéance",
+                                                                tint = Secondary,
+                                                                modifier = Modifier.size(18.dp)
+                                                        )
+                                                }
+                                                Spacer(Modifier.height(4.dp))
+                                                IconButton(
+                                                        onClick = { onEdit(task) },
+                                                        modifier = Modifier.size(24.dp)
+                                                ) {
+                                                        Icon(
+                                                                Icons.Default.MoreVert,
+                                                                contentDescription = "Modifier",
+                                                                tint = Color.Gray,
+                                                                modifier = Modifier.size(18.dp)
+                                                        )
                                                 }
                                         }
 
-                                        IconButton(
-                                                onClick = { showMenu = true },
-                                                modifier = Modifier.size(24.dp)
-                                        ) {
+                                        if (task.isDone) {
                                                 Icon(
-                                                        Icons.Default.MoreVert,
-                                                        contentDescription = "Options",
-                                                        tint = Color.Gray,
-                                                        modifier = Modifier.size(18.dp)
+                                                        Icons.Default.CheckCircle,
+                                                        contentDescription = "Effectuée",
+                                                        tint = Secondary,
+                                                        modifier =
+                                                                Modifier.size(20.dp)
+                                                                        .padding(start = 8.dp)
                                                 )
                                         }
                                 }
-
-                                if (task.isDone) {
-                                        Icon(
-                                                Icons.Default.CheckCircle,
-                                                contentDescription = "Effectuée",
-                                                tint = Secondary,
-                                                modifier = Modifier.size(20.dp)
-                                        )
-                                }
                         }
-                }
-
-                DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false },
-                        containerColor = MidnightGreen, // Vert nuit moderne
-                        offset =
-                                androidx.compose.ui.unit.DpOffset(
-                                        x = (-8).dp,
-                                        y = 0.dp
-                                ) // Rapproché des 3 pts
-                ) {
-                        DropdownMenuItem(
-                                text = { Text("Reporter", color = Color.White) },
-                                onClick = {
-                                        onPostpone(task)
-                                        showMenu = false
-                                },
-                                leadingIcon = {
-                                        Icon(
-                                                Icons.Default.Update,
-                                                contentDescription = null,
-                                                tint = Secondary
-                                        )
-                                }
-                        )
-                        DropdownMenuItem(
-                                text = { Text("Modifier", color = Color.White) },
-                                onClick = {
-                                        onEdit(task)
-                                        showMenu = false
-                                },
-                                leadingIcon = {
-                                        Icon(
-                                                Icons.Default.Edit,
-                                                contentDescription = null,
-                                                tint = Secondary
-                                        )
-                                }
-                        )
-                        DropdownMenuItem(
-                                text = { Text("Supprimer", color = Color.Red) },
-                                onClick = {
-                                        onDelete(task)
-                                        showMenu = false
-                                },
-                                leadingIcon = {
-                                        Icon(
-                                                Icons.Default.Delete,
-                                                contentDescription = null,
-                                                tint = Color.Red
-                                        )
-                                }
-                        )
                 }
         }
 }
@@ -1013,7 +1024,9 @@ fun AddTaskDialog(
         LaunchedEffect(text) {
                 if (text.isNotBlank()) {
                         val (_, parsedDate) = SmartParser.parse(text)
-                        currentDueDate = parsedDate
+                        if (parsedDate != null) {
+                                currentDueDate = parsedDate
+                        }
                 } else if (task == null) {
                         currentDueDate = null
                 }
@@ -1022,10 +1035,51 @@ fun AddTaskDialog(
         AlertDialog(
                 onDismissRequest = onDismiss,
                 title = {
-                        Text(
-                                if (task == null) "Nouvelle Tâche" else "Modifier Tâche",
-                                fontWeight = FontWeight.Bold
-                        )
+                        Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                        ) {
+                                Text(
+                                        if (task == null) "Nouvelle Tâche" else "Modifier Tâche",
+                                        fontWeight = FontWeight.Bold
+                                )
+                                IconButton(
+                                        onClick = {
+                                                if (text.isNotBlank()) {
+                                                        val (cleanLabel, parsedDate) =
+                                                                SmartParser.parse(text)
+                                                        val finalLabel =
+                                                                if (cleanLabel.isNotBlank())
+                                                                        cleanLabel
+                                                                else text
+                                                        val finalDate = currentDueDate ?: parsedDate
+
+                                                        onAdd(
+                                                                finalLabel,
+                                                                selectedFolderId,
+                                                                priority,
+                                                                alarmLevel,
+                                                                taskType,
+                                                                nValue.toIntOrNull(),
+                                                                repeatUnit,
+                                                                warningInterval.toIntOrNull() ?: 15,
+                                                                warningUnit,
+                                                                warningRepeatInterval.toIntOrNull(),
+                                                                warningRepeatUnit,
+                                                                finalDate
+                                                        )
+                                                }
+                                        }
+                                ) {
+                                        Icon(
+                                                Icons.Default.Check,
+                                                contentDescription = "Valider",
+                                                tint = Secondary,
+                                                modifier = Modifier.size(28.dp)
+                                        )
+                                }
+                        }
                 },
                 text = {
                         Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
@@ -1276,9 +1330,7 @@ fun AddTaskDialog(
 
                                         IconButton(
                                                 onClick = {
-                                                        val now =
-                                                                currentDueDate
-                                                                        ?: LocalDateTime.now()
+                                                        val now = LocalDateTime.now()
                                                         val datePicker =
                                                                 android.app.DatePickerDialog(
                                                                         context,
@@ -1314,13 +1366,15 @@ fun AddTaskDialog(
                                                                         now.dayOfMonth
                                                                 )
                                                         datePicker.show()
-                                                }
+                                                },
+                                                modifier = Modifier.size(48.dp)
                                         ) {
                                                 Icon(
                                                         Icons.Default.AccessTime,
                                                         contentDescription =
                                                                 "Choisir date et heure",
-                                                        tint = Secondary
+                                                        tint = Secondary,
+                                                        modifier = Modifier.size(32.dp)
                                                 )
                                         }
                                 }
@@ -1442,43 +1496,8 @@ fun AddTaskDialog(
                                 }
                         }
                 },
-                confirmButton = {
-                        Button(
-                                onClick = {
-                                        if (text.isNotBlank()) {
-                                                val (cleanLabel, parsedDate) =
-                                                        SmartParser.parse(text)
-                                                val finalLabel =
-                                                        if (cleanLabel.isNotBlank()) cleanLabel
-                                                        else text
-                                                val finalDate = currentDueDate ?: parsedDate
-
-                                                onAdd(
-                                                        finalLabel,
-                                                        selectedFolderId,
-                                                        priority,
-                                                        alarmLevel,
-                                                        taskType,
-                                                        nValue.toIntOrNull(),
-                                                        repeatUnit,
-                                                        warningInterval.toIntOrNull() ?: 15,
-                                                        warningUnit,
-                                                        warningRepeatInterval.toIntOrNull(),
-                                                        warningRepeatUnit,
-                                                        finalDate
-                                                )
-                                        }
-                                },
-                                colors =
-                                        ButtonDefaults.buttonColors(
-                                                containerColor = Secondary,
-                                                contentColor = Black
-                                        )
-                        ) { Text(if (task == null) "Ajouter" else "Sauvegarder") }
-                },
-                dismissButton = {
-                        TextButton(onClick = onDismiss) { Text("Annuler", color = Color.Gray) }
-                },
+                confirmButton = {},
+                dismissButton = {},
                 containerColor = DarkGray,
                 titleContentColor = Color.White,
                 textContentColor = Color.White

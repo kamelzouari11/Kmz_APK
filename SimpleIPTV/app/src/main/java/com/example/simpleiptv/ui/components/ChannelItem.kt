@@ -120,15 +120,13 @@ fun ChannelItem(
                                         }
                                         .focusable(),
                         shape = CircleShape,
-                        color =
-                                if (isFavFocused) Color.White.copy(alpha = 0.2f)
-                                else Color.Transparent
+                        color = if (isFavFocused) Color.White else Color.Transparent
                 ) {
                         Box(contentAlignment = Alignment.Center) {
                                 Icon(
                                         imageVector = Icons.Default.Star,
                                         contentDescription = null,
-                                        tint = if (isFavFocused) Color.White else Color.Gray,
+                                        tint = if (isFavFocused) Color.Black else Color.Gray,
                                         modifier = Modifier.size(32.dp)
                                 )
                         }

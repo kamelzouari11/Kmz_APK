@@ -3,10 +3,12 @@ package com.example.simpleiptv
 import android.view.KeyEvent
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -47,78 +49,189 @@ fun VideoPlayerView(
         onCategorySelected: (CategoryEntity) -> Unit,
         onBack: () -> Unit,
         interactive: Boolean = true,
-        isLandscape: Boolean = true
+        isLandscape: Boolean = true,
+        playingChannel: ChannelEntity? = null,
+        countriesScrollState: LazyListState? = null,
+        categoriesScrollState: LazyListState? = null,
+        channelsScrollState: LazyListState? = null
 ) {
         var isOverlayVisible by remember { mutableStateOf(false) }
         var showFullOverlay by remember(isLandscape) { mutableStateOf(isLandscape) }
         val focusRequester = remember { FocusRequester() }
+        val vodFocusRequester = remember { FocusRequester() }
+        val isVod = playingChannel?.type == "VOD"
 
-        LaunchedEffect(isOverlayVisible) {
-                if (isOverlayVisible && showFullOverlay) {
+        var playerViewRef by remember { mutableStateOf<PlayerView?>(null) }
+
+        // Use passed states or fallback to local ones if null (though MainScreen passes them)
+        val countryState = countriesScrollState ?: rememberLazyListState()
+        val categoryState = categoriesScrollState ?: rememberLazyListState()
+        val channelState = channelsScrollState ?: rememberLazyListState()
+
+        LaunchedEffect(isOverlayVisible, isVod) {
+                if (isVod) {
+                        vodFocusRequester.requestFocus()
+                } else if (isOverlayVisible && interactive) {
+                        // Priority: Focus the playing channel item if visible in the memory
                         focusRequester.requestFocus()
                 }
         }
 
-        if (isOverlayVisible) {
-                BackHandler { isOverlayVisible = false }
+        if (isOverlayVisible && !isVod) {
+                BackHandler { onBack() }
         }
 
         Box(
                 modifier =
                         Modifier.fillMaxSize()
                                 .background(Color.Black)
-                                .clickable(enabled = interactive) {
-                                        if (!isOverlayVisible) {
-                                                showFullOverlay = isLandscape
-                                                isOverlayVisible = true
-                                        } else {
-                                                isOverlayVisible = false
-                                        }
-                                }
-                                .focusable()
-                                .onKeyEvent { event ->
-                                        if (event.nativeKeyEvent.action == KeyEvent.ACTION_UP) {
-                                                when (event.nativeKeyEvent.keyCode) {
-                                                        KeyEvent.KEYCODE_DPAD_CENTER,
-                                                        KeyEvent.KEYCODE_ENTER,
-                                                        KeyEvent.KEYCODE_NUMPAD_ENTER -> {
-                                                                if (!interactive)
-                                                                        return@onKeyEvent false
-                                                                if (!isOverlayVisible) {
-                                                                        showFullOverlay = true
-                                                                        isOverlayVisible = true
-                                                                        return@onKeyEvent true
-                                                                }
-                                                        }
-                                                        KeyEvent.KEYCODE_BACK -> {
-                                                                if (!interactive)
-                                                                        return@onKeyEvent false
-                                                                if (isOverlayVisible) {
-                                                                        isOverlayVisible = false
-                                                                        return@onKeyEvent true
-                                                                }
-                                                                onBack()
-                                                                return@onKeyEvent true
+                                .then(
+                                        if (!isVod) {
+                                                Modifier.clickable(enabled = interactive) {
+                                                        if (!isOverlayVisible) {
+                                                                showFullOverlay = isLandscape
+                                                                isOverlayVisible = true
+                                                        } else {
+                                                                isOverlayVisible = false
                                                         }
                                                 }
+                                                        .focusable()
+                                                        .onKeyEvent { event ->
+                                                                if (event.nativeKeyEvent.action ==
+                                                                                KeyEvent.ACTION_DOWN
+                                                                ) {
+                                                                        when (event.nativeKeyEvent
+                                                                                        .keyCode
+                                                                        ) {
+                                                                                KeyEvent.KEYCODE_DPAD_CENTER,
+                                                                                KeyEvent.KEYCODE_ENTER,
+                                                                                KeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                                                                                        if (!interactive
+                                                                                        )
+                                                                                                return@onKeyEvent false
+                                                                                        if (!isOverlayVisible
+                                                                                        ) {
+                                                                                                showFullOverlay =
+                                                                                                        true
+                                                                                                isOverlayVisible =
+                                                                                                        true
+                                                                                        }
+                                                                                        return@onKeyEvent true
+                                                                                }
+                                                                                KeyEvent.KEYCODE_BACK -> {
+                                                                                        if (!interactive
+                                                                                        )
+                                                                                                return@onKeyEvent false
+                                                                                        if (isOverlayVisible
+                                                                                        ) {
+                                                                                                isOverlayVisible =
+                                                                                                        false
+                                                                                                return@onKeyEvent true
+                                                                                        }
+                                                                                        onBack()
+                                                                                        return@onKeyEvent true
+                                                                                }
+                                                                        }
+                                                                }
+                                                                false
+                                                        }
+                                        } else {
+                                                // In VOD, we rely entirely on the AndroidView for
+                                                // keys/clicks
+                                                Modifier
                                         }
-                                        false
-                                }
+                                )
         ) {
                 // 1. The Video Surface
+                var isPlayerFocused by remember { mutableStateOf(false) }
+
                 AndroidView(
                         factory = { context ->
                                 PlayerView(context).apply {
                                         player = exoPlayer
-                                        useController = false
+                                        useController = isVod
                                         keepScreenOn = true
+                                        isFocusable = true
+                                        isFocusableInTouchMode = true
+                                        playerViewRef = this
                                 }
                         },
-                        modifier = Modifier.fillMaxSize()
+                        update = { view ->
+                                view.useController = isVod
+                                playerViewRef = view
+                        },
+                        modifier =
+                                Modifier.fillMaxSize()
+                                        .onFocusChanged { isPlayerFocused = it.isFocused }
+                                        .then(
+                                                if (isVod) {
+                                                        Modifier.focusRequester(vodFocusRequester)
+                                                                .focusable()
+                                                                .clickable {
+                                                                        playerViewRef
+                                                                                ?.showController()
+                                                                }
+                                                                .onKeyEvent { event ->
+                                                                        if (event.nativeKeyEvent
+                                                                                        .action ==
+                                                                                        KeyEvent.ACTION_DOWN
+                                                                        ) {
+                                                                                when (event.nativeKeyEvent
+                                                                                                .keyCode
+                                                                                ) {
+                                                                                        KeyEvent.KEYCODE_BACK -> {
+                                                                                                if (playerViewRef
+                                                                                                                ?.isControllerFullyVisible ==
+                                                                                                                true
+                                                                                                ) {
+                                                                                                        playerViewRef
+                                                                                                                ?.hideController()
+                                                                                                        true
+                                                                                                } else {
+                                                                                                        onBack()
+                                                                                                        true
+                                                                                                }
+                                                                                        }
+                                                                                        KeyEvent.KEYCODE_DPAD_UP,
+                                                                                        KeyEvent.KEYCODE_DPAD_DOWN,
+                                                                                        KeyEvent.KEYCODE_DPAD_CENTER,
+                                                                                        KeyEvent.KEYCODE_ENTER,
+                                                                                        KeyEvent.KEYCODE_DPAD_LEFT,
+                                                                                        KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                                                                                                playerViewRef
+                                                                                                        ?.showController()
+                                                                                                false // Let the view handle the actual seek/play/pause
+                                                                                        }
+                                                                                        else ->
+                                                                                                false
+                                                                                }
+                                                                        } else {
+                                                                                false
+                                                                        }
+                                                                }
+                                                } else {
+                                                        Modifier
+                                                }
+                                        )
                 )
 
-                // 2. The Overlays (Side by Side)
-                if (isOverlayVisible) {
+                // Visual indicator for focus in VOD
+                if (isVod && isPlayerFocused) {
+                        Box(
+                                modifier =
+                                        Modifier.fillMaxSize()
+                                                .padding(2.dp)
+                                                .background(Color.Cyan.copy(alpha = 0.05f))
+                                                .border(
+                                                        2.dp,
+                                                        Color.Cyan.copy(alpha = 0.3f),
+                                                        MaterialTheme.shapes.small
+                                                )
+                        )
+                }
+
+                // 2. The Overlays (Side by Side) - Only for LIVE
+                if (isOverlayVisible && !isVod) {
                         Row(
                                 modifier =
                                         Modifier.fillMaxSize()
@@ -134,8 +247,7 @@ fun VideoPlayerView(
                                                         modifier =
                                                                 Modifier.fillMaxHeight()
                                                                         .width(150.dp)
-                                                        // Removed background for transparency
-                                                        ) {
+                                                ) {
                                                         Text(
                                                                 text = "Pays",
                                                                 color = Color.White,
@@ -144,7 +256,10 @@ fun VideoPlayerView(
                                                                         MaterialTheme.typography
                                                                                 .titleMedium
                                                         )
-                                                        LazyColumn(modifier = Modifier.weight(1f)) {
+                                                        LazyColumn(
+                                                                state = countryState,
+                                                                modifier = Modifier.weight(1f)
+                                                        ) {
                                                                 items(countries, key = { it }) {
                                                                         country ->
                                                                         val isSelected =
@@ -228,17 +343,17 @@ fun VideoPlayerView(
                                         }
 
                                         // Category List (Middle)
-                                        Column(
-                                                modifier = Modifier.fillMaxHeight().width(280.dp)
-                                                // Removed background for transparency
-                                                ) {
+                                        Column(modifier = Modifier.fillMaxHeight().width(280.dp)) {
                                                 Text(
                                                         text = "Catégories",
                                                         color = Color.White,
                                                         modifier = Modifier.padding(16.dp),
                                                         style = MaterialTheme.typography.titleMedium
                                                 )
-                                                LazyColumn(modifier = Modifier.weight(1f)) {
+                                                LazyColumn(
+                                                        state = categoryState,
+                                                        modifier = Modifier.weight(1f)
+                                                ) {
                                                         itemsIndexed(
                                                                 categories,
                                                                 key = { _, cat -> cat.category_id }
@@ -345,30 +460,22 @@ fun VideoPlayerView(
                                                                 if (showFullOverlay) 320.dp
                                                                 else 400.dp
                                                         )
-                                        // Removed background for transparency
-                                        ) {
+                                ) {
                                         Text(
                                                 text = "Chaînes",
                                                 color = Color.White,
                                                 modifier = Modifier.padding(16.dp),
                                                 style = MaterialTheme.typography.titleMedium
                                         )
-                                        val listState = rememberLazyListState()
                                         LazyColumn(
-                                                state = listState,
+                                                state = channelState,
                                                 modifier = Modifier.weight(1f)
                                         ) {
                                                 items(currentChannels, key = { it.stream_id }) {
                                                         channel ->
                                                         val isPlaying =
-                                                                exoPlayer
-                                                                        .currentMediaItem
-                                                                        ?.localConfiguration
-                                                                        ?.uri
-                                                                        ?.toString()
-                                                                        ?.contains(
-                                                                                channel.stream_id
-                                                                        ) == true
+                                                                channel.stream_id ==
+                                                                        playingChannel?.stream_id
                                                         var isFocused by remember {
                                                                 mutableStateOf(false)
                                                         }
@@ -381,6 +488,15 @@ fun VideoPlayerView(
                                                                                         isFocused =
                                                                                                 it.isFocused
                                                                                 }
+                                                                                .then(
+                                                                                        if (isPlaying
+                                                                                        )
+                                                                                                Modifier.focusRequester(
+                                                                                                        focusRequester
+                                                                                                )
+                                                                                        else
+                                                                                                Modifier
+                                                                                )
                                                                                 .clickable {
                                                                                         isOverlayVisible =
                                                                                                 false

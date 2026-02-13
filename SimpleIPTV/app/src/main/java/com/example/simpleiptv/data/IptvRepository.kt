@@ -10,86 +10,132 @@ import kotlinx.coroutines.flow.Flow
 
 class IptvRepository(private val api: XtreamApi, private val dao: IptvDao) {
 
-    // Sub-services
-    private val backupService = BackupService(dao)
-    private val syncService = SyncService(dao)
-    private val streamService = StreamService(dao)
+        // Sub-services
+        private val backupService = BackupService(dao)
+        private val syncService = SyncService(dao)
+        private val streamService = StreamService(dao)
 
-    // --- Basic DAO Access ---
-    fun getCategories(profileId: Int): Flow<List<CategoryEntity>> = dao.getAllCategories(profileId)
-    fun getFavoriteLists(profileId: Int): Flow<List<FavoriteListEntity>> =
-            dao.getAllFavoriteLists(profileId)
-    fun getRecentChannels(profileId: Int): Flow<List<ChannelEntity>> =
-            dao.getRecentChannels(profileId)
-    fun getChannelsByCategory(categoryId: String, profileId: Int): Flow<List<ChannelEntity>> =
-            dao.getChannelsByCategory(categoryId, profileId)
-    fun getChannelsByFavoriteList(listId: Int, profileId: Int): Flow<List<ChannelEntity>> =
-            dao.getChannelsByFavoriteList(listId, profileId)
-    fun searchChannels(query: String, profileId: Int): Flow<List<ChannelEntity>> =
-            dao.searchChannels(query, profileId)
+        // --- Basic DAO Access ---
+        fun getCategories(profileId: Int, type: String = "LIVE"): Flow<List<CategoryEntity>> =
+                dao.getAllCategories(profileId, type)
+        fun getFavoriteLists(
+                profileId: Int,
+                type: String = "LIVE"
+        ): Flow<List<FavoriteListEntity>> = dao.getAllFavoriteLists(profileId, type)
+        fun getRecentChannels(profileId: Int, type: String = "LIVE"): Flow<List<ChannelEntity>> =
+                dao.getRecentChannels(profileId, type)
+        fun getChannelsByCategory(
+                categoryId: String,
+                profileId: Int,
+                type: String = "LIVE"
+        ): Flow<List<ChannelEntity>> = dao.getChannelsByCategory(categoryId, profileId, type)
+        fun getChannelsByFavoriteList(
+                listId: Int,
+                profileId: Int,
+                type: String = "LIVE"
+        ): Flow<List<ChannelEntity>> = dao.getChannelsByFavoriteList(listId, profileId, type)
+        fun searchChannels(
+                query: String,
+                profileId: Int,
+                type: String = "LIVE"
+        ): Flow<List<ChannelEntity>> = dao.searchChannels(query, profileId, type)
+        suspend fun getChannelCount(profileId: Int, type: String = "LIVE"): Int =
+                dao.getChannelCount(profileId, type)
 
-    // --- Favorites Logic ---
-    suspend fun addFavoriteList(name: String, profileId: Int) =
-            dao.insertFavoriteList(FavoriteListEntity(name = name, profileId = profileId))
-    suspend fun removeFavoriteList(list: FavoriteListEntity) = dao.deleteFavoriteList(list)
-    suspend fun addChannelToFavoriteList(streamId: String, listId: Int, profileId: Int) {
-        val maxPos = dao.getMaxPositionForList(listId, profileId) ?: -1
-        dao.addChannelToFavorite(ChannelFavoriteCrossRef(streamId, listId, profileId, maxPos + 1))
-    }
-
-    suspend fun toggleChannelFavorite(channelId: String, listId: Int, profileId: Int) {
-        val currentLists = dao.getListIdsForChannel(channelId, profileId)
-        if (currentLists.contains(listId)) {
-            dao.removeChannelFromFavorite(ChannelFavoriteCrossRef(channelId, listId, profileId))
-        } else {
-            val maxPos = dao.getMaxPositionForList(listId, profileId) ?: -1
-            dao.addChannelToFavorite(
-                    ChannelFavoriteCrossRef(channelId, listId, profileId, maxPos + 1)
-            )
+        // --- Favorites Logic ---
+        suspend fun addFavoriteList(name: String, profileId: Int, type: String = "LIVE") =
+                dao.insertFavoriteList(
+                        FavoriteListEntity(name = name, profileId = profileId, type = type)
+                )
+        suspend fun removeFavoriteList(list: FavoriteListEntity) = dao.deleteFavoriteList(list)
+        suspend fun addChannelToFavoriteList(
+                streamId: String,
+                listId: Int,
+                profileId: Int,
+                type: String = "LIVE"
+        ) {
+                val maxPos = dao.getMaxPositionForList(listId, profileId, type) ?: -1
+                dao.addChannelToFavorite(
+                        ChannelFavoriteCrossRef(streamId, listId, profileId, type, maxPos + 1)
+                )
         }
-    }
 
-    suspend fun moveChannelInList(channelId: String, listId: Int, profileId: Int, up: Boolean) {
-        // Shared logic could stay here or move to a PlaylistService if it becomes too large
-    }
+        suspend fun toggleChannelFavorite(
+                channelId: String,
+                listId: Int,
+                profileId: Int,
+                type: String = "LIVE"
+        ) {
+                val currentLists = dao.getListIdsForChannel(channelId, profileId, type)
+                if (currentLists.contains(listId)) {
+                        dao.removeChannelFromFavorite(
+                                ChannelFavoriteCrossRef(channelId, listId, profileId, type)
+                        )
+                } else {
+                        val maxPos = dao.getMaxPositionForList(listId, profileId, type) ?: -1
+                        dao.addChannelToFavorite(
+                                ChannelFavoriteCrossRef(
+                                        channelId,
+                                        listId,
+                                        profileId,
+                                        type,
+                                        maxPos + 1
+                                )
+                        )
+                }
+        }
 
-    // --- Recents Logic ---
-    suspend fun addToRecents(channelId: String, profileId: Int) {
-        dao.insertRecent(RecentChannelEntity(channelId, System.currentTimeMillis(), profileId))
-        dao.trimRecents(profileId)
-    }
+        @Suppress("UNUSED_PARAMETER")
+        suspend fun moveChannelInList(
+                channelId: String,
+                listId: Int,
+                profileId: Int,
+                type: String,
+                up: Boolean
+        ) {
+                // Shared logic could stay here or move to a PlaylistService if it becomes too large
+        }
 
-    // --- Profiles Logic ---
-    val allProfiles: Flow<List<ProfileEntity>> = dao.getAllProfiles()
-    suspend fun getSelectedProfile(): ProfileEntity? = dao.getSelectedProfile()
-    suspend fun addProfile(profile: ProfileEntity) = dao.insertProfile(profile)
-    suspend fun updateProfile(profile: ProfileEntity) = dao.updateProfile(profile)
-    suspend fun deleteProfile(profile: ProfileEntity) {
-        dao.clearCategories(profile.id)
-        dao.clearChannels(profile.id)
-        dao.clearChannelCategoryLinks(profile.id)
-        dao.clearFavoriteLists(profile.id)
-        dao.clearChannelFavorites(profile.id)
-        dao.clearRecents(profile.id)
-        dao.deleteProfile(profile)
-    }
-    suspend fun selectProfile(profileId: Int) {
-        dao.deselectAllProfiles()
-        dao.selectProfile(profileId)
-    }
+        // --- Recents Logic ---
+        suspend fun addToRecents(channelId: String, profileId: Int, type: String = "LIVE") {
+                dao.insertRecent(
+                        RecentChannelEntity(channelId, System.currentTimeMillis(), profileId, type)
+                )
+                dao.trimRecents(profileId, type)
+        }
 
-    // --- Delegated to SyncService ---
-    suspend fun refreshDatabase(profile: ProfileEntity) = syncService.refreshDatabase(profile)
+        // --- Profiles Logic ---
+        val allProfiles: Flow<List<ProfileEntity>> = dao.getAllProfiles()
+        suspend fun getSelectedProfile(): ProfileEntity? = dao.getSelectedProfile()
+        suspend fun addProfile(profile: ProfileEntity) = dao.insertProfile(profile)
+        suspend fun updateProfile(profile: ProfileEntity) = dao.updateProfile(profile)
+        suspend fun deleteProfile(profile: ProfileEntity) {
+                dao.clearCategories(profile.id)
+                dao.clearChannels(profile.id)
+                dao.clearChannelCategoryLinks(profile.id)
+                dao.clearFavoriteLists(profile.id)
+                dao.clearChannelFavorites(profile.id)
+                dao.clearRecents(profile.id)
+                dao.deleteProfile(profile)
+        }
+        suspend fun selectProfile(profileId: Int) {
+                dao.deselectAllProfiles()
+                dao.selectProfile(profileId)
+        }
 
-    // --- Delegated to StreamService ---
-    suspend fun getStreamUrl(profile: ProfileEntity, channelId: String): String =
-            streamService.getStreamUrl(profile, channelId)
+        // --- Delegated to SyncService ---
+        suspend fun refreshDatabase(profile: ProfileEntity) = syncService.refreshDatabase(profile)
 
-    // --- Delegated to BackupService ---
-    suspend fun exportFavoritesToJson(profileId: Int): String =
-            backupService.exportFavoritesToJson(profileId)
-    suspend fun importFavoritesFromJson(profileId: Int, json: String) =
-            backupService.importFavoritesFromJson(profileId, json)
-    suspend fun exportDatabaseToJson(): String = backupService.exportDatabaseToJson()
-    suspend fun importDatabaseFromJson(json: String) = backupService.importDatabaseFromJson(json)
+        // --- Delegated to StreamService ---
+        suspend fun getStreamUrl(profile: ProfileEntity, channelId: String): String =
+                streamService.getStreamUrl(profile, channelId)
+
+        // --- Delegated to BackupService ---
+        suspend fun exportFavoritesToJson(profileId: Int): String =
+                backupService.exportFavoritesToJson(profileId)
+        suspend fun importFavoritesFromJson(profileId: Int, json: String) =
+                backupService.importFavoritesFromJson(profileId, json)
+        suspend fun exportDatabaseToJson(): String = backupService.exportDatabaseToJson()
+        suspend fun importDatabaseFromJson(json: String) =
+                backupService.importDatabaseFromJson(json)
 }

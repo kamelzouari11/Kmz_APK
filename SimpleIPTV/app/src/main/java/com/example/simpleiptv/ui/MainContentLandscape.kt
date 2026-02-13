@@ -3,6 +3,7 @@ package com.example.simpleiptv.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -10,23 +11,33 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.unit.dp
 import com.example.simpleiptv.data.local.entities.ChannelEntity
 import com.example.simpleiptv.ui.components.ChannelItem
 import com.example.simpleiptv.ui.components.SidebarItem
+import com.example.simpleiptv.ui.components.VodItem
 import com.example.simpleiptv.ui.viewmodel.GeneratorType
 import com.example.simpleiptv.ui.viewmodel.MainViewModel
+import com.example.simpleiptv.ui.viewmodel.MediaMode
 
 @Composable
-fun MainContentLandscape(viewModel: MainViewModel, onChannelClick: (ChannelEntity) -> Unit) {
+fun MainContentLandscape(
+        viewModel: MainViewModel,
+        onChannelClick: (ChannelEntity) -> Unit,
+        countryScrollState: LazyListState,
+        categoryScrollState: LazyListState,
+        channelScrollState: LazyListState
+) {
     Row(modifier = Modifier.fillMaxSize()) {
         // --- Column 1: Groups (Pays / Accueil) ---
         // Width reduced from 0.18f to 0.10f
         LazyColumn(
+                state = countryScrollState,
                 modifier =
                         Modifier.weight(0.15f)
                                 .fillMaxHeight()
@@ -68,6 +79,7 @@ fun MainContentLandscape(viewModel: MainViewModel, onChannelClick: (ChannelEntit
         // --- Column 2: Categories ---
         // Width increased from 0.25f to 0.33f (gained from Column 1)
         LazyColumn(
+                state = categoryScrollState,
                 modifier =
                         Modifier.weight(0.30f)
                                 .fillMaxHeight()
@@ -165,18 +177,78 @@ fun MainContentLandscape(viewModel: MainViewModel, onChannelClick: (ChannelEntit
         VerticalDivider(color = Color.Gray.copy(alpha = 0.1f), thickness = 1.dp)
 
         // --- Column 3: Channels ---
-        LazyColumn(
-                modifier = Modifier.weight(0.55f).fillMaxHeight().padding(4.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(viewModel.channels, key = { it.stream_id }) { channel ->
-                val isPlaying = viewModel.playingChannel?.stream_id == channel.stream_id
-                ChannelItem(
-                        channel = channel,
-                        isPlaying = isPlaying,
-                        onClick = { onChannelClick(channel) },
-                        onFavoriteClick = { viewModel.channelToFavorite = channel }
-                )
+        val isVod = viewModel.currentMediaMode == MediaMode.VOD
+
+        if (isVod) {
+            val rows = viewModel.channels.chunked(2)
+            var pageIndex by remember(viewModel.channels) { mutableIntStateOf(0) }
+            val currentRow = rows.getOrNull(pageIndex) ?: emptyList()
+
+            Box(modifier = Modifier.weight(0.55f).fillMaxHeight().padding(4.dp)) {
+                if (currentRow.isNotEmpty()) {
+                    Row(modifier = Modifier.fillMaxSize()) {
+                        currentRow.forEach { channel ->
+                            val isPlaying = viewModel.playingChannel?.stream_id == channel.stream_id
+                            VodItem(
+                                    channel = channel,
+                                    isPlaying = isPlaying,
+                                    onClick = { onChannelClick(channel) },
+                                    modifier =
+                                            Modifier.weight(0.25f) // 25% of screen
+                                                    .fillMaxHeight(0.95f)
+                                                    .onKeyEvent { event ->
+                                                        if (event.nativeKeyEvent.action ==
+                                                                        android.view.KeyEvent
+                                                                                .ACTION_DOWN
+                                                        ) {
+                                                            when (event.nativeKeyEvent.keyCode) {
+                                                                android.view.KeyEvent
+                                                                        .KEYCODE_DPAD_DOWN -> {
+                                                                    if (pageIndex < rows.size - 1) {
+                                                                        pageIndex++
+                                                                        return@onKeyEvent true
+                                                                    }
+                                                                }
+                                                                android.view.KeyEvent
+                                                                        .KEYCODE_DPAD_UP -> {
+                                                                    if (pageIndex > 0) {
+                                                                        pageIndex--
+                                                                        return@onKeyEvent true
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                        false
+                                                    }
+                            )
+                        }
+                        if (currentRow.size < 2) {
+                            Spacer(Modifier.weight(0.25f))
+                        }
+                        // Explicit spacing to make up the rest of the 55% column (5% of screen)
+                        Spacer(Modifier.weight(0.05f))
+                    }
+                } else {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("Aucun film trouvé", color = Color.Gray)
+                    }
+                }
+            }
+        } else {
+            LazyColumn(
+                    state = channelScrollState,
+                    modifier = Modifier.weight(0.55f).fillMaxHeight().padding(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(viewModel.channels, key = { it.stream_id }) { channel ->
+                    val isPlaying = viewModel.playingChannel?.stream_id == channel.stream_id
+                    ChannelItem(
+                            channel = channel,
+                            isPlaying = isPlaying,
+                            onClick = { onChannelClick(channel) },
+                            onFavoriteClick = { viewModel.channelToFavorite = channel }
+                    )
+                }
             }
         }
     }

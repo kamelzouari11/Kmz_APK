@@ -110,10 +110,9 @@ class MusicMetadataManager {
                     album = albumObj?.optString("title"),
                     durationMs = track.getLong("duration") * 1000, // Deezer retourne en secondes
                     coverUrl = albumObj?.optString("cover_medium"),
-                    coverUrlHD = albumObj?.optString("cover_xl")
-                                    ?: albumObj?.optString("cover_big")
-                                            ?: albumObj?.optString("cover_medium")
-                                            ?.replace("250x250", "1000x1000"),
+                    coverUrlHD = albumObj?.optString("cover_big")?.replace("500x500", "600x600")
+                                    ?: albumObj?.optString("cover_medium")
+                                            ?.replace("250x250", "600x600"),
                     source = "deezer"
             )
         } catch (e: Exception) {
@@ -147,10 +146,9 @@ class MusicMetadataManager {
                     album = albumObj?.optString("title"),
                     durationMs = track.getLong("duration") * 1000,
                     coverUrl = albumObj?.optString("cover_medium"),
-                    coverUrlHD = albumObj?.optString("cover_xl")
-                                    ?: albumObj?.optString("cover_big")
-                                            ?: albumObj?.optString("cover_medium")
-                                            ?.replace("250x250", "1000x1000"),
+                    coverUrlHD = albumObj?.optString("cover_big")?.replace("500x500", "600x600")
+                                    ?: albumObj?.optString("cover_medium")
+                                            ?.replace("250x250", "600x600"),
                     source = "deezer"
             )
         } catch (e: Exception) {

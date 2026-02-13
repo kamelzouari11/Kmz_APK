@@ -1,74 +1,82 @@
 [
     {
-        "merged": "com.kmz.shoppinglist.app-merged_res-58:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
-        "source": "com.kmz.shoppinglist.app-main-60:/mipmap-anydpi-v26/ic_launcher_round.xml"
+        "merged": "/home/kamel/.gradle/daemon/8.13/com.kmz.shoppinglist.app-merged_res-58:/drawable_ic_launcher_background.xml.flat",
+        "source": "/home/kamel/.gradle/daemon/8.13/com.kmz.shoppinglist.app-main-60:/drawable/ic_launcher_background.xml"
     },
     {
-        "merged": "com.kmz.shoppinglist.app-merged_res-58:/mipmap-hdpi_ic_launcher_round.png.flat",
-        "source": "com.kmz.shoppinglist.app-main-60:/mipmap-hdpi/ic_launcher_round.png"
+        "merged": "/home/kamel/.gradle/daemon/8.13/com.kmz.shoppinglist.app-merged_res-58:/mipmap-xxxhdpi_ic_launcher.png.flat",
+        "source": "/home/kamel/.gradle/daemon/8.13/com.kmz.shoppinglist.app-main-60:/mipmap-xxxhdpi/ic_launcher.png"
     },
     {
-        "merged": "com.kmz.shoppinglist.app-merged_res-58:/mipmap-xhdpi_ic_launcher_round.png.flat",
-        "source": "com.kmz.shoppinglist.app-main-60:/mipmap-xhdpi/ic_launcher_round.png"
+        "merged": "com.kmz.shoppinglist.app-merged_res-58:/drawable_shopping_list_all.png.flat",
+        "source": "com.kmz.shoppinglist.app-main-60:/drawable/shopping_list_all.png"
     },
     {
-        "merged": "com.kmz.shoppinglist.app-merged_res-58:/xml_backup_rules.xml.flat",
-        "source": "com.kmz.shoppinglist.app-main-60:/xml/backup_rules.xml"
+        "merged": "/home/kamel/.gradle/daemon/8.13/com.kmz.shoppinglist.app-merged_res-58:/mipmap-hdpi_ic_launcher_round.png.flat",
+        "source": "/home/kamel/.gradle/daemon/8.13/com.kmz.shoppinglist.app-main-60:/mipmap-hdpi/ic_launcher_round.png"
     },
     {
-        "merged": "com.kmz.shoppinglist.app-merged_res-58:/drawable_liste_courses.png.flat",
-        "source": "com.kmz.shoppinglist.app-main-60:/drawable/liste_courses.png"
+        "merged": "/home/kamel/.gradle/daemon/8.13/com.kmz.shoppinglist.app-merged_res-58:/mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "/home/kamel/.gradle/daemon/8.13/com.kmz.shoppinglist.app-main-60:/mipmap-anydpi-v26/ic_launcher.xml"
     },
     {
-        "merged": "com.kmz.shoppinglist.app-merged_res-58:/drawable_ic_launcher_foreground.xml.flat",
-        "source": "com.kmz.shoppinglist.app-main-60:/drawable/ic_launcher_foreground.xml"
+        "merged": "/home/kamel/.gradle/daemon/8.13/com.kmz.shoppinglist.app-merged_res-58:/mipmap-xxhdpi_ic_launcher_round.png.flat",
+        "source": "/home/kamel/.gradle/daemon/8.13/com.kmz.shoppinglist.app-main-60:/mipmap-xxhdpi/ic_launcher_round.png"
     },
     {
-        "merged": "com.kmz.shoppinglist.app-merged_res-58:/mipmap-mdpi_ic_launcher_round.png.flat",
-        "source": "com.kmz.shoppinglist.app-main-60:/mipmap-mdpi/ic_launcher_round.png"
+        "merged": "/home/kamel/.gradle/daemon/8.13/com.kmz.shoppinglist.app-merged_res-58:/mipmap-xhdpi_ic_launcher_round.png.flat",
+        "source": "/home/kamel/.gradle/daemon/8.13/com.kmz.shoppinglist.app-main-60:/mipmap-xhdpi/ic_launcher_round.png"
     },
     {
-        "merged": "com.kmz.shoppinglist.app-merged_res-58:/mipmap-mdpi_ic_launcher.png.flat",
-        "source": "com.kmz.shoppinglist.app-main-60:/mipmap-mdpi/ic_launcher.png"
+        "merged": "/home/kamel/.gradle/daemon/8.13/com.kmz.shoppinglist.app-merged_res-58:/mipmap-mdpi_ic_launcher.png.flat",
+        "source": "/home/kamel/.gradle/daemon/8.13/com.kmz.shoppinglist.app-main-60:/mipmap-mdpi/ic_launcher.png"
     },
     {
-        "merged": "com.kmz.shoppinglist.app-merged_res-58:/mipmap-anydpi-v26_ic_launcher.xml.flat",
-        "source": "com.kmz.shoppinglist.app-main-60:/mipmap-anydpi-v26/ic_launcher.xml"
+        "merged": "/home/kamel/.gradle/daemon/8.13/com.kmz.shoppinglist.app-merged_res-58:/mipmap-hdpi_ic_launcher.png.flat",
+        "source": "/home/kamel/.gradle/daemon/8.13/com.kmz.shoppinglist.app-main-60:/mipmap-hdpi/ic_launcher.png"
     },
     {
-        "merged": "com.kmz.shoppinglist.app-merged_res-58:/mipmap-hdpi_ic_launcher.png.flat",
-        "source": "com.kmz.shoppinglist.app-main-60:/mipmap-hdpi/ic_launcher.png"
+        "merged": "/home/kamel/.gradle/daemon/8.13/com.kmz.shoppinglist.app-merged_res-58:/xml_backup_rules.xml.flat",
+        "source": "/home/kamel/.gradle/daemon/8.13/com.kmz.shoppinglist.app-main-60:/xml/backup_rules.xml"
     },
     {
-        "merged": "com.kmz.shoppinglist.app-merged_res-58:/mipmap-xxxhdpi_ic_launcher.png.flat",
-        "source": "com.kmz.shoppinglist.app-main-60:/mipmap-xxxhdpi/ic_launcher.png"
+        "merged": "/home/kamel/.gradle/daemon/8.13/com.kmz.shoppinglist.app-merged_res-58:/mipmap-xhdpi_ic_launcher.png.flat",
+        "source": "/home/kamel/.gradle/daemon/8.13/com.kmz.shoppinglist.app-main-60:/mipmap-xhdpi/ic_launcher.png"
     },
     {
-        "merged": "com.kmz.shoppinglist.app-merged_res-58:/drawable_ic_launcher_foreground_image.png.flat",
-        "source": "com.kmz.shoppinglist.app-main-60:/drawable/ic_launcher_foreground_image.png"
+        "merged": "/home/kamel/.gradle/daemon/8.13/com.kmz.shoppinglist.app-merged_res-58:/mipmap-mdpi_ic_launcher_round.png.flat",
+        "source": "/home/kamel/.gradle/daemon/8.13/com.kmz.shoppinglist.app-main-60:/mipmap-mdpi/ic_launcher_round.png"
     },
     {
-        "merged": "com.kmz.shoppinglist.app-merged_res-58:/mipmap-xxhdpi_ic_launcher_round.png.flat",
-        "source": "com.kmz.shoppinglist.app-main-60:/mipmap-xxhdpi/ic_launcher_round.png"
+        "merged": "/home/kamel/.gradle/daemon/8.13/com.kmz.shoppinglist.app-merged_res-58:/drawable_ic_launcher_foreground_image.png.flat",
+        "source": "/home/kamel/.gradle/daemon/8.13/com.kmz.shoppinglist.app-main-60:/drawable/ic_launcher_foreground_image.png"
     },
     {
-        "merged": "com.kmz.shoppinglist.app-merged_res-58:/mipmap-xhdpi_ic_launcher.png.flat",
-        "source": "com.kmz.shoppinglist.app-main-60:/mipmap-xhdpi/ic_launcher.png"
+        "merged": "/home/kamel/.gradle/daemon/8.13/com.kmz.shoppinglist.app-merged_res-58:/mipmap-xxhdpi_ic_launcher.png.flat",
+        "source": "/home/kamel/.gradle/daemon/8.13/com.kmz.shoppinglist.app-main-60:/mipmap-xxhdpi/ic_launcher.png"
     },
     {
-        "merged": "com.kmz.shoppinglist.app-merged_res-58:/drawable_ic_launcher_background.xml.flat",
-        "source": "com.kmz.shoppinglist.app-main-60:/drawable/ic_launcher_background.xml"
+        "merged": "/home/kamel/.gradle/daemon/8.13/com.kmz.shoppinglist.app-merged_res-58:/drawable_ic_all_articles.png.flat",
+        "source": "/home/kamel/.gradle/daemon/8.13/com.kmz.shoppinglist.app-main-60:/drawable/ic_all_articles.png"
     },
     {
-        "merged": "com.kmz.shoppinglist.app-merged_res-58:/mipmap-xxxhdpi_ic_launcher_round.png.flat",
-        "source": "com.kmz.shoppinglist.app-main-60:/mipmap-xxxhdpi/ic_launcher_round.png"
+        "merged": "/home/kamel/.gradle/daemon/8.13/com.kmz.shoppinglist.app-merged_res-58:/xml_data_extraction_rules.xml.flat",
+        "source": "/home/kamel/.gradle/daemon/8.13/com.kmz.shoppinglist.app-main-60:/xml/data_extraction_rules.xml"
     },
     {
-        "merged": "com.kmz.shoppinglist.app-merged_res-58:/mipmap-xxhdpi_ic_launcher.png.flat",
-        "source": "com.kmz.shoppinglist.app-main-60:/mipmap-xxhdpi/ic_launcher.png"
+        "merged": "/home/kamel/.gradle/daemon/8.13/com.kmz.shoppinglist.app-merged_res-58:/drawable_ic_launcher_foreground.xml.flat",
+        "source": "/home/kamel/.gradle/daemon/8.13/com.kmz.shoppinglist.app-main-60:/drawable/ic_launcher_foreground.xml"
     },
     {
-        "merged": "com.kmz.shoppinglist.app-merged_res-58:/xml_data_extraction_rules.xml.flat",
-        "source": "com.kmz.shoppinglist.app-main-60:/xml/data_extraction_rules.xml"
+        "merged": "/home/kamel/.gradle/daemon/8.13/com.kmz.shoppinglist.app-merged_res-58:/drawable_liste_courses.png.flat",
+        "source": "/home/kamel/.gradle/daemon/8.13/com.kmz.shoppinglist.app-main-60:/drawable/liste_courses.png"
+    },
+    {
+        "merged": "/home/kamel/.gradle/daemon/8.13/com.kmz.shoppinglist.app-merged_res-58:/mipmap-xxxhdpi_ic_launcher_round.png.flat",
+        "source": "/home/kamel/.gradle/daemon/8.13/com.kmz.shoppinglist.app-main-60:/mipmap-xxxhdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "/home/kamel/.gradle/daemon/8.13/com.kmz.shoppinglist.app-merged_res-58:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "/home/kamel/.gradle/daemon/8.13/com.kmz.shoppinglist.app-main-60:/mipmap-anydpi-v26/ic_launcher_round.xml"
     }
 ]

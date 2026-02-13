@@ -2,14 +2,38 @@ package com.example.simpleiptv.ui
 
 import android.app.Activity
 import androidx.activity.result.ActivityResultLauncher
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.PowerSettingsNew
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Tv
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -21,6 +45,7 @@ import com.example.simpleiptv.ui.components.HeaderIconButton
 import com.example.simpleiptv.ui.components.TvInput
 import com.example.simpleiptv.ui.viewmodel.GeneratorType
 import com.example.simpleiptv.ui.viewmodel.MainViewModel
+import com.example.simpleiptv.ui.viewmodel.MediaMode
 import kotlinx.coroutines.launch
 
 @Composable
@@ -34,14 +59,19 @@ fun MainHeader(
         val context = LocalContext.current
         val scope = rememberCoroutineScope()
         val focusManager = LocalFocusManager.current
+        val focusRequester = remember { FocusRequester() }
+
+        LaunchedEffect(isLandscape) {
+                if (isLandscape) {
+                        try {
+                                focusRequester.requestFocus()
+                        } catch (e: Exception) {}
+                }
+        }
 
         Card(
                 modifier = Modifier.fillMaxWidth().padding(8.dp),
-                colors =
-                        CardDefaults.cardColors(
-                                containerColor =
-                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                        )
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
                 Column {
                         if (isLandscape) {
@@ -56,12 +86,6 @@ fun MainHeader(
                                                 modifier = Modifier.size(60.dp)
                                         )
 
-                                        Text(
-                                                text = "SimpleIPTV",
-                                                style = MaterialTheme.typography.titleMedium,
-                                                color = Color.White
-                                        )
-
                                         TvInput(
                                                 value = viewModel.searchQuery,
                                                 onValueChange = {
@@ -73,7 +97,53 @@ fun MainHeader(
                                                 label = "Rechercher...",
                                                 focusManager = focusManager,
                                                 leadingIcon = Icons.Default.Search,
-                                                modifier = Modifier.width(250.dp)
+                                                modifier = Modifier.width(180.dp)
+                                        )
+
+                                        HeaderIconButton(
+                                                icon = Icons.Default.Tv,
+                                                desc = "Live TV",
+                                                onClick = {
+                                                        viewModel.setMediaMode(
+                                                                com.example.simpleiptv.ui.viewmodel
+                                                                        .MediaMode.LIVE
+                                                        )
+                                                },
+                                                tintNormal =
+                                                        if (viewModel.currentMediaMode ==
+                                                                        com.example.simpleiptv.ui
+                                                                                .viewmodel.MediaMode
+                                                                                .LIVE
+                                                        )
+                                                                Color.Cyan
+                                                        else Color.Gray,
+                                                isSelected =
+                                                        viewModel.currentMediaMode ==
+                                                                com.example.simpleiptv.ui.viewmodel
+                                                                        .MediaMode.LIVE
+                                        )
+
+                                        HeaderIconButton(
+                                                icon = Icons.Default.Movie,
+                                                desc = "VOD",
+                                                onClick = {
+                                                        viewModel.setMediaMode(
+                                                                com.example.simpleiptv.ui.viewmodel
+                                                                        .MediaMode.VOD
+                                                        )
+                                                },
+                                                tintNormal =
+                                                        if (viewModel.currentMediaMode ==
+                                                                        com.example.simpleiptv.ui
+                                                                                .viewmodel.MediaMode
+                                                                                .VOD
+                                                        )
+                                                                Color.Cyan
+                                                        else Color.Gray,
+                                                isSelected =
+                                                        viewModel.currentMediaMode ==
+                                                                com.example.simpleiptv.ui.viewmodel
+                                                                        .MediaMode.VOD
                                         )
 
                                         if (viewModel.searchQuery.isNotBlank()) {
@@ -89,12 +159,11 @@ fun MainHeader(
                                                 )
                                         }
 
-                                        Spacer(Modifier.weight(1f))
-
                                         HeaderIconButton(
                                                 icon = Icons.Default.PlayArrow,
                                                 desc = "Player",
                                                 onClick = { viewModel.isFullScreenPlayer = true },
+                                                modifier = Modifier.focusRequester(focusRequester),
                                                 tintNormal =
                                                         if (viewModel.playingChannel != null)
                                                                 Color.Green
@@ -151,9 +220,9 @@ fun MainHeader(
                         } else {
                                 Column(modifier = Modifier.padding(12.dp)) {
                                         Row(
-                                                modifier = Modifier.fillMaxWidth(),
+                                                modifier = Modifier.fillMaxWidth().padding(8.dp),
                                                 verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.SpaceBetween
+                                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                                         ) {
                                                 Text(
                                                         text = "SimpleIPTV",
@@ -170,114 +239,132 @@ fun MainHeader(
                                                                         !viewModel
                                                                                 .isSearchVisibleOnMobile
                                                         },
-                                                        tintNormal = Color.White // Brighter search
-                                                        // button
-                                                        )
+                                                        tintNormal = Color.White
+                                                )
+                                                HeaderIconButton(
+                                                        icon = Icons.Default.Tv,
+                                                        desc = "Live",
+                                                        onClick = {
+                                                                viewModel.setMediaMode(
+                                                                        com.example.simpleiptv.ui
+                                                                                .viewmodel.MediaMode
+                                                                                .LIVE
+                                                                )
+                                                        },
+                                                        tintNormal =
+                                                                if (viewModel.currentMediaMode ==
+                                                                                com.example
+                                                                                        .simpleiptv
+                                                                                        .ui
+                                                                                        .viewmodel
+                                                                                        .MediaMode
+                                                                                        .LIVE
+                                                                )
+                                                                        Color.Cyan
+                                                                else Color.White,
+                                                        isSelected =
+                                                                viewModel.currentMediaMode ==
+                                                                        com.example.simpleiptv.ui
+                                                                                .viewmodel.MediaMode
+                                                                                .LIVE
+                                                )
+                                                HeaderIconButton(
+                                                        icon = Icons.Default.Movie,
+                                                        desc = "VOD",
+                                                        onClick = {
+                                                                viewModel.setMediaMode(
+                                                                        com.example.simpleiptv.ui
+                                                                                .viewmodel.MediaMode
+                                                                                .VOD
+                                                                )
+                                                        },
+                                                        tintNormal =
+                                                                if (viewModel.currentMediaMode ==
+                                                                                com.example
+                                                                                        .simpleiptv
+                                                                                        .ui
+                                                                                        .viewmodel
+                                                                                        .MediaMode
+                                                                                        .VOD
+                                                                )
+                                                                        Color.Cyan
+                                                                else Color.White,
+                                                        isSelected =
+                                                                viewModel.currentMediaMode ==
+                                                                        com.example.simpleiptv.ui
+                                                                                .viewmodel.MediaMode
+                                                                                .VOD
+                                                )
                                         }
                                         Spacer(Modifier.height(8.dp))
                                         Row(
                                                 modifier = Modifier.fillMaxWidth(),
-                                                verticalAlignment = Alignment.CenterVertically
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                                         ) {
-                                                Box(
-                                                        modifier = Modifier.weight(1f),
-                                                        contentAlignment = Alignment.Center
-                                                ) {
-                                                        HeaderIconButton(
-                                                                icon = Icons.Default.Person,
-                                                                desc = "Profils",
-                                                                onClick = {
-                                                                        viewModel
-                                                                                .showProfileManager =
-                                                                                true
-                                                                }
-                                                        )
-                                                }
-                                                Box(
-                                                        modifier = Modifier.weight(1f),
-                                                        contentAlignment = Alignment.Center
-                                                ) {
-                                                        HeaderIconButton(
-                                                                icon = Icons.Default.Refresh,
-                                                                desc = "Actualiser",
-                                                                onClick = {
-                                                                        scope.launch {
-                                                                                viewModel.profiles
-                                                                                        .find {
-                                                                                                it.id ==
-                                                                                                        viewModel
-                                                                                                                .activeProfileId
-                                                                                        }
-                                                                                        ?.let {
+                                                HeaderIconButton(
+                                                        icon = Icons.Default.Person,
+                                                        desc = "Profils",
+                                                        onClick = {
+                                                                viewModel.showProfileManager = true
+                                                        }
+                                                )
+                                                HeaderIconButton(
+                                                        icon = Icons.Default.Refresh,
+                                                        desc = "Actualiser",
+                                                        onClick = {
+                                                                scope.launch {
+                                                                        viewModel.profiles
+                                                                                .find {
+                                                                                        it.id ==
                                                                                                 viewModel
-                                                                                                        .refreshDatabase(
-                                                                                                                it
-                                                                                                        )
-                                                                                        }
-                                                                        }
+                                                                                                        .activeProfileId
+                                                                                }
+                                                                                ?.let {
+                                                                                        viewModel
+                                                                                                .refreshDatabase(
+                                                                                                        it
+                                                                                                )
+                                                                                }
                                                                 }
-                                                        )
-                                                }
-                                                Box(
-                                                        modifier = Modifier.weight(1f),
-                                                        contentAlignment = Alignment.Center
-                                                ) {
-                                                        HeaderIconButton(
-                                                                icon = Icons.Default.CloudUpload,
-                                                                desc = "Sauvegarder",
-                                                                onClick = onSave
-                                                        )
-                                                }
-                                                Box(
-                                                        modifier = Modifier.weight(1f),
-                                                        contentAlignment = Alignment.Center
-                                                ) {
-                                                        HeaderIconButton(
-                                                                icon = Icons.Default.CloudDownload,
-                                                                desc = "Restaurer",
-                                                                onClick = {
-                                                                        openLauncher?.launch(
-                                                                                "application/json"
-                                                                        )
-                                                                }
-                                                        )
-                                                }
-                                                if (viewModel.playingChannel != null) {
-                                                        Box(
-                                                                modifier = Modifier.weight(1f),
-                                                                contentAlignment = Alignment.Center
-                                                        ) {
-                                                                HeaderIconButton(
-                                                                        icon =
-                                                                                Icons.Default
-                                                                                        .PlayArrow,
-                                                                        desc = "Retour Player",
-                                                                        onClick = {
-                                                                                viewModel
-                                                                                        .isFullScreenPlayer =
-                                                                                        true
-                                                                        },
-                                                                        tintNormal = Color.Green
+                                                        }
+                                                )
+                                                HeaderIconButton(
+                                                        icon = Icons.Default.CloudUpload,
+                                                        desc = "Sauvegarder",
+                                                        onClick = onSave
+                                                )
+                                                HeaderIconButton(
+                                                        icon = Icons.Default.CloudDownload,
+                                                        desc = "Restaurer",
+                                                        onClick = {
+                                                                openLauncher?.launch(
+                                                                        "application/json"
                                                                 )
                                                         }
-                                                }
-                                                Box(
-                                                        modifier = Modifier.weight(1f),
-                                                        contentAlignment = Alignment.Center
-                                                ) {
+                                                )
+                                                if (viewModel.playingChannel != null) {
                                                         HeaderIconButton(
-                                                                icon =
-                                                                        Icons.Default
-                                                                                .PowerSettingsNew,
-                                                                desc = "Quitter",
+                                                                icon = Icons.Default.PlayArrow,
+                                                                desc = "Retour Player",
                                                                 onClick = {
-                                                                        player?.stop()
-                                                                        (context as? Activity)
-                                                                                ?.finishAffinity()
+                                                                        viewModel
+                                                                                .isFullScreenPlayer =
+                                                                                true
                                                                 },
-                                                                tintNormal = Color.Red
+                                                                tintNormal = Color.Green
                                                         )
                                                 }
+                                                HeaderIconButton(
+                                                        icon = Icons.Default.PowerSettingsNew,
+                                                        desc = "Quitter",
+                                                        onClick = {
+                                                                player?.stop()
+                                                                (context as? Activity)
+                                                                        ?.finishAffinity()
+                                                        },
+                                                        tintNormal = Color.Red
+                                                )
                                         }
                                 }
                         }

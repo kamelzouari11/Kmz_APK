@@ -9,16 +9,31 @@ interface XtreamApi {
 
     @GET("player_api.php")
     suspend fun getLiveCategories(
-        @Query("username") user: String,
-        @Query("password") pass: String,
-        @Query("action") action: String = "get_live_categories"
+            @Query("username") user: String,
+            @Query("password") pass: String,
+            @Query("action") action: String = "get_live_categories"
     ): List<LiveCategory>
 
     @GET("player_api.php")
     suspend fun getLiveStreams(
-        @Query("username") user: String,
-        @Query("password") pass: String,
-        @Query("category_id") categoryId: String? = null,
-        @Query("action") action: String = "get_live_streams"
+            @Query("username") user: String,
+            @Query("password") pass: String,
+            @Query("category_id") categoryId: String? = null,
+            @Query("action") action: String = "get_live_streams"
     ): List<LiveChannel>
+
+    @GET("player_api.php")
+    suspend fun getVodCategories(
+            @Query("username") user: String,
+            @Query("password") pass: String,
+            @Query("action") action: String = "get_vod_categories"
+    ): List<com.example.simpleiptv.data.model.VodCategory>
+
+    @GET("player_api.php")
+    suspend fun getVodStreams(
+            @Query("username") user: String,
+            @Query("password") pass: String,
+            @Query("category_id") categoryId: String? = null,
+            @Query("action") action: String = "get_vod_streams"
+    ): List<com.example.simpleiptv.data.model.VodMovie>
 }

@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.kmz.shazamplayer.app-mergeDebugResources-46:/values-fr-rCA/values-fr-rCA.xml",
+            "outputFile": "com.kmz.shazamplayer.app-mergeDebugResources-47:/values-fr-rCA/values-fr-rCA.xml",
             "map": [
                 {
                     "source": "/home/kamel/.gradle/caches/9.0-milestone-1/transforms/2908748570bc41278c9b23620fae822b/transformed/jetified-media3-session-1.2.1/res/values-fr-rCA/values-fr-rCA.xml",

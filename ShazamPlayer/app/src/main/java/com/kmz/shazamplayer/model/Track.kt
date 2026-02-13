@@ -3,8 +3,8 @@ package com.kmz.shazamplayer.model
 data class Track(
         val index: String,
         val tagTime: String,
-        val title: String,
-        val artist: String,
+        var title: String,
+        var artist: String,
         val shazamUrl: String,
         val trackKey: String,
         var streamUrl: String? = null,

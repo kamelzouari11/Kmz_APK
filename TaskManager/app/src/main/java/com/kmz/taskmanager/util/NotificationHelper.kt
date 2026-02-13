@@ -17,22 +17,37 @@ import java.time.ZoneId
 
 object NotificationHelper {
         private const val CHANNEL_ID = "task_reminders"
+        private const val ALARM_CHANNEL_ID = "task_alarms"
 
         fun createNotificationChannel(context: Context) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        val name = "Rappels de tâches"
-                        val descriptionText = "Notifications pour vos tâches à venir"
-                        val importance = NotificationManager.IMPORTANCE_HIGH
                         val notificationManager: NotificationManager =
                                 context.getSystemService(Context.NOTIFICATION_SERVICE) as
                                         NotificationManager
 
+                        // 1. Reminder Channel (Normal)
+                        val name = "Rappels de tâches"
+                        val descriptionText = "Notifications pour vos tâches à venir"
+                        val importance = NotificationManager.IMPORTANCE_HIGH
                         val soundUri =
                                 RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+
                         val channel =
                                 NotificationChannel(CHANNEL_ID, name, importance).apply {
                                         description = descriptionText
-                                        setSound(soundUri, null)
+                                        setSound(
+                                                soundUri,
+                                                android.media.AudioAttributes.Builder()
+                                                        .setUsage(
+                                                                android.media.AudioAttributes
+                                                                        .USAGE_NOTIFICATION
+                                                        )
+                                                        .setContentType(
+                                                                android.media.AudioAttributes
+                                                                        .CONTENT_TYPE_SONIFICATION
+                                                        )
+                                                        .build()
+                                        )
                                         enableVibration(true)
                                         vibrationPattern = longArrayOf(0, 500, 1000)
                                         lockscreenVisibility =
@@ -40,6 +55,42 @@ object NotificationHelper {
                                         setShowBadge(true)
                                 }
                         notificationManager.createNotificationChannel(channel)
+
+                        // 2. Alarm Channel (High priority)
+                        val alarmName = "Alarmes de tâches"
+                        val alarmDesc = "Sonneries de type réveil pour les tâches urgentes"
+                        val alarmImportance = NotificationManager.IMPORTANCE_HIGH
+                        val alarmSoundUri =
+                                RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+
+                        val alarmChannel =
+                                NotificationChannel(ALARM_CHANNEL_ID, alarmName, alarmImportance)
+                                        .apply {
+                                                description = alarmDesc
+                                                setSound(
+                                                        alarmSoundUri,
+                                                        android.media.AudioAttributes.Builder()
+                                                                .setUsage(
+                                                                        android.media
+                                                                                .AudioAttributes
+                                                                                .USAGE_ALARM
+                                                                )
+                                                                .setContentType(
+                                                                        android.media
+                                                                                .AudioAttributes
+                                                                                .CONTENT_TYPE_SONIFICATION
+                                                                )
+                                                                .build()
+                                                )
+                                                enableVibration(true)
+                                                vibrationPattern = longArrayOf(0, 1000, 500, 1000)
+                                                lockscreenVisibility =
+                                                        android.app.Notification.VISIBILITY_PUBLIC
+                                                setShowBadge(true)
+                                                enableLights(true)
+                                                lightColor = android.graphics.Color.RED
+                                        }
+                        notificationManager.createNotificationChannel(alarmChannel)
                 }
         }
 
@@ -67,14 +118,13 @@ object NotificationHelper {
                 val triggerAt =
                         task.dueDate.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
-                scheduleAlarm(context, alarmManager, triggerAt, pendingIntent)
+                scheduleAlarm(alarmManager, triggerAt, pendingIntent)
 
                 // Schedule Warning if applicable
                 scheduleWarning(context, task)
         }
 
         private fun scheduleAlarm(
-                context: Context,
                 alarmManager: AlarmManager,
                 triggerAt: Long,
                 pendingIntent: PendingIntent
@@ -190,7 +240,7 @@ object NotificationHelper {
 
                 val triggerAt =
                         nextWarningTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                scheduleAlarm(context, alarmManager, triggerAt, pendingIntent)
+                scheduleAlarm(alarmManager, triggerAt, pendingIntent)
         }
 
         fun cancelTaskAlarm(context: Context, task: Task) {
@@ -236,16 +286,20 @@ object NotificationHelper {
                 val pendingIntent =
                         PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_IMMUTABLE)
 
+                val useAlarmChannel =
+                        (type == "ALARM" &&
+                                (alarmLevel == AlarmLevel.VERY_HIGH ||
+                                        alarmLevel == AlarmLevel.HIGH)) || isLate
+                val currentChannelId = if (useAlarmChannel) ALARM_CHANNEL_ID else CHANNEL_ID
+
                 val soundUri =
                         RingtoneManager.getDefaultUri(
-                                if (type == "WARNING") RingtoneManager.TYPE_NOTIFICATION
-                                else if (isLate || alarmLevel == AlarmLevel.VERY_HIGH)
-                                        RingtoneManager.TYPE_ALARM
+                                if (useAlarmChannel) RingtoneManager.TYPE_ALARM
                                 else RingtoneManager.TYPE_NOTIFICATION
                         )
 
                 val builder =
-                        NotificationCompat.Builder(context, CHANNEL_ID)
+                        NotificationCompat.Builder(context, currentChannelId)
                                 .setSmallIcon(
                                         if (isLate) android.R.drawable.stat_notify_error
                                         else android.R.drawable.ic_lock_idle_alarm
@@ -266,28 +320,33 @@ object NotificationHelper {
                                         if (isLate) android.graphics.Color.RED else 0x4CAF50
                                 ) // Vert TaskManager
                                 .setPriority(
-                                        if (isLate) NotificationCompat.PRIORITY_MAX
-                                        else if (type == "WARNING") NotificationCompat.PRIORITY_HIGH
-                                        else
-                                                when (alarmLevel) {
-                                                        AlarmLevel.VERY_HIGH ->
-                                                                NotificationCompat.PRIORITY_MAX
-                                                        AlarmLevel.HIGH ->
-                                                                NotificationCompat.PRIORITY_HIGH
-                                                        else -> NotificationCompat.PRIORITY_HIGH
-                                                }
+                                        if (isLate || alarmLevel == AlarmLevel.VERY_HIGH)
+                                                NotificationCompat.PRIORITY_MAX
+                                        else NotificationCompat.PRIORITY_HIGH
                                 )
                                 .setContentIntent(pendingIntent)
                                 .setAutoCancel(true)
                                 .setSound(soundUri)
-                                .setVibrate(longArrayOf(0, 500, 1000))
+                                .setVibrate(
+                                        if (useAlarmChannel) longArrayOf(0, 1000, 500, 1000)
+                                        else longArrayOf(0, 500, 1000)
+                                )
                                 .setCategory(
-                                        if (isLate || type == "ALARM")
-                                                NotificationCompat.CATEGORY_ALARM
+                                        if (useAlarmChannel) NotificationCompat.CATEGORY_ALARM
                                         else NotificationCompat.CATEGORY_EVENT
                                 )
-                                .setDefaults(NotificationCompat.DEFAULT_ALL)
-                                .setOnlyAlertOnce(true)
+                                .setDefaults(
+                                        NotificationCompat.DEFAULT_LIGHTS
+                                ) // Don't use DEFAULT_ALL as we set sound/vibrate manually for
+                                // Alarms
+                                .setOnlyAlertOnce(false)
+
+                // Use insistent flag for high priority levels to make it ring like an alarm
+                val notification = builder.build()
+                if (useAlarmChannel) {
+                        notification.flags =
+                                notification.flags or android.app.Notification.FLAG_INSISTENT
+                }
 
                 val notificationManager =
                         context.getSystemService(Context.NOTIFICATION_SERVICE) as
@@ -295,6 +354,6 @@ object NotificationHelper {
 
                 val notificationId =
                         if (type == "WARNING") taskId.toInt() + 1000000 else taskId.toInt()
-                notificationManager.notify(notificationId, builder.build())
+                notificationManager.notify(notificationId, notification)
         }
 }

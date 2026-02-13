@@ -198,10 +198,7 @@ fun ProfileManagerDialog(
                                                                         .focusable(),
                                                         shape = MaterialTheme.shapes.small,
                                                         color =
-                                                                if (isSelectFocused)
-                                                                        Color.White.copy(
-                                                                                alpha = 0.9f
-                                                                        )
+                                                                if (isSelectFocused) Color.White
                                                                 else if (profile.isSelected)
                                                                         MaterialTheme.colorScheme
                                                                                 .primaryContainer
@@ -291,10 +288,6 @@ fun ProfileManagerDialog(
                                                                         .background(
                                                                                 if (isEditFocused)
                                                                                         Color.White
-                                                                                                .copy(
-                                                                                                        alpha =
-                                                                                                                0.2f
-                                                                                                )
                                                                                 else
                                                                                         Color.Transparent,
                                                                                 CircleShape
@@ -304,8 +297,12 @@ fun ProfileManagerDialog(
                                                                 Icons.Default.Edit,
                                                                 "Modifier",
                                                                 tint =
-                                                                        MaterialTheme.colorScheme
-                                                                                .primary
+                                                                        if (isEditFocused)
+                                                                                Color.Black
+                                                                        else
+                                                                                MaterialTheme
+                                                                                        .colorScheme
+                                                                                        .primary
                                                         )
                                                 }
 
@@ -324,10 +321,6 @@ fun ProfileManagerDialog(
                                                                         .background(
                                                                                 if (isDeleteFocused)
                                                                                         Color.White
-                                                                                                .copy(
-                                                                                                        alpha =
-                                                                                                                0.2f
-                                                                                                )
                                                                                 else
                                                                                         Color.Transparent,
                                                                                 CircleShape
@@ -336,7 +329,10 @@ fun ProfileManagerDialog(
                                                         Icon(
                                                                 Icons.Default.Delete,
                                                                 "Supprimer",
-                                                                tint = Color.Red
+                                                                tint =
+                                                                        if (isDeleteFocused)
+                                                                                Color.Black
+                                                                        else Color.Red
                                                         )
                                                 }
                                         }

@@ -1,10 +1,10 @@
 package com.kmz.shoppinglist.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -18,7 +18,10 @@ import com.kmz.shoppinglist.data.*
 import com.kmz.shoppinglist.ui.components.*
 import com.kmz.shoppinglist.ui.theme.*
 
-/** Écran niveau 2 : Liste des articles d'une catégorie. Strictly identical to AllArticlesScreen. */
+/**
+ * Écran niveau 2 : Liste des articles d'une catégorie. Strictly identical to AllArticlesScreen
+ * logic but for 1 category.
+ */
 @Composable
 fun ArticlesScreen(
         category: Category,
@@ -30,8 +33,24 @@ fun ArticlesScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var articleToEdit by remember { mutableStateOf<Article?>(null) }
     var showEditDialog by remember { mutableStateOf(false) }
-    var isIconMode by remember { mutableStateOf(false) }
-    var filterPriority by remember { mutableStateOf(Priority.OPTIONAL) }
+    var isIconMode by remember { mutableStateOf(dataManager.getIconMode()) }
+    var filterPriority by remember { mutableStateOf(dataManager.getFilterPriority()) }
+    var isBoughtExpanded by remember { mutableStateOf(dataManager.getBoughtExpanded()) }
+
+    fun updateIconMode(enabled: Boolean) {
+        isIconMode = enabled
+        dataManager.setIconMode(enabled)
+    }
+
+    fun updateFilterPriority(priority: Priority) {
+        filterPriority = priority
+        dataManager.setFilterPriority(priority)
+    }
+
+    fun updateBoughtExpanded(expanded: Boolean) {
+        isBoughtExpanded = expanded
+        dataManager.setBoughtExpanded(expanded)
+    }
 
     val categories = remember { dataManager.getCategories() }
 
@@ -39,8 +58,7 @@ fun ArticlesScreen(
     val filteredArticles =
             articles.filter { it.priority.displayOrder <= filterPriority.displayOrder }
 
-    // Séparer les articles achetés et non achetés (unbought filtrés, bought non filtrés car souvent
-    // non priorisés)
+    // Séparer les articles achetés et non achetés
     val unboughtArticles = filteredArticles.filter { !it.isBought }
     val boughtArticles = articles.filter { it.isBought }
 
@@ -53,117 +71,42 @@ fun ArticlesScreen(
 
     Box(modifier = Modifier.fillMaxSize().background(Black)) {
         Column(modifier = Modifier.fillMaxSize()) {
-            Box(
-                    modifier =
-                            Modifier.fillMaxWidth()
-                                    .background(DarkGray)
-                                    .padding(vertical = 8.dp, horizontal = 16.dp)
-            ) {
-                Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = onBackClick) {
-                            Icon(
-                                    Icons.Default.ArrowBack,
-                                    contentDescription = "Retour",
-                                    tint = White
-                            )
-                        }
+            ScreenHeader(
+                    title = category.name,
+                    subtitle = "${unboughtArticles.size} à acheter",
+                    onBackClick = onBackClick,
+                    isIconMode = isIconMode,
+                    onIconModeChange = { updateIconMode(it) },
+                    filterPriority = filterPriority,
+                    onFilterPriorityChange = { updateFilterPriority(it) }
+            )
 
-                        Spacer(modifier = Modifier.width(4.dp))
-
-                        Column {
-                            Text(
-                                    text = category.name,
-                                    color = White,
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                    text = "${unboughtArticles.size} à acheter",
-                                    color = TextGray,
-                                    fontSize = 11.sp
-                            )
-                        }
-                    }
-
-                    // Bouton Toggle Large Bleu au maximum
-                    IconButton(
-                            onClick = { isIconMode = !isIconMode },
-                            modifier = Modifier.size(56.dp).background(AccentBlue, CircleShape)
-                    ) {
-                        Icon(
-                                imageVector =
-                                        if (isIconMode) Icons.Default.List
-                                        else Icons.Default.ShoppingCart,
-                                contentDescription = "Changer de vue",
-                                tint = White,
-                                modifier = Modifier.size(36.dp)
-                        )
-                    }
-                }
-            }
-
-            // Liste des articles
             LazyColumn(
                     modifier = Modifier.weight(1f).fillMaxWidth(),
                     contentPadding = PaddingValues(top = 12.dp, bottom = 80.dp)
             ) {
-                // Articles non achetés (Grille 2 colonnes comme AllArticlesScreen)
-                val chunkedArticles = unboughtArticles.chunked(2)
+                val columnCount = if (isIconMode) 3 else 2
+
+                // Articles non achetés
+                val chunkedArticles = unboughtArticles.chunked(columnCount)
                 items(chunkedArticles) { rowArticles ->
-                    Row(
-                            modifier =
-                                    Modifier.fillMaxWidth()
-                                            .padding(horizontal = 16.dp, vertical = 4.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        rowArticles.forEach { article ->
-                            Box(modifier = Modifier.weight(1f)) {
-                                if (isIconMode) {
-                                    ArticleIconItem(
-                                            article = article,
-                                            onClick = {
-                                                dataManager.toggleArticleBought(article.id)
-                                                refreshArticles()
-                                            },
-                                            onLongClick = {
-                                                articleToEdit = article
-                                                showEditDialog = true
-                                            },
-                                            onPriorityChange = { priority ->
-                                                dataManager.updateArticle(
-                                                        article.copy(priority = priority)
-                                                )
-                                                refreshArticles()
-                                            }
-                                    )
-                                } else {
-                                    ArticleTextItem(
-                                            article = article,
-                                            onClick = {
-                                                dataManager.toggleArticleBought(article.id)
-                                                refreshArticles()
-                                            },
-                                            onLongClick = {
-                                                articleToEdit = article
-                                                showEditDialog = true
-                                            },
-                                            onPriorityChange = { priority ->
-                                                dataManager.updateArticle(
-                                                        article.copy(priority = priority)
-                                                )
-                                                refreshArticles()
-                                            }
-                                    )
-                                }
+                    ArticleGridRow(
+                            articles = rowArticles,
+                            columnCount = columnCount,
+                            isIconMode = isIconMode,
+                            onToggleBought = { article ->
+                                dataManager.toggleArticleBought(article.id)
+                                refreshArticles()
+                            },
+                            onEdit = { article ->
+                                articleToEdit = article
+                                showEditDialog = true
+                            },
+                            onPriorityChange = { article, priority ->
+                                dataManager.updateArticle(article.copy(priority = priority))
+                                refreshArticles()
                             }
-                        }
-                        if (rowArticles.size == 1) Spacer(modifier = Modifier.weight(1f))
-                    }
+                    )
                 }
 
                 // Section "Achetés"
@@ -171,7 +114,12 @@ fun ArticlesScreen(
                     item {
                         Spacer(modifier = Modifier.height(32.dp))
                         Row(
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                                modifier =
+                                        Modifier.fillMaxWidth()
+                                                .padding(horizontal = 16.dp)
+                                                .clickable {
+                                                    updateBoughtExpanded(!isBoughtExpanded)
+                                                },
                                 verticalAlignment = Alignment.CenterVertically
                         ) {
                             Box(
@@ -180,9 +128,18 @@ fun ArticlesScreen(
                                                     .height(1.dp)
                                                     .background(TextDarkGray)
                             )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Icon(
+                                    imageVector =
+                                            if (isBoughtExpanded) Icons.Default.ExpandLess
+                                            else Icons.Default.ExpandMore,
+                                    contentDescription = null,
+                                    tint = White,
+                                    modifier = Modifier.size(20.dp)
+                            )
                             Text(
                                     text = " ARTICLES ACHETÉS ",
-                                    color = TextGray,
+                                    color = White,
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold
                             )
@@ -196,35 +153,30 @@ fun ArticlesScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                     }
 
-                    val chunkedBought = boughtArticles.chunked(2)
-                    items(chunkedBought) { rowArticles ->
-                        Row(
-                                modifier =
-                                        Modifier.fillMaxWidth()
-                                                .padding(horizontal = 16.dp, vertical = 4.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            rowArticles.forEach { article ->
-                                Box(modifier = Modifier.weight(1f)) {
-                                    BoughtArticleTextItem(
-                                            article = article,
-                                            onClick = {
-                                                dataManager.toggleArticleBought(article.id)
-                                                refreshArticles()
-                                            },
-                                            onLongClick = {
-                                                articleToEdit = article
-                                                showEditDialog = true
-                                            }
-                                    )
-                                }
-                            }
-                            if (rowArticles.size == 1) Spacer(modifier = Modifier.weight(1f))
+                    if (isBoughtExpanded) {
+                        val chunkedBought = boughtArticles.chunked(columnCount)
+                        items(chunkedBought) { rowArticles ->
+                            ArticleGridRow(
+                                    articles = rowArticles,
+                                    columnCount = columnCount,
+                                    isIconMode = isIconMode,
+                                    onToggleBought = { article ->
+                                        dataManager.toggleArticleBought(article.id)
+                                        refreshArticles()
+                                    },
+                                    onEdit = { article ->
+                                        articleToEdit = article
+                                        showEditDialog = true
+                                    },
+                                    onPriorityChange = { article, priority ->
+                                        dataManager.updateArticle(article.copy(priority = priority))
+                                        refreshArticles()
+                                    }
+                            )
                         }
                     }
                 }
 
-                // Message vide
                 if (articles.isEmpty()) {
                     item {
                         Box(
@@ -242,9 +194,8 @@ fun ArticlesScreen(
             }
         }
 
-        // Barres de boutons d'action (Filtre, Micro, Ajout)
         BottomActionButtons(
-                onFilterClick = { priority -> filterPriority = priority },
+                onFilterClick = { updateFilterPriority(it) },
                 onMicClick = onMicClick,
                 onAddClick = {
                     articleToEdit = null
@@ -252,11 +203,11 @@ fun ArticlesScreen(
                     showAddDialog = true
                 },
                 filterPriority = filterPriority,
+                showFilter = false,
                 modifier = Modifier.align(Alignment.BottomCenter)
         )
     }
 
-    // Dialog d'ajout
     if (showAddDialog) {
         key(addDialogKey) {
             EditArticleDialog(
@@ -285,7 +236,6 @@ fun ArticlesScreen(
         }
     }
 
-    // Dialog d'édition
     if (showEditDialog && articleToEdit != null) {
         EditArticleDialog(
                 article = articleToEdit,

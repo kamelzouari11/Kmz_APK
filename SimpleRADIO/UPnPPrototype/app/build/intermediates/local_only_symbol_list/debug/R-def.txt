@@ -1,0 +1,35 @@
+R_DEF: Internal format may change without notice
+local
+color accent
+color background_dark
+color card_dark
+color divider
+color error_red
+color primary
+color primary_dark
+color status_playing
+color status_searching
+color status_stopped
+color surface_dark
+color text_primary
+color text_secondary
+drawable card_background
+drawable device_item_background
+drawable device_item_selected
+drawable ic_radio_logo
+id btnClearLog
+id btnCopyLog
+id btnDiscover
+id btnPlay
+id btnStop
+id controlSection
+id deviceListContainer
+id logScrollView
+id tvDiscoveryStatus
+id tvLog
+id tvNoDevices
+id tvPlaybackStatus
+id tvSelectedDevice
+layout activity_main
+string app_name
+style Theme.UPnPPrototype

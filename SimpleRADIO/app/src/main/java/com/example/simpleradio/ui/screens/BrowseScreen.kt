@@ -1,32 +1,20 @@
 package com.example.simpleradio.ui.screens
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Label
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.Public
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.SignalCellularAlt
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.simpleradio.data.local.entities.RadioStationEntity
 import com.example.simpleradio.data.model.RadioCountry
 import com.example.simpleradio.data.model.RadioTag
-import com.example.simpleradio.ui.components.MainItem
-import com.example.simpleradio.ui.components.SidebarItem
+import com.example.simpleradio.ui.components.RadioStationList
+import com.example.simpleradio.ui.components.filterSidebarItems
 
 @Composable
 fun BrowseScreen(
@@ -66,204 +54,25 @@ fun BrowseScreen(
                         modifier = Modifier.fillMaxSize().padding(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // 1. Recherche
-                    item {
-                        SidebarItem(
-                                text = "Recherche",
-                                icon = Icons.Default.Search,
-                                isSelected = false,
-                                onClick = onSearchClick
-                        )
-                    }
-
-                    // 2. Qualité
-                    item {
-                        SidebarItem(
-                                text =
-                                        "Qualité : ${if (selectedRadioBitrate != null) "$selectedRadioBitrate kbps" else "Tous"}",
-                                icon = Icons.Default.SignalCellularAlt,
-                                isSelected = selectedRadioBitrate != null,
-                                onClick = onToggleQualityExpanded
-                        )
-                    }
-                    if (isQualityExpanded) {
-                        item {
-                            SidebarItem(
-                                    text = "Toutes qualités",
-                                    isSelected = selectedRadioBitrate == null,
-                                    onClick = {
-                                        onBitrateSelected(null)
-                                        onToggleQualityExpanded()
-                                    }
-                            )
-                        }
-                        item {
-                            Row(
-                                    Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceEvenly
-                            ) {
-                                listOf(64, 128, 192, 320).forEach { kbps ->
-                                    var isFocused by remember { mutableStateOf(false) }
-                                    Button(
-                                            onClick = {
-                                                onBitrateSelected(kbps)
-                                                onToggleQualityExpanded()
-                                            },
-                                            modifier =
-                                                    Modifier.weight(1f)
-                                                            .padding(horizontal = 2.dp)
-                                                            .onFocusChanged {
-                                                                isFocused = it.isFocused
-                                                            },
-                                            contentPadding =
-                                                    PaddingValues(
-                                                            horizontal = 4.dp,
-                                                            vertical = 8.dp
-                                                    ),
-                                            colors =
-                                                    ButtonDefaults.buttonColors(
-                                                            containerColor =
-                                                                    if (isFocused) Color.White
-                                                                    else if (selectedRadioBitrate ==
-                                                                                    kbps
-                                                                    )
-                                                                            MaterialTheme
-                                                                                    .colorScheme
-                                                                                    .primary
-                                                                    else
-                                                                            MaterialTheme
-                                                                                    .colorScheme
-                                                                                    .surfaceVariant,
-                                                            contentColor =
-                                                                    if (isFocused) Color.Black
-                                                                    else if (selectedRadioBitrate ==
-                                                                                    kbps
-                                                                    )
-                                                                            MaterialTheme
-                                                                                    .colorScheme
-                                                                                    .onPrimary
-                                                                    else
-                                                                            MaterialTheme
-                                                                                    .colorScheme
-                                                                                    .onSurfaceVariant
-                                                    )
-                                    ) { Text("$kbps", maxLines = 1) }
-                                }
-                            }
-                        }
-                    }
-
-                    // 3. Pays
-                    item {
-                        SidebarItem(
-                                text =
-                                        "Pays : ${radioCountries.find { it.iso_3166_1 == selectedRadioCountry }?.name ?: "Tous"}",
-                                icon = Icons.Default.Public,
-                                isSelected = selectedRadioCountry != null,
-                                onClick = onToggleCountryExpanded
-                        )
-                    }
-                    if (isCountryExpanded) {
-                        item {
-                            SidebarItem(
-                                    text = "Tous les pays",
-                                    isSelected = selectedRadioCountry == null,
-                                    onClick = {
-                                        onCountrySelected(null)
-                                        onToggleCountryExpanded()
-                                    }
-                            )
-                        }
-                        items(radioCountries.take(50)) { country ->
-                            SidebarItem(
-                                    text = country.name,
-                                    isSelected = selectedRadioCountry == country.iso_3166_1,
-                                    onClick = {
-                                        onCountrySelected(country.iso_3166_1)
-                                        onToggleCountryExpanded()
-                                    }
-                            )
-                        }
-                    }
-
-                    // 4. Genre
-                    item {
-                        SidebarItem(
-                                text = "Genre : ${selectedRadioTag ?: "Tous"}",
-                                icon = Icons.AutoMirrored.Filled.Label,
-                                isSelected = selectedRadioTag != null,
-                                onClick = onToggleGenreExpanded
-                        )
-                    }
-                    if (isGenreExpanded) {
-                        item {
-                            SidebarItem(
-                                    text = "Tous les genres",
-                                    isSelected = selectedRadioTag == null,
-                                    onClick = {
-                                        onTagSelected(null)
-                                        onToggleGenreExpanded()
-                                    }
-                            )
-                        }
-                        items(radioTags.take(50)) { tag ->
-                            SidebarItem(
-                                    text = tag.name,
-                                    isSelected = selectedRadioTag == tag.name,
-                                    onClick = {
-                                        onTagSelected(tag.name)
-                                        onToggleGenreExpanded()
-                                    }
-                            )
-                        }
-                    }
-
-                    // Bouton Filtrer liste (VERT)
-                    item {
-                        var isFocused by remember { mutableStateOf(false) }
-                        Card(
-                                modifier =
-                                        Modifier.fillMaxWidth()
-                                                .onFocusChanged { isFocused = it.isFocused }
-                                                .clickable { onApplyFilters() },
-                                colors =
-                                        CardDefaults.cardColors(
-                                                containerColor =
-                                                        if (isFocused) Color.White
-                                                        else Color(0xFF4CAF50) // Vert
-                                        )
-                        ) {
-                            Row(
-                                    modifier = Modifier.fillMaxWidth().padding(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                        Icons.Default.FilterList,
-                                        null,
-                                        tint = if (isFocused) Color.Black else Color.White
-                                )
-                                Spacer(Modifier.width(12.dp))
-                                Text(
-                                        "Filtrer liste",
-                                        color = if (isFocused) Color.Black else Color.White,
-                                        maxLines = 1
-                                )
-                            }
-                        }
-                    }
-
-                    // Bouton Réinitialiser
-                    item {
-                        SidebarItem(
-                                text = "Réinitialiser",
-                                icon = Icons.Default.Clear,
-                                isSelected = false,
-                                onClick = onResetFilters
-                        )
-                    }
-
-                    // Spacer
-                    item { Spacer(modifier = Modifier.height(120.dp)) }
+                    filterSidebarItems(
+                            radioCountries = radioCountries,
+                            radioTags = radioTags,
+                            selectedRadioCountry = selectedRadioCountry,
+                            selectedRadioTag = selectedRadioTag,
+                            selectedRadioBitrate = selectedRadioBitrate,
+                            isQualityExpanded = isQualityExpanded,
+                            isCountryExpanded = isCountryExpanded,
+                            isGenreExpanded = isGenreExpanded,
+                            onCountrySelected = onCountrySelected,
+                            onTagSelected = onTagSelected,
+                            onBitrateSelected = onBitrateSelected,
+                            onToggleQualityExpanded = onToggleQualityExpanded,
+                            onToggleCountryExpanded = onToggleCountryExpanded,
+                            onToggleGenreExpanded = onToggleGenreExpanded,
+                            onSearchClick = onSearchClick,
+                            onApplyFilters = onApplyFilters,
+                            onResetFilters = onResetFilters
+                    )
                 }
             } else {
                 // RADIO LIST (PORTRAIT)
@@ -281,27 +90,15 @@ fun BrowseScreen(
                             Text("Retour aux catégories")
                         }
                     }
-                    LazyColumn(
-                            state = resultsListState,
-                            modifier =
-                                    Modifier.fillMaxSize()
-                                            .padding(8.dp)
-                                            .focusRequester(listFocusRequester),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        items(currentRadioList) { radio ->
-                            MainItem(
-                                    title = radio.name,
-                                    subtitle =
-                                            "${radio.country ?: ""} | ${radio.bitrate ?: "?"} kbps",
-                                    iconUrl = radio.favicon,
-                                    isPlaying = playingRadio?.stationuuid == radio.stationuuid,
-                                    onClick = { onRadioSelected(radio) },
-                                    onAddFavorite = { onAddFavorite(radio) }
-                            )
-                        }
-                        item { Spacer(modifier = Modifier.height(120.dp)) }
-                    }
+                    RadioStationList(
+                            currentRadioList = currentRadioList,
+                            playingRadio = playingRadio,
+                            resultsListState = resultsListState,
+                            listFocusRequester = listFocusRequester,
+                            onRadioSelected = onRadioSelected,
+                            onAddFavorite = onAddFavorite,
+                            modifier = Modifier.padding(8.dp)
+                    )
                 }
             }
         }
@@ -311,222 +108,38 @@ fun BrowseScreen(
             // LEFT SIDEBAR
             Column(modifier = Modifier.weight(0.3f).fillMaxHeight().padding(8.dp)) {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    // Recherche
-                    item {
-                        SidebarItem(
-                                text = "Recherche",
-                                icon = Icons.Default.Search,
-                                isSelected = false,
-                                onClick = onSearchClick
-                        )
-                    }
-                    // Qualité
-                    item {
-                        SidebarItem(
-                                text =
-                                        "Qualité : ${if (selectedRadioBitrate != null) "$selectedRadioBitrate kbps" else "Tous"}",
-                                icon = Icons.Default.SignalCellularAlt,
-                                isSelected = selectedRadioBitrate != null,
-                                onClick = onToggleQualityExpanded
-                        )
-                    }
-                    if (isQualityExpanded) {
-                        item {
-                            SidebarItem(
-                                    text = "Toutes qualités",
-                                    isSelected = selectedRadioBitrate == null,
-                                    onClick = {
-                                        onBitrateSelected(null)
-                                        onToggleQualityExpanded()
-                                    }
-                            )
-                        }
-                        item {
-                            Row(
-                                    Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceEvenly
-                            ) {
-                                listOf(64, 128, 192, 320).forEach { kbps ->
-                                    var isFocused by remember { mutableStateOf(false) }
-                                    Button(
-                                            onClick = {
-                                                onBitrateSelected(kbps)
-                                                onToggleQualityExpanded()
-                                            },
-                                            modifier =
-                                                    Modifier.weight(1f)
-                                                            .padding(horizontal = 2.dp)
-                                                            .onFocusChanged {
-                                                                isFocused = it.isFocused
-                                                            },
-                                            contentPadding =
-                                                    PaddingValues(
-                                                            horizontal = 4.dp,
-                                                            vertical = 8.dp
-                                                    ),
-                                            colors =
-                                                    ButtonDefaults.buttonColors(
-                                                            containerColor =
-                                                                    if (isFocused) Color.White
-                                                                    else if (selectedRadioBitrate ==
-                                                                                    kbps
-                                                                    )
-                                                                            MaterialTheme
-                                                                                    .colorScheme
-                                                                                    .primary
-                                                                    else
-                                                                            MaterialTheme
-                                                                                    .colorScheme
-                                                                                    .surfaceVariant,
-                                                            contentColor =
-                                                                    if (isFocused) Color.Black
-                                                                    else if (selectedRadioBitrate ==
-                                                                                    kbps
-                                                                    )
-                                                                            MaterialTheme
-                                                                                    .colorScheme
-                                                                                    .onPrimary
-                                                                    else
-                                                                            MaterialTheme
-                                                                                    .colorScheme
-                                                                                    .onSurfaceVariant
-                                                    )
-                                    ) { Text("$kbps", maxLines = 1) }
-                                }
-                            }
-                        }
-                    }
-                    // Pays
-                    item {
-                        SidebarItem(
-                                text =
-                                        "Pays : ${radioCountries.find { it.iso_3166_1 == selectedRadioCountry }?.name ?: "Tous"}",
-                                icon = Icons.Default.Public,
-                                isSelected = selectedRadioCountry != null,
-                                onClick = onToggleCountryExpanded
-                        )
-                    }
-                    if (isCountryExpanded) {
-                        item {
-                            SidebarItem(
-                                    text = "Tous les pays",
-                                    isSelected = selectedRadioCountry == null,
-                                    onClick = {
-                                        onCountrySelected(null)
-                                        onToggleCountryExpanded()
-                                    }
-                            )
-                        }
-                        items(radioCountries.take(50)) { country ->
-                            SidebarItem(
-                                    text = country.name,
-                                    isSelected = selectedRadioCountry == country.iso_3166_1,
-                                    onClick = {
-                                        onCountrySelected(country.iso_3166_1)
-                                        onToggleCountryExpanded()
-                                    }
-                            )
-                        }
-                    }
-                    // Genre
-                    item {
-                        SidebarItem(
-                                text = "Genre : ${selectedRadioTag ?: "Tous"}",
-                                icon = Icons.AutoMirrored.Filled.Label,
-                                isSelected = selectedRadioTag != null,
-                                onClick = onToggleGenreExpanded
-                        )
-                    }
-                    if (isGenreExpanded) {
-                        item {
-                            SidebarItem(
-                                    text = "Tous les genres",
-                                    isSelected = selectedRadioTag == null,
-                                    onClick = {
-                                        onTagSelected(null)
-                                        onToggleGenreExpanded()
-                                    }
-                            )
-                        }
-                        items(radioTags.take(50)) { tag ->
-                            SidebarItem(
-                                    text = tag.name,
-                                    isSelected = selectedRadioTag == tag.name,
-                                    onClick = {
-                                        onTagSelected(tag.name)
-                                        onToggleGenreExpanded()
-                                    }
-                            )
-                        }
-                    }
-
-                    // Bouton Filtrer liste (VERT)
-                    item {
-                        var isFocused by remember { mutableStateOf(false) }
-                        Card(
-                                modifier =
-                                        Modifier.fillMaxWidth()
-                                                .onFocusChanged { isFocused = it.isFocused }
-                                                .clickable { onApplyFilters() },
-                                colors =
-                                        CardDefaults.cardColors(
-                                                containerColor =
-                                                        if (isFocused) Color.White
-                                                        else Color(0xFF4CAF50) // Vert
-                                        )
-                        ) {
-                            Row(
-                                    modifier = Modifier.fillMaxWidth().padding(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                        Icons.Default.FilterList,
-                                        null,
-                                        tint = if (isFocused) Color.Black else Color.White
-                                )
-                                Spacer(Modifier.width(12.dp))
-                                Text(
-                                        "Filtrer liste",
-                                        color = if (isFocused) Color.Black else Color.White,
-                                        maxLines = 1
-                                )
-                            }
-                        }
-                    }
-
-                    // Bouton Réinitialiser
-                    item {
-                        SidebarItem(
-                                text = "Réinitialiser",
-                                icon = Icons.Default.Clear,
-                                isSelected = false,
-                                onClick = onResetFilters
-                        )
-                    }
-
-                    item { Spacer(Modifier.height(120.dp)) }
+                    filterSidebarItems(
+                            radioCountries = radioCountries,
+                            radioTags = radioTags,
+                            selectedRadioCountry = selectedRadioCountry,
+                            selectedRadioTag = selectedRadioTag,
+                            selectedRadioBitrate = selectedRadioBitrate,
+                            isQualityExpanded = isQualityExpanded,
+                            isCountryExpanded = isCountryExpanded,
+                            isGenreExpanded = isGenreExpanded,
+                            onCountrySelected = onCountrySelected,
+                            onTagSelected = onTagSelected,
+                            onBitrateSelected = onBitrateSelected,
+                            onToggleQualityExpanded = onToggleQualityExpanded,
+                            onToggleCountryExpanded = onToggleCountryExpanded,
+                            onToggleGenreExpanded = onToggleGenreExpanded,
+                            onSearchClick = onSearchClick,
+                            onApplyFilters = onApplyFilters,
+                            onResetFilters = onResetFilters
+                    )
                 }
             }
 
             // RIGHT LIST
             Column(modifier = Modifier.weight(0.7f).fillMaxHeight().padding(8.dp)) {
-                LazyColumn(
-                        state = resultsListState,
-                        modifier = Modifier.fillMaxSize().focusRequester(listFocusRequester),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(currentRadioList) { radio ->
-                        MainItem(
-                                title = radio.name,
-                                subtitle = "${radio.country ?: ""} | ${radio.bitrate ?: "?"} kbps",
-                                iconUrl = radio.favicon,
-                                isPlaying = playingRadio?.stationuuid == radio.stationuuid,
-                                onClick = { onRadioSelected(radio) },
-                                onAddFavorite = { onAddFavorite(radio) }
-                        )
-                    }
-                    item { Spacer(modifier = Modifier.height(120.dp)) }
-                }
+                RadioStationList(
+                        currentRadioList = currentRadioList,
+                        playingRadio = playingRadio,
+                        resultsListState = resultsListState,
+                        listFocusRequester = listFocusRequester,
+                        onRadioSelected = onRadioSelected,
+                        onAddFavorite = onAddFavorite
+                )
             }
         }
     }

@@ -17,6 +17,7 @@ class SyncService(private val dao: IptvDao) {
             refreshStalker(profile)
         } else {
             refreshXtream(profile)
+            refreshVodXtream(profile)
         }
     }
 
@@ -31,6 +32,7 @@ class SyncService(private val dao: IptvDao) {
                             cat.category_id ?: "0",
                             cat.category_name,
                             profile.id,
+                            type = "LIVE",
                             sortOrder = index
                     )
                 }
@@ -40,11 +42,74 @@ class SyncService(private val dao: IptvDao) {
         apiChannels.forEachIndexed { index, ch ->
             val id = ch.stream_id.toString()
             channelEntitiesMap[id] =
-                    ChannelEntity(id, ch.name, ch.stream_icon, profile.id, sortOrder = index)
-            linkEntities.add(ChannelCategoryCrossRef(id, ch.category_id ?: "0", profile.id))
+                    ChannelEntity(
+                            id,
+                            ch.name,
+                            ch.stream_icon,
+                            profile.id,
+                            type = "LIVE",
+                            sortOrder = index
+                    )
+            linkEntities.add(
+                    ChannelCategoryCrossRef(id, ch.category_id ?: "0", profile.id, type = "LIVE")
+            )
         }
 
-        saveToDao(profile.id, categoryEntities, channelEntitiesMap.values.toList(), linkEntities)
+        saveToDao(
+                profile.id,
+                categoryEntities,
+                channelEntitiesMap.values.toList(),
+                linkEntities,
+                type = "LIVE"
+        )
+    }
+
+    private suspend fun refreshVodXtream(profile: ProfileEntity) {
+        try {
+            val dynamicApi = XtreamClient.create(profile.url)
+            val apiCategories = dynamicApi.getVodCategories(profile.username, profile.password)
+            val apiStreams = dynamicApi.getVodStreams(profile.username, profile.password)
+
+            val categoryEntities =
+                    apiCategories.mapIndexed { index, cat ->
+                        CategoryEntity(
+                                cat.category_id ?: "0",
+                                cat.category_name,
+                                profile.id,
+                                type = "VOD",
+                                sortOrder = index
+                        )
+                    }
+            val channelEntitiesMap = mutableMapOf<String, ChannelEntity>()
+            val linkEntities = mutableListOf<ChannelCategoryCrossRef>()
+
+            apiStreams.forEachIndexed { index, ch ->
+                val id = ch.stream_id.toString()
+                channelEntitiesMap[id] =
+                        ChannelEntity(
+                                id,
+                                ch.name,
+                                ch.stream_icon,
+                                profile.id,
+                                type = "VOD",
+                                extraParams = ch.container_extension,
+                                sortOrder = index
+                        )
+                linkEntities.add(
+                        ChannelCategoryCrossRef(id, ch.category_id ?: "0", profile.id, type = "VOD")
+                )
+            }
+
+            saveToDao(
+                    profile.id,
+                    categoryEntities,
+                    channelEntitiesMap.values.toList(),
+                    linkEntities,
+                    type = "VOD"
+            )
+        } catch (e: Exception) {
+            Log.e("SyncService", "VOD Sync failed", e)
+        }
     }
 
     private suspend fun refreshStalker(profile: ProfileEntity) {
@@ -59,7 +124,13 @@ class SyncService(private val dao: IptvDao) {
         val genresResponse = api.getGenres(token)
         val categoryEntities =
                 genresResponse.js.mapIndexed { index, genre ->
-                    CategoryEntity(genre.id, genre.title, profile.id, sortOrder = index)
+                    CategoryEntity(
+                            genre.id,
+                            genre.title,
+                            profile.id,
+                            type = "LIVE",
+                            sortOrder = index
+                    )
                 }
 
         val channelEntitiesMap = mutableMapOf<String, ChannelEntity>()
@@ -138,22 +209,37 @@ class SyncService(private val dao: IptvDao) {
 
             if (!channelEntitiesMap.containsKey(id)) {
                 channelEntitiesMap[id] =
-                        ChannelEntity(id, name, icon, profile.id, cmd, sortOrder = index)
+                        ChannelEntity(
+                                id,
+                                name,
+                                icon,
+                                profile.id,
+                                type = "LIVE",
+                                extraParams = cmd,
+                                sortOrder = index
+                        )
             }
             if (genreId != null) {
-                linkEntities.add(ChannelCategoryCrossRef(id, genreId, profile.id))
+                linkEntities.add(ChannelCategoryCrossRef(id, genreId, profile.id, type = "LIVE"))
             }
         }
 
-        saveToDao(profile.id, categoryEntities, channelEntitiesMap.values.toList(), linkEntities)
+        saveToDao(
+                profile.id,
+                categoryEntities,
+                channelEntitiesMap.values.toList(),
+                linkEntities,
+                type = "LIVE"
+        )
     }
 
     private suspend fun saveToDao(
             profileId: Int,
             categories: List<CategoryEntity>,
             channels: List<ChannelEntity>,
-            links: List<ChannelCategoryCrossRef>
+            links: List<ChannelCategoryCrossRef>,
+            type: String = "LIVE"
     ) {
-        dao.syncProfileData(profileId, categories, channels, links)
+        dao.syncProfileData(profileId, categories, channels, links, type)
     }
 }

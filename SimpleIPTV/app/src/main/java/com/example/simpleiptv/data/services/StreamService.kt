@@ -8,13 +8,19 @@ import com.example.simpleiptv.data.local.entities.ProfileEntity
 class StreamService(private val dao: IptvDao) {
 
     suspend fun getStreamUrl(profile: ProfileEntity, channelId: String): String {
-        return if (profile.type == "stalker") {
+        // Fetch the channel to know its type (LIVE or VOD)
+        // We might not know the type directly from channelId alone if we don't have it.
+        // But we can try to guess or better, find it in DB.
+        val channel =
+                dao.getChannelById(channelId, profile.id, "LIVE")
+                        ?: dao.getChannelById(channelId, profile.id, "VOD")
+
+        if (profile.type == "stalker") {
             val mac = profile.macAddress ?: return ""
             val api = StalkerClient.create(profile.url, mac)
             val handshake = api.handshake(mac)
             val token = "Bearer " + handshake.js.token
 
-            val channel = dao.getChannelById(channelId, profile.id)
             val rawCmd = channel?.extraParams
 
             val cmdToSend =
@@ -48,10 +54,15 @@ class StreamService(private val dao: IptvDao) {
                 )
                 url += channelId
             }
-            url
+            return url
         } else {
             val baseUrl = if (profile.url.endsWith("/")) profile.url else "${profile.url}/"
-            "${baseUrl}live/${profile.username}/${profile.password}/${channelId}.ts"
+            return if (channel?.type == "VOD") {
+                val ext = channel.extraParams ?: "mp4"
+                "${baseUrl}movie/${profile.username}/${profile.password}/${channelId}.${ext}"
+            } else {
+                "${baseUrl}live/${profile.username}/${profile.password}/${channelId}.ts"
+            }
         }
     }
 }

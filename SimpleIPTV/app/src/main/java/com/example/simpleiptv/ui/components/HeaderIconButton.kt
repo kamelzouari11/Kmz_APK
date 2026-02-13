@@ -19,7 +19,8 @@ fun HeaderIconButton(
         desc: String?,
         onClick: () -> Unit,
         modifier: Modifier = Modifier,
-        tintNormal: Color = MaterialTheme.colorScheme.primary
+        tintNormal: Color = MaterialTheme.colorScheme.primary,
+        isSelected: Boolean = false
 ) {
         var isFocused by remember { mutableStateOf(false) }
         IconButton(
@@ -29,15 +30,18 @@ fun HeaderIconButton(
                                 .onFocusChanged { state -> isFocused = state.isFocused }
                                 .scale(if (isFocused) 1.05f else 1f)
                                 .background(
-                                        if (isFocused) Color.White.copy(alpha = 0.2f)
-                                        else Color.Transparent,
+                                        when {
+                                                isFocused -> Color.White
+                                                isSelected -> Color.Cyan.copy(alpha = 0.2f)
+                                                else -> Color.Transparent
+                                        },
                                         MaterialTheme.shapes.small
                                 )
         ) {
                 Icon(
                         icon,
                         desc,
-                        tint = if (isFocused) Color.White else tintNormal,
+                        tint = if (isFocused) Color.Black else tintNormal,
                         modifier = Modifier.size(48.dp)
                 )
         }

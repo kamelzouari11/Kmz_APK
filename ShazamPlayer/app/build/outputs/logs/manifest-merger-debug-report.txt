@@ -1,9 +1,9 @@
 -- Merging decision tree log ---
 manifest
-ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:2:1-29:12
-INJECTED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:2:1-29:12
-INJECTED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:2:1-29:12
-INJECTED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:2:1-29:12
+ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:2:1-33:12
+INJECTED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:2:1-33:12
+INJECTED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:2:1-33:12
+INJECTED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:2:1-33:12
 MERGED from [androidx.media3:media3-ui:1.2.1] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/c277c5c52f7d5e285039fbc1ed6f8543/transformed/jetified-media3-ui-1.2.1/AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.media3:media3-session:1.2.1] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/2908748570bc41278c9b23620fae822b/transformed/jetified-media3-session-1.2.1/AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.media3:media3-extractor:1.2.1] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/5cea45264fb595d2756585c9462ac337/transformed/jetified-media3-extractor-1.2.1/AndroidManifest.xml:17:1-22:12
@@ -31,30 +31,31 @@ MERGED from [androidx.compose.foundation:foundation-android:1.5.4] /home/kamel/.
 MERGED from [androidx.compose.ui:ui-unit-android:1.5.4] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/11e4a1fdb2fb502e6fce67d325e5a1d3/transformed/jetified-ui-unit-release/AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.compose.ui:ui-geometry-android:1.5.4] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/7729d0bb97a5e69afbe23da498ac84c6/transformed/jetified-ui-geometry-release/AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.compose.ui:ui-util-android:1.5.4] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/3e58611790ab01874257ec58d85a36c8/transformed/jetified-ui-util-release/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.compose.ui:ui-text-android:1.5.4] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/d3965ec49dc21fa98c5cbfc2b6e15bf7/transformed/jetified-ui-text-release/AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.compose.ui:ui-tooling-preview-android:1.5.4] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/62033a030946081d3191458cccf1fd56/transformed/jetified-ui-tooling-preview-release/AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.compose.ui:ui-graphics-android:1.5.4] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/cc068fc3616477c6d4050629d7fdf184/transformed/jetified-ui-graphics-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-text-android:1.5.4] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/d3965ec49dc21fa98c5cbfc2b6e15bf7/transformed/jetified-ui-text-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.emoji2:emoji2:1.4.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/922b8a00336a2e719e3b5ff293411161/transformed/jetified-emoji2-1.4.0/AndroidManifest.xml:17:1-35:12
+MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/fd88d7cdcaee039603baca8d01dacf40/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:17:1-35:12
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/5fe5034a7d5fe7428c9ccc98211d1515/transformed/lifecycle-livedata-core-2.7.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/0c5ecb33e84b42ef602965990a233805/transformed/jetified-savedstate-ktx-1.2.1/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.savedstate:savedstate:1.2.1] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/9017f107fe3429950910d7a9418c677e/transformed/jetified-savedstate-1.2.1/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/0c963fd608d47bc0fdc602dc201cf428/transformed/lifecycle-viewmodel-2.7.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/8d34903dca3c0068decbe14d356e2ee3/transformed/jetified-lifecycle-viewmodel-savedstate-2.7.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/1d683307c551cb7014fb2c27a04a7532/transformed/jetified-lifecycle-viewmodel-ktx-2.7.0/AndroidManifest.xml:2:1-7:12
+MERGED from [io.coil-kt:coil:2.5.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/0e4b06806eaa467e00fa71c1fd619b64/transformed/jetified-coil-2.5.0/AndroidManifest.xml:2:1-7:12
+MERGED from [io.coil-kt:coil-base:2.5.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/98d99b1bfa4342fee8da4dd71057af82/transformed/jetified-coil-base-2.5.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-runtime:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/507d6ac13dffd334abf9dce0006cbfd1/transformed/lifecycle-runtime-2.7.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-runtime-ktx:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/8d229eca2ef453334016473100deb400/transformed/jetified-lifecycle-runtime-ktx-2.7.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/21cbc93b2c72ea0d616d8ca10cad4d69/transformed/jetified-lifecycle-viewmodel-compose-2.7.0/AndroidManifest.xml:2:1-7:12
 MERGED from [com.google.accompanist:accompanist-drawablepainter:0.32.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/0f66207f2e2790383909735211f8e51d/transformed/jetified-accompanist-drawablepainter-0.32.0/AndroidManifest.xml:17:1-23:12
 MERGED from [androidx.compose.ui:ui-android:1.5.4] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/39fa116f24dd90433925841ec3b65bde/transformed/jetified-ui-release/AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.customview:customview:1.0.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/8556351e7fba8a8ee237b775be3adabb/transformed/customview-1.0.0/AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.autofill:autofill:1.0.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/2e7021824bf5307466cb7fe661a03226/transformed/jetified-autofill-1.0.0/AndroidManifest.xml:17:1-24:12
-MERGED from [io.coil-kt:coil:2.5.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/0e4b06806eaa467e00fa71c1fd619b64/transformed/jetified-coil-2.5.0/AndroidManifest.xml:2:1-7:12
-MERGED from [io.coil-kt:coil-base:2.5.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/98d99b1bfa4342fee8da4dd71057af82/transformed/jetified-coil-base-2.5.0/AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.appcompat:appcompat-resources:1.6.1] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/b41b64d612d1efa2e2213dd20ae70143/transformed/jetified-appcompat-resources-1.6.1/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.emoji2:emoji2:1.4.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/922b8a00336a2e719e3b5ff293411161/transformed/jetified-emoji2-1.4.0/AndroidManifest.xml:17:1-35:12
 MERGED from [androidx.vectordrawable:vectordrawable-animated:1.1.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/1fce54d94d453d928bece014616d5e2a/transformed/vectordrawable-animated-1.1.0/AndroidManifest.xml:17:1-24:12
 MERGED from [androidx.vectordrawable:vectordrawable:1.1.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/4c05b579087e0a0184b1465c85c81c42/transformed/vectordrawable-1.1.0/AndroidManifest.xml:17:1-24:12
 MERGED from [androidx.core:core:1.12.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/6d3b3cb1ee12db3b50f8898ca61e50cf/transformed/core-1.12.0/AndroidManifest.xml:17:1-30:12
 MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/f6335d60ff8e6bc47073975282a53772/transformed/jetified-customview-poolingcontainer-1.0.0/AndroidManifest.xml:17:1-23:12
-MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/fd88d7cdcaee039603baca8d01dacf40/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:17:1-35:12
-MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/5fe5034a7d5fe7428c9ccc98211d1515/transformed/lifecycle-livedata-core-2.7.0/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/1d683307c551cb7014fb2c27a04a7532/transformed/jetified-lifecycle-viewmodel-ktx-2.7.0/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/0c963fd608d47bc0fdc602dc201cf428/transformed/lifecycle-viewmodel-2.7.0/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.lifecycle:lifecycle-runtime-ktx:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/8d229eca2ef453334016473100deb400/transformed/jetified-lifecycle-runtime-ktx-2.7.0/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.lifecycle:lifecycle-runtime:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/507d6ac13dffd334abf9dce0006cbfd1/transformed/lifecycle-runtime-2.7.0/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/0c5ecb33e84b42ef602965990a233805/transformed/jetified-savedstate-ktx-1.2.1/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.savedstate:savedstate:1.2.1] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/9017f107fe3429950910d7a9418c677e/transformed/jetified-savedstate-1.2.1/AndroidManifest.xml:17:1-22:12
-MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/8d34903dca3c0068decbe14d356e2ee3/transformed/jetified-lifecycle-viewmodel-savedstate-2.7.0/AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.core:core-ktx:1.12.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/88d8717729f175d8c47969dd95c8bb51/transformed/jetified-core-ktx-1.12.0/AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.compose.runtime:runtime-saveable-android:1.5.4] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/024a6dc63407c35f9861a67aac135c42/transformed/jetified-runtime-saveable-release/AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.compose.runtime:runtime-android:1.5.4] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/68fe0295460b0d82ea63e4d811008c20/transformed/jetified-runtime-release/AndroidManifest.xml:2:1-7:12
@@ -90,15 +91,21 @@ uses-permission#android.permission.MANAGE_EXTERNAL_STORAGE
 ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:7:5-82
 	android:name
 		ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:7:22-79
+queries
+ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:9:5-11:15
+package#com.spotify.music
+ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:10:9-53
+	android:name
+		ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:10:18-50
 application
-ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:9:5-27:19
-INJECTED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:9:5-27:19
+ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:13:5-31:19
+INJECTED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:13:5-31:19
 MERGED from [androidx.emoji2:emoji2:1.4.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/922b8a00336a2e719e3b5ff293411161/transformed/jetified-emoji2-1.4.0/AndroidManifest.xml:23:5-33:19
 MERGED from [androidx.emoji2:emoji2:1.4.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/922b8a00336a2e719e3b5ff293411161/transformed/jetified-emoji2-1.4.0/AndroidManifest.xml:23:5-33:19
-MERGED from [androidx.core:core:1.12.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/6d3b3cb1ee12db3b50f8898ca61e50cf/transformed/core-1.12.0/AndroidManifest.xml:28:5-89
-MERGED from [androidx.core:core:1.12.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/6d3b3cb1ee12db3b50f8898ca61e50cf/transformed/core-1.12.0/AndroidManifest.xml:28:5-89
 MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/fd88d7cdcaee039603baca8d01dacf40/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:23:5-33:19
 MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/fd88d7cdcaee039603baca8d01dacf40/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.core:core:1.12.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/6d3b3cb1ee12db3b50f8898ca61e50cf/transformed/core-1.12.0/AndroidManifest.xml:28:5-89
+MERGED from [androidx.core:core:1.12.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/6d3b3cb1ee12db3b50f8898ca61e50cf/transformed/core-1.12.0/AndroidManifest.xml:28:5-89
 MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/765ba1358efd7e4e7561a566f6d23c4c/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:24:5-25:19
 MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/765ba1358efd7e4e7561a566f6d23c4c/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:24:5-25:19
 MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/fd5b46b41897818eb94e49c9f5e5434f/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:23:5-53:19
@@ -110,39 +117,39 @@ MERGED from [androidx.startup:startup-runtime:1.1.1] /home/kamel/.gradle/caches/
 	android:appComponentFactory
 		ADDED from [androidx.core:core:1.12.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/6d3b3cb1ee12db3b50f8898ca61e50cf/transformed/core-1.12.0/AndroidManifest.xml:28:18-86
 	android:supportsRtl
-		ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:14:9-35
+		ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:18:9-35
 	android:label
-		ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:12:9-37
+		ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:16:9-37
 	android:roundIcon
-		ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:13:9-54
+		ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:17:9-54
 	android:icon
-		ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:11:9-43
+		ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:15:9-43
 	android:allowBackup
-		ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:10:9-35
+		ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:14:9-35
 	android:theme
-		ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:15:9-66
+		ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:19:9-66
 	android:usesCleartextTraffic
-		ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:16:9-44
+		ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:20:9-44
 activity#com.kmz.shazamplayer.MainActivity
-ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:17:9-26:20
+ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:21:9-30:20
 	android:label
-		ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:20:13-41
+		ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:24:13-41
 	android:exported
-		ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:19:13-36
+		ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:23:13-36
 	android:theme
-		ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:21:13-70
+		ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:25:13-70
 	android:name
-		ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:18:13-41
+		ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:22:13-41
 intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
-ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:22:13-25:29
+ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:26:13-29:29
 action#android.intent.action.MAIN
-ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:23:17-69
+ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:27:17-69
 	android:name
-		ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:23:25-66
+		ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:27:25-66
 category#android.intent.category.LAUNCHER
-ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:24:17-77
+ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:28:17-77
 	android:name
-		ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:24:27-74
+		ADDED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml:28:27-74
 uses-sdk
 INJECTED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from /media/kamel/DATA/KmzAPK/ShazamPlayer/app/src/main/AndroidManifest.xml
@@ -201,12 +208,38 @@ MERGED from [androidx.compose.ui:ui-geometry-android:1.5.4] /home/kamel/.gradle/
 MERGED from [androidx.compose.ui:ui-geometry-android:1.5.4] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/7729d0bb97a5e69afbe23da498ac84c6/transformed/jetified-ui-geometry-release/AndroidManifest.xml:5:5-44
 MERGED from [androidx.compose.ui:ui-util-android:1.5.4] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/3e58611790ab01874257ec58d85a36c8/transformed/jetified-ui-util-release/AndroidManifest.xml:5:5-44
 MERGED from [androidx.compose.ui:ui-util-android:1.5.4] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/3e58611790ab01874257ec58d85a36c8/transformed/jetified-ui-util-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.ui:ui-text-android:1.5.4] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/d3965ec49dc21fa98c5cbfc2b6e15bf7/transformed/jetified-ui-text-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.ui:ui-text-android:1.5.4] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/d3965ec49dc21fa98c5cbfc2b6e15bf7/transformed/jetified-ui-text-release/AndroidManifest.xml:5:5-44
 MERGED from [androidx.compose.ui:ui-tooling-preview-android:1.5.4] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/62033a030946081d3191458cccf1fd56/transformed/jetified-ui-tooling-preview-release/AndroidManifest.xml:20:5-44
 MERGED from [androidx.compose.ui:ui-tooling-preview-android:1.5.4] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/62033a030946081d3191458cccf1fd56/transformed/jetified-ui-tooling-preview-release/AndroidManifest.xml:20:5-44
 MERGED from [androidx.compose.ui:ui-graphics-android:1.5.4] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/cc068fc3616477c6d4050629d7fdf184/transformed/jetified-ui-graphics-release/AndroidManifest.xml:5:5-44
 MERGED from [androidx.compose.ui:ui-graphics-android:1.5.4] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/cc068fc3616477c6d4050629d7fdf184/transformed/jetified-ui-graphics-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-text-android:1.5.4] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/d3965ec49dc21fa98c5cbfc2b6e15bf7/transformed/jetified-ui-text-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-text-android:1.5.4] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/d3965ec49dc21fa98c5cbfc2b6e15bf7/transformed/jetified-ui-text-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.emoji2:emoji2:1.4.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/922b8a00336a2e719e3b5ff293411161/transformed/jetified-emoji2-1.4.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.emoji2:emoji2:1.4.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/922b8a00336a2e719e3b5ff293411161/transformed/jetified-emoji2-1.4.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/fd88d7cdcaee039603baca8d01dacf40/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/fd88d7cdcaee039603baca8d01dacf40/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/5fe5034a7d5fe7428c9ccc98211d1515/transformed/lifecycle-livedata-core-2.7.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/5fe5034a7d5fe7428c9ccc98211d1515/transformed/lifecycle-livedata-core-2.7.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/0c5ecb33e84b42ef602965990a233805/transformed/jetified-savedstate-ktx-1.2.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/0c5ecb33e84b42ef602965990a233805/transformed/jetified-savedstate-ktx-1.2.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate:1.2.1] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/9017f107fe3429950910d7a9418c677e/transformed/jetified-savedstate-1.2.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate:1.2.1] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/9017f107fe3429950910d7a9418c677e/transformed/jetified-savedstate-1.2.1/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/0c963fd608d47bc0fdc602dc201cf428/transformed/lifecycle-viewmodel-2.7.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/0c963fd608d47bc0fdc602dc201cf428/transformed/lifecycle-viewmodel-2.7.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/8d34903dca3c0068decbe14d356e2ee3/transformed/jetified-lifecycle-viewmodel-savedstate-2.7.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/8d34903dca3c0068decbe14d356e2ee3/transformed/jetified-lifecycle-viewmodel-savedstate-2.7.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/1d683307c551cb7014fb2c27a04a7532/transformed/jetified-lifecycle-viewmodel-ktx-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/1d683307c551cb7014fb2c27a04a7532/transformed/jetified-lifecycle-viewmodel-ktx-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [io.coil-kt:coil:2.5.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/0e4b06806eaa467e00fa71c1fd619b64/transformed/jetified-coil-2.5.0/AndroidManifest.xml:5:5-44
+MERGED from [io.coil-kt:coil:2.5.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/0e4b06806eaa467e00fa71c1fd619b64/transformed/jetified-coil-2.5.0/AndroidManifest.xml:5:5-44
+MERGED from [io.coil-kt:coil-base:2.5.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/98d99b1bfa4342fee8da4dd71057af82/transformed/jetified-coil-base-2.5.0/AndroidManifest.xml:5:5-44
+MERGED from [io.coil-kt:coil-base:2.5.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/98d99b1bfa4342fee8da4dd71057af82/transformed/jetified-coil-base-2.5.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/507d6ac13dffd334abf9dce0006cbfd1/transformed/lifecycle-runtime-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/507d6ac13dffd334abf9dce0006cbfd1/transformed/lifecycle-runtime-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-ktx:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/8d229eca2ef453334016473100deb400/transformed/jetified-lifecycle-runtime-ktx-2.7.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-ktx:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/8d229eca2ef453334016473100deb400/transformed/jetified-lifecycle-runtime-ktx-2.7.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/21cbc93b2c72ea0d616d8ca10cad4d69/transformed/jetified-lifecycle-viewmodel-compose-2.7.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/21cbc93b2c72ea0d616d8ca10cad4d69/transformed/jetified-lifecycle-viewmodel-compose-2.7.0/AndroidManifest.xml:5:5-44
 MERGED from [com.google.accompanist:accompanist-drawablepainter:0.32.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/0f66207f2e2790383909735211f8e51d/transformed/jetified-accompanist-drawablepainter-0.32.0/AndroidManifest.xml:21:5-44
 MERGED from [com.google.accompanist:accompanist-drawablepainter:0.32.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/0f66207f2e2790383909735211f8e51d/transformed/jetified-accompanist-drawablepainter-0.32.0/AndroidManifest.xml:21:5-44
 MERGED from [androidx.compose.ui:ui-android:1.5.4] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/39fa116f24dd90433925841ec3b65bde/transformed/jetified-ui-release/AndroidManifest.xml:5:5-44
@@ -215,14 +248,8 @@ MERGED from [androidx.customview:customview:1.0.0] /home/kamel/.gradle/caches/9.
 MERGED from [androidx.customview:customview:1.0.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/8556351e7fba8a8ee237b775be3adabb/transformed/customview-1.0.0/AndroidManifest.xml:20:5-44
 MERGED from [androidx.autofill:autofill:1.0.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/2e7021824bf5307466cb7fe661a03226/transformed/jetified-autofill-1.0.0/AndroidManifest.xml:20:5-22:41
 MERGED from [androidx.autofill:autofill:1.0.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/2e7021824bf5307466cb7fe661a03226/transformed/jetified-autofill-1.0.0/AndroidManifest.xml:20:5-22:41
-MERGED from [io.coil-kt:coil:2.5.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/0e4b06806eaa467e00fa71c1fd619b64/transformed/jetified-coil-2.5.0/AndroidManifest.xml:5:5-44
-MERGED from [io.coil-kt:coil:2.5.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/0e4b06806eaa467e00fa71c1fd619b64/transformed/jetified-coil-2.5.0/AndroidManifest.xml:5:5-44
-MERGED from [io.coil-kt:coil-base:2.5.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/98d99b1bfa4342fee8da4dd71057af82/transformed/jetified-coil-base-2.5.0/AndroidManifest.xml:5:5-44
-MERGED from [io.coil-kt:coil-base:2.5.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/98d99b1bfa4342fee8da4dd71057af82/transformed/jetified-coil-base-2.5.0/AndroidManifest.xml:5:5-44
 MERGED from [androidx.appcompat:appcompat-resources:1.6.1] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/b41b64d612d1efa2e2213dd20ae70143/transformed/jetified-appcompat-resources-1.6.1/AndroidManifest.xml:20:5-44
 MERGED from [androidx.appcompat:appcompat-resources:1.6.1] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/b41b64d612d1efa2e2213dd20ae70143/transformed/jetified-appcompat-resources-1.6.1/AndroidManifest.xml:20:5-44
-MERGED from [androidx.emoji2:emoji2:1.4.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/922b8a00336a2e719e3b5ff293411161/transformed/jetified-emoji2-1.4.0/AndroidManifest.xml:21:5-44
-MERGED from [androidx.emoji2:emoji2:1.4.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/922b8a00336a2e719e3b5ff293411161/transformed/jetified-emoji2-1.4.0/AndroidManifest.xml:21:5-44
 MERGED from [androidx.vectordrawable:vectordrawable-animated:1.1.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/1fce54d94d453d928bece014616d5e2a/transformed/vectordrawable-animated-1.1.0/AndroidManifest.xml:20:5-22:41
 MERGED from [androidx.vectordrawable:vectordrawable-animated:1.1.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/1fce54d94d453d928bece014616d5e2a/transformed/vectordrawable-animated-1.1.0/AndroidManifest.xml:20:5-22:41
 MERGED from [androidx.vectordrawable:vectordrawable:1.1.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/4c05b579087e0a0184b1465c85c81c42/transformed/vectordrawable-1.1.0/AndroidManifest.xml:20:5-22:41
@@ -231,24 +258,6 @@ MERGED from [androidx.core:core:1.12.0] /home/kamel/.gradle/caches/9.0-milestone
 MERGED from [androidx.core:core:1.12.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/6d3b3cb1ee12db3b50f8898ca61e50cf/transformed/core-1.12.0/AndroidManifest.xml:20:5-44
 MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/f6335d60ff8e6bc47073975282a53772/transformed/jetified-customview-poolingcontainer-1.0.0/AndroidManifest.xml:20:5-21:38
 MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/f6335d60ff8e6bc47073975282a53772/transformed/jetified-customview-poolingcontainer-1.0.0/AndroidManifest.xml:20:5-21:38
-MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/fd88d7cdcaee039603baca8d01dacf40/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:21:5-44
-MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/fd88d7cdcaee039603baca8d01dacf40/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:21:5-44
-MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/5fe5034a7d5fe7428c9ccc98211d1515/transformed/lifecycle-livedata-core-2.7.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/5fe5034a7d5fe7428c9ccc98211d1515/transformed/lifecycle-livedata-core-2.7.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/1d683307c551cb7014fb2c27a04a7532/transformed/jetified-lifecycle-viewmodel-ktx-2.7.0/AndroidManifest.xml:5:5-44
-MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/1d683307c551cb7014fb2c27a04a7532/transformed/jetified-lifecycle-viewmodel-ktx-2.7.0/AndroidManifest.xml:5:5-44
-MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/0c963fd608d47bc0fdc602dc201cf428/transformed/lifecycle-viewmodel-2.7.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/0c963fd608d47bc0fdc602dc201cf428/transformed/lifecycle-viewmodel-2.7.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.lifecycle:lifecycle-runtime-ktx:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/8d229eca2ef453334016473100deb400/transformed/jetified-lifecycle-runtime-ktx-2.7.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.lifecycle:lifecycle-runtime-ktx:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/8d229eca2ef453334016473100deb400/transformed/jetified-lifecycle-runtime-ktx-2.7.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.lifecycle:lifecycle-runtime:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/507d6ac13dffd334abf9dce0006cbfd1/transformed/lifecycle-runtime-2.7.0/AndroidManifest.xml:5:5-44
-MERGED from [androidx.lifecycle:lifecycle-runtime:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/507d6ac13dffd334abf9dce0006cbfd1/transformed/lifecycle-runtime-2.7.0/AndroidManifest.xml:5:5-44
-MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/0c5ecb33e84b42ef602965990a233805/transformed/jetified-savedstate-ktx-1.2.1/AndroidManifest.xml:20:5-44
-MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/0c5ecb33e84b42ef602965990a233805/transformed/jetified-savedstate-ktx-1.2.1/AndroidManifest.xml:20:5-44
-MERGED from [androidx.savedstate:savedstate:1.2.1] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/9017f107fe3429950910d7a9418c677e/transformed/jetified-savedstate-1.2.1/AndroidManifest.xml:20:5-44
-MERGED from [androidx.savedstate:savedstate:1.2.1] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/9017f107fe3429950910d7a9418c677e/transformed/jetified-savedstate-1.2.1/AndroidManifest.xml:20:5-44
-MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/8d34903dca3c0068decbe14d356e2ee3/transformed/jetified-lifecycle-viewmodel-savedstate-2.7.0/AndroidManifest.xml:20:5-44
-MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/8d34903dca3c0068decbe14d356e2ee3/transformed/jetified-lifecycle-viewmodel-savedstate-2.7.0/AndroidManifest.xml:20:5-44
 MERGED from [androidx.core:core-ktx:1.12.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/88d8717729f175d8c47969dd95c8bb51/transformed/jetified-core-ktx-1.12.0/AndroidManifest.xml:5:5-44
 MERGED from [androidx.core:core-ktx:1.12.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/88d8717729f175d8c47969dd95c8bb51/transformed/jetified-core-ktx-1.12.0/AndroidManifest.xml:5:5-44
 MERGED from [androidx.compose.runtime:runtime-saveable-android:1.5.4] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/024a6dc63407c35f9861a67aac135c42/transformed/jetified-runtime-saveable-release/AndroidManifest.xml:5:5-44
@@ -303,6 +312,12 @@ ADDED from [androidx.emoji2:emoji2:1.4.0] /home/kamel/.gradle/caches/9.0-milesto
 		ADDED from [androidx.emoji2:emoji2:1.4.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/922b8a00336a2e719e3b5ff293411161/transformed/jetified-emoji2-1.4.0/AndroidManifest.xml:31:17-49
 	android:name
 		ADDED from [androidx.emoji2:emoji2:1.4.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/922b8a00336a2e719e3b5ff293411161/transformed/jetified-emoji2-1.4.0/AndroidManifest.xml:30:17-75
+meta-data#androidx.lifecycle.ProcessLifecycleInitializer
+ADDED from [androidx.lifecycle:lifecycle-process:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/fd88d7cdcaee039603baca8d01dacf40/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:29:13-31:52
+	android:value
+		ADDED from [androidx.lifecycle:lifecycle-process:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/fd88d7cdcaee039603baca8d01dacf40/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:31:17-49
+	android:name
+		ADDED from [androidx.lifecycle:lifecycle-process:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/fd88d7cdcaee039603baca8d01dacf40/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:30:17-78
 permission#${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
 ADDED from [androidx.core:core:1.12.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/6d3b3cb1ee12db3b50f8898ca61e50cf/transformed/core-1.12.0/AndroidManifest.xml:22:5-24:47
 	android:protectionLevel
@@ -323,12 +338,6 @@ uses-permission#com.kmz.shazamplayer.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
 ADDED from [androidx.core:core:1.12.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/6d3b3cb1ee12db3b50f8898ca61e50cf/transformed/core-1.12.0/AndroidManifest.xml:26:5-97
 	android:name
 		ADDED from [androidx.core:core:1.12.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/6d3b3cb1ee12db3b50f8898ca61e50cf/transformed/core-1.12.0/AndroidManifest.xml:26:22-94
-meta-data#androidx.lifecycle.ProcessLifecycleInitializer
-ADDED from [androidx.lifecycle:lifecycle-process:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/fd88d7cdcaee039603baca8d01dacf40/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:29:13-31:52
-	android:value
-		ADDED from [androidx.lifecycle:lifecycle-process:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/fd88d7cdcaee039603baca8d01dacf40/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:31:17-49
-	android:name
-		ADDED from [androidx.lifecycle:lifecycle-process:2.7.0] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/fd88d7cdcaee039603baca8d01dacf40/transformed/jetified-lifecycle-process-2.7.0/AndroidManifest.xml:30:17-78
 meta-data#androidx.profileinstaller.ProfileInstallerInitializer
 ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] /home/kamel/.gradle/caches/9.0-milestone-1/transforms/fd5b46b41897818eb94e49c9f5e5434f/transformed/jetified-profileinstaller-1.3.1/AndroidManifest.xml:29:13-31:52
 	android:value

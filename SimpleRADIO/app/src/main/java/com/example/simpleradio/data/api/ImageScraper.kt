@@ -45,28 +45,23 @@ object ImageScraper {
                 return@withContext emptyList()
             }
 
-    /** Construit les requêtes progressives (du plus précis au plus large). */
+    /** Construit les requêtes progressives basées sur les recommandations (précis -> large). */
     private fun buildProgressiveQueries(radioName: String, country: String?): List<String> {
         val queries = mutableListOf<String>()
+        val countryPart = if (!country.isNullOrBlank()) "\"$country\"" else ""
 
-        // Niveau 1 – Requête principale (très large mais pertinente)
-        if (!country.isNullOrBlank()) {
-            queries.add(
-                    "\"$radioName\" \"$country\" (logo OR icon OR branding OR \"station logo\")"
-            )
-        }
+        // Niveau 1 – Recommandation ChatGPT : Recherche précise de "logo radio" avec formats
+        queries.add(
+                "\"$radioName\" $countryPart \"logo radio\" (filetype:png OR filetype:svg OR filetype:jpg)"
+        )
 
-        // Niveau 2 – Avec formats acceptés (guide Google sans bloquer)
-        if (!country.isNullOrBlank()) {
-            queries.add(
-                    "\"$radioName\" \"$country\" (logo OR icon OR branding) (png OR svg OR jpg OR jpeg OR webp)"
-            )
-        }
+        // Niveau 2 – Recommandation ChatGPT : Recherche de "logo radio" (tous formats)
+        queries.add("\"$radioName\" $countryPart logo radio")
 
-        // Niveau 3 – Requête tolérante (radio peu connue)
-        queries.add("\"$radioName\" (radio OR fm OR webradio) logo")
+        // Niveau 3 – Branding et icône (très efficace pour les radios internationales)
+        queries.add("\"$radioName\" $countryPart (branding OR icon OR \"station logo\")")
 
-        // Niveau 4 – Full open (très peu de radios n'ont aucun logo)
+        // Niveau 4 – Full open (si vraiment rien trouvé)
         queries.add("\"$radioName\" logo")
 
         return queries
