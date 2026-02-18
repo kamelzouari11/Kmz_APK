@@ -20,26 +20,37 @@ fun StationInfoDisplay(
         nameMaxLines: Int = 1,
         nameStyle: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.headlineSmall
 ) {
-    Column(
-            modifier = modifier,
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-                text = currentStation?.name ?: "Station inconnue",
-                style = nameStyle,
-                color = Color.White,
-                maxLines = nameMaxLines,
-                textAlign = textAlign
-        )
-        Text(
-                text =
-                        "${currentStation?.country ?: "Monde"} | ${currentStation?.bitrate ?: "?"} kbps",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.Gray,
-                maxLines = 1
-        )
-    }
+        Column(
+                modifier = modifier,
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+        ) {
+                Text(
+                        text = currentStation?.name ?: "Station inconnue",
+                        style = nameStyle,
+                        color = Color.White,
+                        maxLines = nameMaxLines,
+                        textAlign = textAlign
+                )
+                Text(
+                        text =
+                                "${currentStation?.country ?: "Monde"} | ${currentStation?.bitrate ?: "?"} kbps",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Gray,
+                        maxLines = 1
+                )
+                // DEBUG: Affichage de l'URL complète en petit
+                currentStation?.url?.let { url ->
+                        Text(
+                                text = url,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.Gray.copy(alpha = 0.5f),
+                                maxLines = 1,
+                                modifier = Modifier.padding(top = 4.dp).padding(horizontal = 16.dp),
+                                textAlign = textAlign
+                        )
+                }
+        }
 }
 
 /** Artist / Title metadata display. Used in both Portrait and Landscape player layouts. */
@@ -55,37 +66,37 @@ fun MetadataInfoDisplay(
         artistStyle: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.titleLarge,
         titleStyle: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.bodyLarge
 ) {
-    Column(
-            modifier = modifier,
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-    ) {
-        // Uniquement si on a de VRAIES métadonnées de chanson
-        if (!artist.isNullOrBlank() || !title.isNullOrBlank()) {
-            Text(
-                    text = artist ?: "",
-                    style = artistStyle,
-                    color = MaterialTheme.colorScheme.primary,
-                    maxLines = artistMaxLines,
-                    textAlign = textAlign
-            )
-            if (!title.isNullOrBlank()) {
-                Spacer(Modifier.height(8.dp))
-                Text(
-                        text = title,
-                        style = titleStyle,
-                        color = Color.White,
-                        maxLines = titleMaxLines,
-                        textAlign = textAlign
-                )
-            }
-        } else {
-            // Sinon on affiche juste un rappel discret de la station
-            Text(
-                    text = currentStation?.name ?: "",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color.Gray
-            )
+        Column(
+                modifier = modifier,
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+        ) {
+                // Uniquement si on a de VRAIES métadonnées de chanson
+                if (!artist.isNullOrBlank() || !title.isNullOrBlank()) {
+                        Text(
+                                text = artist ?: "",
+                                style = artistStyle,
+                                color = MaterialTheme.colorScheme.primary,
+                                maxLines = artistMaxLines,
+                                textAlign = textAlign
+                        )
+                        if (!title.isNullOrBlank()) {
+                                Spacer(Modifier.height(8.dp))
+                                Text(
+                                        text = title,
+                                        style = titleStyle,
+                                        color = Color.White,
+                                        maxLines = titleMaxLines,
+                                        textAlign = textAlign
+                                )
+                        }
+                } else {
+                        // Sinon on affiche juste un rappel discret de la station
+                        Text(
+                                text = currentStation?.name ?: "",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Color.Gray
+                        )
+                }
         }
-    }
 }

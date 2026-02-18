@@ -68,8 +68,8 @@ fun MainContentPortrait(viewModel: MainViewModel, onChannelClick: (ChannelEntity
                     item {
                         Text(
                                 text = "Pays",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color.Gray,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 4.dp)
                         )
                     }
@@ -108,7 +108,8 @@ fun MainContentPortrait(viewModel: MainViewModel, onChannelClick: (ChannelEntity
                                         viewModel.lastGeneratorType = GeneratorType.RECENTS
                                         viewModel.refreshChannels()
                                         isShowingChannels = true
-                                    }
+                                    },
+                                    onDelete = { viewModel.clearRecents() }
                             )
                         }
                         item {
@@ -120,8 +121,8 @@ fun MainContentPortrait(viewModel: MainViewModel, onChannelClick: (ChannelEntity
                             ) {
                                 Text(
                                         text = "Favoris",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = Color.Gray,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.weight(1f)
                                 )
                                 IconButton(
@@ -159,8 +160,8 @@ fun MainContentPortrait(viewModel: MainViewModel, onChannelClick: (ChannelEntity
                                 text =
                                         if (viewModel.selectedCountryFilter == "ALL") "Catégories"
                                         else "Catégories ${viewModel.selectedCountryFilter}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color.Gray,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.padding(start = 8.dp, top = 8.dp, bottom = 4.dp)
                         )
                     }

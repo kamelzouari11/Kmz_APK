@@ -6,7 +6,7 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -77,7 +77,7 @@ fun SidebarItem(
                                 Text(
                                         text = text,
                                         maxLines = 1,
-                                        style = MaterialTheme.typography.titleLarge,
+                                        style = MaterialTheme.typography.bodyLarge,
                                         color =
                                                 if (isItemFocused) Color.Black
                                                 else Color.Unspecified
@@ -103,7 +103,7 @@ fun SidebarItem(
                         ) {
                                 Box(contentAlignment = Alignment.Center) {
                                         Icon(
-                                                imageVector = Icons.Default.Delete,
+                                                imageVector = Icons.Default.Close,
                                                 contentDescription = null,
                                                 tint =
                                                         if (isDeleteFocused) Color.Red

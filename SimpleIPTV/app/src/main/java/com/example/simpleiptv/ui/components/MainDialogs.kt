@@ -11,10 +11,9 @@ import com.example.simpleiptv.ui.dialogs.GenericFavoriteDialog
 import com.example.simpleiptv.ui.dialogs.ProfileFormDialog
 import com.example.simpleiptv.ui.dialogs.ProfileManagerDialog
 import com.example.simpleiptv.ui.viewmodel.MainViewModel
-import kotlinx.coroutines.launch
 
 @Composable
-fun MainDialogs(viewModel: MainViewModel, importJson: suspend (String) -> Unit) {
+fun MainDialogs(viewModel: MainViewModel) {
     val scope = rememberCoroutineScope()
 
     if (viewModel.showProfileManager) {
@@ -84,29 +83,6 @@ fun MainDialogs(viewModel: MainViewModel, importJson: suspend (String) -> Unit) 
                             listId
                     )
                     viewModel.channelToFavorite = null
-                }
-        )
-    }
-
-    if (viewModel.showRestoreConfirmDialog) {
-        AlertDialog(
-                onDismissRequest = { viewModel.showRestoreConfirmDialog = false },
-                title = { Text("Restaurer la sauvegarde ?") },
-                text = { Text("Cela écrasera vos profils et favoris actuels.") },
-                confirmButton = {
-                    Button(
-                            onClick = {
-                                scope.launch {
-                                    importJson(viewModel.backupJsonToRestore)
-                                    viewModel.showRestoreConfirmDialog = false
-                                }
-                            }
-                    ) { Text("Restaurer") }
-                },
-                dismissButton = {
-                    TextButton(onClick = { viewModel.showRestoreConfirmDialog = false }) {
-                        Text("Annuler")
-                    }
                 }
         )
     }

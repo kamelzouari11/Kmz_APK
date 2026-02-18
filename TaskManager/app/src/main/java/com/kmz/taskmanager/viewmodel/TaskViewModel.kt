@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.kmz.taskmanager.data.*
+import com.kmz.taskmanager.util.BackupUtils
 import com.kmz.taskmanager.util.DataManagementHelper
 import com.kmz.taskmanager.util.NotificationHelper
 import com.kmz.taskmanager.util.SmartParser
@@ -64,7 +65,6 @@ class TaskViewModel(application: Application) : AndroidViewModel(application) {
                 NotificationHelper.scheduleTaskAlarm(getApplication(), updatedTask)
             }
 
-            // If it's a repetitive task and just marked as done, create the next occurrence
             if (newIsDone &&
                             task.type == TaskType.REPETITIVE &&
                             task.dueDate != null &&
@@ -108,9 +108,6 @@ class TaskViewModel(application: Application) : AndroidViewModel(application) {
             NotificationHelper.scheduleTaskAlarm(getApplication(), updatedTask)
         }
     }
-
-    fun getTasksForView(viewType: ViewType, folderId: Long? = null): Flow<List<Task>> =
-            tasks.map { list -> filterTasks(list, viewType, folderId) }
 
     fun filterTasks(list: List<Task>, viewType: ViewType, folderId: Long? = null): List<Task> {
         val now = LocalDate.now()
@@ -160,53 +157,58 @@ class TaskViewModel(application: Application) : AndroidViewModel(application) {
                 if (task != null) {
                     val updatedTask = task.copy(folderId = folderId)
                     taskDao.updateTask(updatedTask)
-                    // No need to reschedule alarm if only folderId changed,
-                    // unless we want to be sure.
                 }
             }
         }
     }
 
-    fun backupData(onResult: (String) -> Unit) {
+    fun backupDataCloud(onResult: (String) -> Unit) {
         viewModelScope.launch {
             val allTasks = taskDao.getAllTasksSync()
             val allFolders = taskDao.getAllFoldersSync()
-            val result = DataManagementHelper.exportData(getApplication(), allTasks, allFolders)
-            onResult(result)
+            val json = DataManagementHelper.getJson(allTasks, allFolders)
+            BackupUtils.saveToCloud(getApplication(), json)
+            onResult("Sync Cloud en cours...")
         }
     }
 
-    fun restoreData(onResult: (String) -> Unit) {
+    fun restoreDataCloud(onResult: (String) -> Unit) {
         viewModelScope.launch {
-            val data = DataManagementHelper.importData(getApplication())
-            if (data != null) {
-                // Clear existing
-                taskDao.nukeTasks()
-                taskDao.nukeFolders()
-
-                val folderIdMap = mutableMapOf<Long, Long>()
-                data.first.forEach { folder ->
-                    val oldId = folder.id
-                    val newId = taskDao.insertFolder(folder.copy(id = 0))
-                    folderIdMap[oldId] = newId
+            val json = BackupUtils.fetchFromCloud(getApplication())
+            if (json != null) {
+                val data = DataManagementHelper.parseJson(json)
+                if (data != null) {
+                    applyImportedData(data, onResult)
+                } else {
+                    onResult("Erreur format Cloud")
                 }
-
-                data.second.forEach { task ->
-                    val newFolderId = folderIdMap[task.folderId] ?: 0L
-                    val newTask = task.copy(id = 0, folderId = newFolderId)
-                    val insertedId = taskDao.insertTask(newTask)
-                    if (!newTask.isDone) {
-                        NotificationHelper.scheduleTaskAlarm(
-                                getApplication(),
-                                newTask.copy(id = insertedId)
-                        )
-                    }
-                }
-                onResult("Données restaurées")
-            } else {
-                onResult("Aucun fichier trouvé")
             }
         }
+    }
+
+    private suspend fun applyImportedData(data: Pair<List<Folder>, List<Task>>, onResult: (String) -> Unit) {
+        taskDao.nukeTasks()
+        taskDao.nukeFolders()
+
+        val folderIdMap = mutableMapOf<Long, Long>()
+        data.first.forEach { folder ->
+            val oldId = folder.id
+            val newId = taskDao.insertFolder(folder.copy(id = 0))
+            folderIdMap[oldId] = newId
+        }
+
+        data.second.forEach { task ->
+            val newFolderId = folderIdMap[task.folderId] ?: 0L
+            val newTask = task.copy(id = 0, folderId = newFolderId)
+            val insertedId = taskDao.insertTask(newTask)
+            if (!newTask.isDone) {
+                NotificationHelper.scheduleTaskAlarm(
+                    getApplication(),
+                    newTask.copy(id = insertedId)
+                )
+            }
+        }
+        onResult("Données restaurées")
     }
 }
 

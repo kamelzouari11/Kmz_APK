@@ -31,7 +31,7 @@ fun VodItem(
                 modifier =
                         modifier.padding(4.dp)
                                 .fillMaxWidth()
-                                .fillMaxHeight() // Fill available height for the page
+                                .aspectRatio(0.7f) // Format affiche de film standard
                                 .onFocusChanged { isFocused = it.isFocused }
                                 .scale(if (isFocused) 1.02f else 1f)
                                 .clickable { onClick() }
@@ -65,7 +65,7 @@ fun VodItem(
                                         text = channel.name,
                                         modifier =
                                                 Modifier.padding(horizontal = 4.dp).fillMaxWidth(),
-                                        style = MaterialTheme.typography.titleMedium,
+                                        style = MaterialTheme.typography.titleSmall,
                                         textAlign = TextAlign.Center,
                                         maxLines = 2,
                                         overflow = TextOverflow.Ellipsis

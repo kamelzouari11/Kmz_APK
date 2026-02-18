@@ -239,6 +239,15 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
         }
     }
 
+    fun clearRecents() {
+        viewModelScope.launch {
+            repository.clearRecents(activeProfileId, currentMediaMode.name)
+            if (lastGeneratorType == GeneratorType.RECENTS) {
+                refreshChannels()
+            }
+        }
+    }
+
     fun addFavoriteList(name: String) {
         viewModelScope.launch {
             repository.addFavoriteList(name, activeProfileId, currentMediaMode.name)

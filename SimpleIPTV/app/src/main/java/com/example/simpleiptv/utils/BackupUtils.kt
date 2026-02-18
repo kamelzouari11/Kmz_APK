@@ -1,57 +1,109 @@
 package com.example.simpleiptv.utils
 
-import android.content.ContentValues
 import android.content.Context
-import android.os.Build
-import android.os.Environment
-import android.provider.MediaStore
+import android.util.Base64
 import android.widget.Toast
-import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
 
 object BackupUtils {
-    suspend fun saveBackup(context: Context, json: String) {
+    private val client = OkHttpClient()
+    private const val GITHUB_API_URL =
+            "https://api.github.com/repos/${GitHubConfig.OWNER}/${GitHubConfig.REPO}/contents/${GitHubConfig.FILE_PATH}"
+
+    suspend fun saveToCloud(context: Context, json: String) {
         withContext(Dispatchers.IO) {
             try {
-                val fileName = "simple_iptv_backup_${System.currentTimeMillis() / 1000}.json"
-                val resolver = context.contentResolver
+                val sha = getFileSha()
+                val base64Content = Base64.encodeToString(json.toByteArray(), Base64.NO_WRAP)
 
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    val contentValues =
-                            ContentValues().apply {
-                                put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
-                                put(MediaStore.MediaColumns.MIME_TYPE, "application/json")
-                                put(
-                                        MediaStore.MediaColumns.RELATIVE_PATH,
-                                        Environment.DIRECTORY_DOWNLOADS
-                                )
-                            }
-                    val uri =
-                            resolver.insert(
-                                    MediaStore.Downloads.EXTERNAL_CONTENT_URI,
-                                    contentValues
-                            )
-                    uri?.let {
-                        resolver.openOutputStream(it)?.use { stream ->
-                            stream.write(json.toByteArray())
+                val bodyJson =
+                        JSONObject().apply {
+                            put("message", "Mise à jour du backup SimpleIPTV")
+                            put("content", base64Content)
+                            if (sha != null) put("sha", sha)
                         }
-                        showToast(context, "Sauvegardé : $fileName dans Téléchargements")
+
+                val request =
+                        Request.Builder()
+                                .url(GITHUB_API_URL)
+                                .header("Authorization", "token ${GitHubConfig.TOKEN}")
+                                .header("Accept", "application/vnd.github+json")
+                                .put(
+                                        bodyJson.toString()
+                                                .toRequestBody("application/json".toMediaType())
+                                )
+                                .build()
+
+                client.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) {
+                        showToast(context, "Cloud: Backup synchronisé !")
+                    } else {
+                        val errorBody = response.body?.string() ?: ""
+                        throw Exception("Erreur GitHub (${response.code})")
                     }
-                            ?: throw Exception("Erreur création fichier MediaStore")
-                } else {
-                    val downloadsDir =
-                            Environment.getExternalStoragePublicDirectory(
-                                    Environment.DIRECTORY_DOWNLOADS
-                            )
-                    if (!downloadsDir.exists()) downloadsDir.mkdirs()
-                    val file = File(downloadsDir, fileName)
-                    file.writeText(json)
-                    showToast(context, "Sauvegardé : $fileName dans Téléchargements")
                 }
             } catch (e: Exception) {
-                showToast(context, "Erreur export: ${e.localizedMessage}")
+                showToast(context, "Erreur Cloud: ${e.localizedMessage}")
             }
+        }
+    }
+
+    suspend fun fetchFromCloud(context: Context): String? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val request =
+                        Request.Builder()
+                                .url(GITHUB_API_URL)
+                                .header("Authorization", "token ${GitHubConfig.TOKEN}")
+                                .header("Accept", "application/vnd.github+json")
+                                .get()
+                                .build()
+
+                client.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) {
+                        val jsonResponse = JSONObject(response.body?.string() ?: "")
+                        val contentRelay = jsonResponse.getString("content")
+                        val cleanContent = contentRelay.replace("\n", "").replace("\r", "")
+                        val decodedBytes = Base64.decode(cleanContent, Base64.DEFAULT)
+
+                        showToast(context, "Cloud: Backup récupéré !")
+                        return@withContext String(decodedBytes)
+                    } else if (response.code == 404) {
+                        throw Exception("Aucun backup trouvé sur GitHub")
+                    } else {
+                        throw Exception("Erreur GitHub (${response.code})")
+                    }
+                }
+            } catch (e: Exception) {
+                showToast(context, "Erreur Cloud: ${e.localizedMessage}")
+                null
+            }
+        }
+    }
+
+    private fun getFileSha(): String? {
+        val request =
+                Request.Builder()
+                        .url(GITHUB_API_URL)
+                        .header("Authorization", "token ${GitHubConfig.TOKEN}")
+                        .get()
+                        .build()
+
+        return try {
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    val jsonResponse = JSONObject(response.body?.string() ?: "")
+                    jsonResponse.getString("sha")
+                } else null
+            }
+        } catch (e: Exception) {
+            null
         }
     }
 

@@ -40,7 +40,6 @@ class MainActivity : ComponentActivity() {
                 super.onCreate(savedInstanceState)
                 window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
-                // Use a lifecycle scope for non-UI initialization
                 lifecycleScope.launch {
                         try {
                                 val database = AppDatabase.getDatabase(this@MainActivity)
@@ -84,8 +83,6 @@ class MainActivity : ComponentActivity() {
                         } catch (e: Throwable) {
                                 e.printStackTrace()
                                 android.util.Log.e("SimpleIPTV", "Startup failure", e)
-                                // Keep isInitialized false so it stays on loading screen instead of
-                                // crashing
                         }
                 }
 
@@ -110,14 +107,37 @@ class MainActivity : ComponentActivity() {
                                 }
 
                                 SimpleIPTVTheme(darkTheme = true) {
+                                        val coroutineScope = rememberCoroutineScope()
                                         MainScreen(
                                                 viewModel = viewModel!!,
                                                 exoPlayer = exoPlayerState,
-                                                exportJson = {
-                                                        iptvRepository!!.exportDatabaseToJson()
+                                                onSave = {
+                                                        coroutineScope.launch {
+                                                                val json =
+                                                                        iptvRepository!!
+                                                                                .exportDatabaseToJson()
+                                                                com.example.simpleiptv.utils
+                                                                        .BackupUtils.saveToCloud(
+                                                                        this@MainActivity,
+                                                                        json
+                                                                )
+                                                        }
                                                 },
-                                                importJson = {
-                                                        iptvRepository!!.importDatabaseFromJson(it)
+                                                onRestore = {
+                                                        coroutineScope.launch {
+                                                                val json =
+                                                                        com.example.simpleiptv.utils
+                                                                                .BackupUtils
+                                                                                .fetchFromCloud(
+                                                                                        this@MainActivity
+                                                                                )
+                                                                if (json != null) {
+                                                                        iptvRepository!!
+                                                                                .importDatabaseFromJson(
+                                                                                        json
+                                                                                )
+                                                                }
+                                                        }
                                                 },
                                                 getStreamUrl = { streamId ->
                                                         val profile =

@@ -1,0 +1,30 @@
+# Fichiers de sauvegarde Cloud (gérés par les applis)
+MySharedFolder/
+
+# Sécurité
+github_token.txt
+
+# Android / Gradle
+.gradle/
+build/
+*/build/
+captures/
+.externalNativeBuild/
+.cxx/
+local.properties
+
+# IDE (Android Studio / IntelliJ)
+.idea/
+*.iml
+*.iws
+*.ipr
+.idea/caches/
+.idea/libraries/
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+
+# Systèmes
+.DS_Store
+Thumbs.db

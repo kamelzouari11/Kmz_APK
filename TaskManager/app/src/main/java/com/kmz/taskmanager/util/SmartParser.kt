@@ -6,7 +6,10 @@ import java.time.LocalTime
 import java.time.temporal.TemporalAdjusters
 
 object SmartParser {
-        fun parse(input: String): Pair<String, LocalDateTime?> {
+        fun parse(
+                input: String,
+                defaultTime: java.time.LocalTime = java.time.LocalTime.of(9, 0)
+        ): Pair<String, LocalDateTime?> {
                 val today = LocalDate.now()
                 var text = input.trim()
                 var dateTime: LocalDateTime? = null
@@ -43,10 +46,10 @@ object SmartParser {
                 val relativeMatch = relativeDateRegex.find(stringToParse)
 
                 // Default time logic: if "midi" or "soir" is mentioned, adjust hour
-                var hour = timeMatch?.groupValues?.get(1)?.toIntOrNull() ?: 12
+                var hour = timeMatch?.groupValues?.get(1)?.toIntOrNull() ?: defaultTime.hour
                 val minute =
                         timeMatch?.groupValues?.get(2)?.takeIf { it.isNotEmpty() }?.toIntOrNull()
-                                ?: 0
+                                ?: defaultTime.minute
 
                 if (timeMatch == null && relativeMatch != null) {
                         val relWord = relativeMatch.groupValues[1].lowercase()

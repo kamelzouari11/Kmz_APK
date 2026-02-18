@@ -3,8 +3,6 @@ package com.example.simpleiptv.ui
 import android.content.res.Configuration
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -26,15 +24,14 @@ import com.example.simpleiptv.ui.components.MainDialogs
 import com.example.simpleiptv.ui.components.MobileSearchRow
 import com.example.simpleiptv.ui.viewmodel.GeneratorType
 import com.example.simpleiptv.ui.viewmodel.MainViewModel
-import com.example.simpleiptv.utils.BackupUtils
 import kotlinx.coroutines.launch
 
 @Composable
 fun MainScreen(
         viewModel: MainViewModel,
         exoPlayer: Player?,
-        exportJson: suspend () -> String,
-        importJson: suspend (String) -> Unit,
+        onSave: () -> Unit,
+        onRestore: () -> Unit,
         getStreamUrl: suspend (String) -> String
 ) {
     val scope = rememberCoroutineScope()
@@ -46,30 +43,6 @@ fun MainScreen(
     val mainCountryScrollState = rememberLazyListState()
     val mainCategoryScrollState = rememberLazyListState()
     val mainChannelScrollState = rememberLazyListState()
-
-    val onSave: () -> Unit = {
-        scope.launch {
-            val json = exportJson()
-            BackupUtils.saveBackup(context, json)
-        }
-    }
-
-    val openDocumentLauncher =
-            rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri
-                ->
-                uri?.let {
-                    try {
-                        context.contentResolver.openInputStream(it)?.use { inputStream ->
-                            viewModel.backupJsonToRestore =
-                                    inputStream.bufferedReader().use { it.readText() }
-                            viewModel.showRestoreConfirmDialog = true
-                        }
-                    } catch (e: Exception) {
-                        Toast.makeText(context, "Read Error: ${e.message}", Toast.LENGTH_SHORT)
-                                .show()
-                    }
-                }
-            }
 
     val onChannelClick: (ChannelEntity) -> Unit = { channel ->
         viewModel.playingChannel = channel
@@ -167,7 +140,7 @@ fun MainScreen(
                             viewModel = viewModel,
                             isLandscape = isLandscape,
                             onSave = onSave,
-                            openLauncher = openDocumentLauncher,
+                            onRestore = onRestore,
                             player = exoPlayer
                     )
 
@@ -199,5 +172,5 @@ fun MainScreen(
         }
     }
 
-    MainDialogs(viewModel, importJson)
+    MainDialogs(viewModel)
 }

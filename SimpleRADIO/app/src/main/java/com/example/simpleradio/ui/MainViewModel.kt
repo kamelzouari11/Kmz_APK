@@ -53,6 +53,11 @@ class MainViewModel(
     var searchTrigger by mutableIntStateOf(0)
     var isLoading by mutableStateOf(false)
 
+    // --- STATE: UI Memory ---
+    var isQualityExpanded by mutableStateOf(false)
+    var isCountryExpanded by mutableStateOf(false)
+    var isGenreExpanded by mutableStateOf(false)
+
     var radioToFavorite by mutableStateOf<RadioStationEntity?>(null)
     var showAddListDialog by mutableStateOf(false)
 
@@ -140,10 +145,15 @@ class MainViewModel(
         radioSearchQuery = ""
         showRecentRadiosOnly = false
         isViewingRadioResults = false
+        isQualityExpanded = false
+        isCountryExpanded = false
+        isGenreExpanded = false
         searchTrigger++
     }
 
     fun onApplyFilters() {
+        showRecentRadiosOnly = false
+        selectedRadioFavoriteListId = null
         isViewingRadioResults = true
         searchTrigger++
     }

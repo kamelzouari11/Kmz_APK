@@ -31,12 +31,7 @@ import com.example.simpleradio.data.api.RadioClient
 import com.example.simpleradio.data.local.AppDatabase
 import com.example.simpleradio.ui.MainViewModel
 import com.example.simpleradio.ui.MainViewModelFactory
-import com.example.simpleradio.ui.components.MainDialogs
-import com.example.simpleradio.ui.components.MainHeader
-import com.example.simpleradio.ui.components.PlaybackManagement
-import com.example.simpleradio.ui.components.rememberCastManagement
-import com.example.simpleradio.ui.components.rememberDataManagement
-import com.example.simpleradio.ui.components.rememberRadioPlayer
+import com.example.simpleradio.ui.components.*
 import com.example.simpleradio.ui.screens.BrowseScreen
 import com.example.simpleradio.ui.screens.VideoPlayerView
 import com.example.simpleradio.ui.theme.SimpleRADIOTheme
@@ -90,6 +85,7 @@ fun MainScreen(viewModel: MainViewModel, radioRepository: RadioRepository, lrcLi
 
         val exoPlayer = rememberRadioPlayer(context, viewModel, radioRepository, prefs)
         val (castHelper, castSession) = rememberCastManagement(context, viewModel, exoPlayer)
+        val upnpManager = rememberUpnpManagement(context, viewModel)
 
         PlaybackManagement(
                 viewModel,
@@ -103,9 +99,6 @@ fun MainScreen(viewModel: MainViewModel, radioRepository: RadioRepository, lrcLi
 
         // Removed local aliases to use viewModel directly
 
-        var isQualityExpanded by remember { mutableStateOf(false) }
-        var isCountryExpanded by remember { mutableStateOf(false) }
-        var isGenreExpanded by remember { mutableStateOf(false) }
         var showLyricsGlobal by remember { mutableStateOf(false) }
         var showAddCustomUrlDialog by remember { mutableStateOf(false) }
         var showSearchDialog by remember { mutableStateOf(false) }
@@ -130,6 +123,9 @@ fun MainScreen(viewModel: MainViewModel, radioRepository: RadioRepository, lrcLi
                         showLyricsGlobal = false
                 } else if (viewModel.isFullScreenPlayer) {
                         viewModel.isFullScreenPlayer = false
+                } else if (viewModel.isViewingRadioResults) {
+                        // Retour intelligent vers les catégories sans reset
+                        viewModel.isViewingRadioResults = false
                 } else {
                         (context as? Activity)?.moveTaskToBack(true)
                 }
@@ -214,9 +210,6 @@ fun MainScreen(viewModel: MainViewModel, radioRepository: RadioRepository, lrcLi
                                                         onRecentClick = {
                                                                 viewModel.onRecentClick()
                                                         },
-                                                        onRefreshClick = {
-                                                                viewModel.onRecentClick()
-                                                        },
                                                         onPlayerClick = {
                                                                 if (!viewModel.isViewingRadioResults
                                                                 )
@@ -256,9 +249,9 @@ fun MainScreen(viewModel: MainViewModel, radioRepository: RadioRepository, lrcLi
                                                 selectedRadioBitrate =
                                                         viewModel.selectedRadioBitrate,
                                                 radioSearchQuery = viewModel.radioSearchQuery,
-                                                isQualityExpanded = isQualityExpanded,
-                                                isCountryExpanded = isCountryExpanded,
-                                                isGenreExpanded = isGenreExpanded,
+                                                isQualityExpanded = viewModel.isQualityExpanded,
+                                                isCountryExpanded = viewModel.isCountryExpanded,
+                                                isGenreExpanded = viewModel.isGenreExpanded,
                                                 isViewingRadioResults =
                                                         viewModel.isViewingRadioResults,
                                                 playingRadio = viewModel.playingRadio,
@@ -272,13 +265,16 @@ fun MainScreen(viewModel: MainViewModel, radioRepository: RadioRepository, lrcLi
                                                         viewModel.setSelectedBitrate(it)
                                                 },
                                                 onToggleQualityExpanded = {
-                                                        isQualityExpanded = !isQualityExpanded
+                                                        viewModel.isQualityExpanded =
+                                                                !viewModel.isQualityExpanded
                                                 },
                                                 onToggleCountryExpanded = {
-                                                        isCountryExpanded = !isCountryExpanded
+                                                        viewModel.isCountryExpanded =
+                                                                !viewModel.isCountryExpanded
                                                 },
                                                 onToggleGenreExpanded = {
-                                                        isGenreExpanded = !isGenreExpanded
+                                                        viewModel.isGenreExpanded =
+                                                                !viewModel.isGenreExpanded
                                                 },
                                                 onToggleViewingResults = { shouldView ->
                                                         viewModel.isViewingRadioResults = shouldView
@@ -355,7 +351,8 @@ fun MainScreen(viewModel: MainViewModel, radioRepository: RadioRepository, lrcLi
                                         showLyrics = showLyricsGlobal,
                                         onToggleLyrics = { show: Boolean ->
                                                 showLyricsGlobal = show
-                                        }
+                                        },
+                                        upnpManager = upnpManager
                                 )
                         }
 
@@ -375,6 +372,12 @@ fun MainScreen(viewModel: MainViewModel, radioRepository: RadioRepository, lrcLi
                                 },
                                 onIncrementSearchTrigger = { viewModel.incrementSearchTrigger() },
                                 radioToFavorite = viewModel.radioToFavorite,
+                                onSetRadioToFavorite = { viewModel.radioToFavorite = it },
+                                radioFavoriteLists = radioFavoriteLists
+                        )
+                }
+        }
+}
                                 onSetRadioToFavorite = { viewModel.radioToFavorite = it },
                                 radioFavoriteLists = radioFavoriteLists
                         )

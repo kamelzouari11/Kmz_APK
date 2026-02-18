@@ -1,7 +1,6 @@
 package com.example.simpleiptv.ui
 
 import android.app.Activity
-import androidx.activity.result.ActivityResultLauncher
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -25,7 +24,6 @@ import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -35,12 +33,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.Player
 import coil.compose.AsyncImage
-import com.example.simpleiptv.R
 import com.example.simpleiptv.ui.components.HeaderIconButton
 import com.example.simpleiptv.ui.components.TvInput
 import com.example.simpleiptv.ui.viewmodel.GeneratorType
@@ -53,7 +51,7 @@ fun MainHeader(
         viewModel: MainViewModel,
         isLandscape: Boolean,
         onSave: () -> Unit,
-        openLauncher: ActivityResultLauncher<String>?,
+        onRestore: () -> Unit,
         player: Player?
 ) {
         val context = LocalContext.current
@@ -81,9 +79,10 @@ fun MainHeader(
                                         horizontalArrangement = Arrangement.spacedBy(25.dp)
                                 ) {
                                         AsyncImage(
-                                                model = R.drawable.ic_app_logo,
+                                                model = "file:///android_asset/app_logo.jpg",
                                                 contentDescription = null,
-                                                modifier = Modifier.size(60.dp)
+                                                modifier = Modifier.size(60.dp),
+                                                contentScale = ContentScale.Fit
                                         )
 
                                         TvInput(
@@ -203,9 +202,7 @@ fun MainHeader(
                                         HeaderIconButton(
                                                 icon = Icons.Default.CloudDownload,
                                                 desc = "Restaurer",
-                                                onClick = {
-                                                        openLauncher?.launch("application/json")
-                                                }
+                                                onClick = onRestore
                                         )
                                         HeaderIconButton(
                                                 icon = Icons.Default.PowerSettingsNew,
@@ -224,12 +221,14 @@ fun MainHeader(
                                                 verticalAlignment = Alignment.CenterVertically,
                                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                                         ) {
-                                                Text(
-                                                        text = "SimpleIPTV",
-                                                        style =
-                                                                MaterialTheme.typography
-                                                                        .headlineSmall,
-                                                        color = MaterialTheme.colorScheme.primary
+                                                AsyncImage(
+                                                        model =
+                                                                "file:///android_asset/app_logo.jpg",
+                                                        contentDescription = null,
+                                                        modifier = Modifier.size(40.dp),
+                                                        contentScale =
+                                                                androidx.compose.ui.layout
+                                                                        .ContentScale.Fit
                                                 )
                                                 HeaderIconButton(
                                                         icon = Icons.Default.Search,
@@ -337,11 +336,7 @@ fun MainHeader(
                                                 HeaderIconButton(
                                                         icon = Icons.Default.CloudDownload,
                                                         desc = "Restaurer",
-                                                        onClick = {
-                                                                openLauncher?.launch(
-                                                                        "application/json"
-                                                                )
-                                                        }
+                                                        onClick = onRestore
                                                 )
                                                 if (viewModel.playingChannel != null) {
                                                         HeaderIconButton(

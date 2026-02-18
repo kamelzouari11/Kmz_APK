@@ -31,6 +31,7 @@ import com.kmz.taskmanager.util.SmartParser
 import com.kmz.taskmanager.viewmodel.TaskViewModel
 import com.kmz.taskmanager.viewmodel.ViewType
 import java.time.LocalDateTime
+import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.launch
 
@@ -300,41 +301,45 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel()) {
                                                 } else {
                                                         IconButton(
                                                                 onClick = {
-                                                                        taskViewModel.backupData {
-                                                                                msg ->
-                                                                                scope.launch {
-                                                                                        snackbarHostState
-                                                                                                .showSnackbar(
-                                                                                                        msg
-                                                                                                )
+                                                                        taskViewModel
+                                                                                .backupDataCloud {
+                                                                                        msg ->
+                                                                                        scope
+                                                                                                .launch {
+                                                                                                        snackbarHostState
+                                                                                                                .showSnackbar(
+                                                                                                                        msg
+                                                                                                                )
+                                                                                                }
                                                                                 }
-                                                                        }
                                                                 }
                                                         ) {
                                                                 Icon(
-                                                                        Icons.Default.Upload,
+                                                                        Icons.Default.CloudUpload,
                                                                         contentDescription =
-                                                                                "Sauvegarder",
+                                                                                "Cloud Upload",
                                                                         tint = Secondary
                                                                 )
                                                         }
                                                         IconButton(
                                                                 onClick = {
-                                                                        taskViewModel.restoreData {
-                                                                                msg ->
-                                                                                scope.launch {
-                                                                                        snackbarHostState
-                                                                                                .showSnackbar(
-                                                                                                        msg
-                                                                                                )
+                                                                        taskViewModel
+                                                                                .restoreDataCloud {
+                                                                                        msg ->
+                                                                                        scope
+                                                                                                .launch {
+                                                                                                        snackbarHostState
+                                                                                                                .showSnackbar(
+                                                                                                                        msg
+                                                                                                                )
+                                                                                                }
                                                                                 }
-                                                                        }
                                                                 }
                                                         ) {
                                                                 Icon(
-                                                                        Icons.Default.Download,
+                                                                        Icons.Default.CloudDownload,
                                                                         contentDescription =
-                                                                                "Restaurer",
+                                                                                "Cloud Download",
                                                                         tint = Secondary
                                                                 )
                                                         }
@@ -435,193 +440,300 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel()) {
                                         }
                                 } else {
                                         LazyColumn(modifier = Modifier.fillMaxSize()) {
-                                                items(filteredTasks, key = { task -> task.id }) {
-                                                        task ->
-                                                        TaskItem(
-                                                                task = task,
-                                                                folders = folders,
-                                                                now = currentTime,
-                                                                isSelected =
-                                                                        task.id in selectedTaskIds,
-                                                                onSelect = {
-                                                                        selectedTaskIds =
-                                                                                if (it in
-                                                                                                selectedTaskIds
-                                                                                ) {
-                                                                                        selectedTaskIds -
-                                                                                                it
-                                                                                } else {
-                                                                                        selectedTaskIds +
-                                                                                                it
-                                                                                }
-                                                                },
-                                                                onToggle = {
-                                                                        taskViewModel
-                                                                                .toggleTaskDone(it)
-                                                                },
-                                                                onEdit = {
-                                                                        taskToEdit = it
-                                                                        showAddTaskDialog = true
-                                                                },
-                                                                onPostpone = { t ->
-                                                                        val now =
-                                                                                LocalDateTime.now()
-                                                                        val datePicker =
-                                                                                android.app
-                                                                                        .DatePickerDialog(
-                                                                                                context,
-                                                                                                {
-                                                                                                        _,
-                                                                                                        y,
-                                                                                                        m,
-                                                                                                        d
-                                                                                                        ->
-                                                                                                        val timePicker =
-                                                                                                                android.app
-                                                                                                                        .TimePickerDialog(
-                                                                                                                                context,
-                                                                                                                                {
-                                                                                                                                        _,
-                                                                                                                                        hh,
-                                                                                                                                        mm
-                                                                                                                                        ->
-                                                                                                                                        val newDate =
-                                                                                                                                                LocalDateTime
-                                                                                                                                                        .of(
-                                                                                                                                                                y,
-                                                                                                                                                                m +
-                                                                                                                                                                        1,
-                                                                                                                                                                d,
-                                                                                                                                                                hh,
-                                                                                                                                                                mm
-                                                                                                                                                        )
-                                                                                                                                        taskViewModel
-                                                                                                                                                .postponeTask(
-                                                                                                                                                        t,
-                                                                                                                                                        newDate
-                                                                                                                                                )
-                                                                                                                                },
-                                                                                                                                now.hour,
-                                                                                                                                now.minute,
-                                                                                                                                true
-                                                                                                                        )
-                                                                                                        timePicker
-                                                                                                                .show()
-                                                                                                },
-                                                                                                now.year,
-                                                                                                now.monthValue -
-                                                                                                        1,
-                                                                                                now.dayOfMonth
+                                                val groupedTasks =
+                                                        filteredTasks.groupBy {
+                                                                it.dueDate?.toLocalDate()
+                                                        }
+                                                groupedTasks.forEach { (date, tasks) ->
+                                                        item {
+                                                                val dateText =
+                                                                        date?.format(
+                                                                                DateTimeFormatter
+                                                                                        .ofPattern(
+                                                                                                "EEEE d MMMM",
+                                                                                                java.util
+                                                                                                        .Locale
+                                                                                                        .FRENCH
                                                                                         )
-                                                                        datePicker.show()
-                                                                }
-                                                        )
+                                                                        )
+                                                                                ?: "Sans date"
+                                                                Text(
+                                                                        text =
+                                                                                dateText
+                                                                                        .replaceFirstChar {
+                                                                                                it.uppercase()
+                                                                                        },
+                                                                        color = Secondary,
+                                                                        fontSize = 13.sp,
+                                                                        fontWeight =
+                                                                                FontWeight.Bold,
+                                                                        modifier =
+                                                                                Modifier.padding(
+                                                                                        start =
+                                                                                                16.dp,
+                                                                                        end = 16.dp,
+                                                                                        top = 16.dp,
+                                                                                        bottom =
+                                                                                                4.dp
+                                                                                )
+                                                                )
+                                                                HorizontalDivider(
+                                                                        modifier =
+                                                                                Modifier.padding(
+                                                                                        horizontal =
+                                                                                                16.dp
+                                                                                ),
+                                                                        thickness = 0.5.dp,
+                                                                        color =
+                                                                                Secondary.copy(
+                                                                                        alpha = 0.3f
+                                                                                )
+                                                                )
+                                                        }
+                                                        items(tasks, key = { task -> task.id }) {
+                                                                task ->
+                                                                TaskItem(
+                                                                        task = task,
+                                                                        folders = folders,
+                                                                        now = currentTime,
+                                                                        isSelected =
+                                                                                task.id in
+                                                                                        selectedTaskIds,
+                                                                        onSelect = {
+                                                                                selectedTaskIds =
+                                                                                        if (it in
+                                                                                                        selectedTaskIds
+                                                                                        ) {
+                                                                                                selectedTaskIds -
+                                                                                                        it
+                                                                                        } else {
+                                                                                                selectedTaskIds +
+                                                                                                        it
+                                                                                        }
+                                                                        },
+                                                                        onToggle = {
+                                                                                taskViewModel
+                                                                                        .toggleTaskDone(
+                                                                                                it
+                                                                                        )
+                                                                        },
+                                                                        onEdit = {
+                                                                                taskToEdit = it
+                                                                                showAddTaskDialog =
+                                                                                        true
+                                                                        },
+                                                                        onPostpone = { t ->
+                                                                                val now =
+                                                                                        LocalDateTime
+                                                                                                .now()
+                                                                                val initialDate =
+                                                                                        t.dueDate
+                                                                                                ?: now.withHour(
+                                                                                                                9
+                                                                                                        )
+                                                                                                        .withMinute(
+                                                                                                                0
+                                                                                                        )
+                                                                                                        .withSecond(
+                                                                                                                0
+                                                                                                        )
+                                                                                                        .withNano(
+                                                                                                                0
+                                                                                                        )
+                                                                                val datePicker =
+                                                                                        android.app
+                                                                                                .DatePickerDialog(
+                                                                                                        context,
+                                                                                                        {
+                                                                                                                _,
+                                                                                                                y,
+                                                                                                                m,
+                                                                                                                d
+                                                                                                                ->
+                                                                                                                val timePicker =
+                                                                                                                        android.app
+                                                                                                                                .TimePickerDialog(
+                                                                                                                                        context,
+                                                                                                                                        {
+                                                                                                                                                _,
+                                                                                                                                                hh,
+                                                                                                                                                mm
+                                                                                                                                                ->
+                                                                                                                                                val newDate =
+                                                                                                                                                        LocalDateTime
+                                                                                                                                                                .of(
+                                                                                                                                                                        y,
+                                                                                                                                                                        m +
+                                                                                                                                                                                1,
+                                                                                                                                                                        d,
+                                                                                                                                                                        hh,
+                                                                                                                                                                        mm
+                                                                                                                                                                )
+                                                                                                                                                taskViewModel
+                                                                                                                                                        .postponeTask(
+                                                                                                                                                                t,
+                                                                                                                                                                newDate
+                                                                                                                                                        )
+                                                                                                                                        },
+                                                                                                                                        initialDate
+                                                                                                                                                .hour,
+                                                                                                                                        initialDate
+                                                                                                                                                .minute,
+                                                                                                                                        true
+                                                                                                                                )
+                                                                                                                timePicker
+                                                                                                                        .show()
+                                                                                                        },
+                                                                                                        initialDate
+                                                                                                                .year,
+                                                                                                        initialDate
+                                                                                                                .monthValue -
+                                                                                                                1,
+                                                                                                        initialDate
+                                                                                                                .dayOfMonth
+                                                                                                )
+                                                                                datePicker.show()
+                                                                        },
+                                                                        onQuickPostpone = { t ->
+                                                                                t.dueDate?.let {
+                                                                                        taskViewModel
+                                                                                                .postponeTask(
+                                                                                                        t,
+                                                                                                        it.plusDays(
+                                                                                                                1
+                                                                                                        )
+                                                                                                )
+                                                                                }
+                                                                                        ?: run {
+                                                                                                taskViewModel
+                                                                                                        .postponeTask(
+                                                                                                                t,
+                                                                                                                LocalDateTime
+                                                                                                                        .now()
+                                                                                                                        .plusDays(
+                                                                                                                                1
+                                                                                                                        )
+                                                                                                                        .withHour(
+                                                                                                                                9
+                                                                                                                        )
+                                                                                                                        .withMinute(
+                                                                                                                                0
+                                                                                                                        )
+                                                                                                                        .withSecond(
+                                                                                                                                0
+                                                                                                                        )
+                                                                                                                        .withNano(
+                                                                                                                                0
+                                                                                                                        )
+                                                                                                        )
+                                                                                        }
+                                                                        }
+                                                                )
+                                                        }
                                                 }
                                                 item { Spacer(Modifier.height(80.dp)) }
                                         }
                                 }
                         }
+                }
 
-                        if (showAddTaskDialog || taskToEdit != null) {
-                                AddTaskDialog(
-                                        task = taskToEdit,
-                                        initialFolderId = selectedFolderId ?: 0L,
-                                        folders = folders,
-                                        onDismiss = {
-                                                showAddTaskDialog = false
-                                                taskToEdit = null
-                                        },
-                                        onAdd = {
-                                                label,
-                                                folderId,
-                                                priority,
-                                                alarm,
-                                                type,
-                                                n,
-                                                unit,
-                                                wInt,
-                                                wUnit,
-                                                wRInt,
-                                                wRUnit,
-                                                dueDate ->
-                                                if (taskToEdit != null) {
-                                                        taskViewModel.addTask(
-                                                                taskToEdit!!.copy(
-                                                                        label = label,
-                                                                        folderId = folderId,
-                                                                        priority = priority,
-                                                                        alarmLevel = alarm,
-                                                                        type = type,
-                                                                        repeatInterval = n,
-                                                                        repeatUnit = unit,
-                                                                        warningInterval = wInt,
-                                                                        warningUnit = wUnit,
-                                                                        warningRepeatInterval =
-                                                                                wRInt,
-                                                                        warningRepeatUnit = wRUnit,
-                                                                        dueDate = dueDate
-                                                                )
+                if (showAddTaskDialog || taskToEdit != null) {
+                        AddTaskDialog(
+                                task = taskToEdit,
+                                initialFolderId = selectedFolderId ?: 0L,
+                                folders = folders,
+                                onDismiss = {
+                                        showAddTaskDialog = false
+                                        taskToEdit = null
+                                },
+                                onAdd = {
+                                        label,
+                                        folderId,
+                                        priority,
+                                        alarm,
+                                        type,
+                                        n,
+                                        unit,
+                                        wInt,
+                                        wUnit,
+                                        wRInt,
+                                        wRUnit,
+                                        dueDate ->
+                                        if (taskToEdit != null) {
+                                                taskViewModel.addTask(
+                                                        taskToEdit!!.copy(
+                                                                label = label,
+                                                                folderId = folderId,
+                                                                priority = priority,
+                                                                alarmLevel = alarm,
+                                                                type = type,
+                                                                repeatInterval = n,
+                                                                repeatUnit = unit,
+                                                                warningInterval = wInt,
+                                                                warningUnit = wUnit,
+                                                                warningRepeatInterval = wRInt,
+                                                                warningRepeatUnit = wRUnit,
+                                                                dueDate = dueDate
                                                         )
-                                                } else {
-                                                        taskViewModel.addTask(
-                                                                Task(
-                                                                        folderId = folderId,
-                                                                        label = label,
-                                                                        dueDate = dueDate,
-                                                                        priority = priority,
-                                                                        alarmLevel = alarm,
-                                                                        type = type,
-                                                                        repeatInterval = n,
-                                                                        repeatUnit = unit,
-                                                                        warningInterval = wInt,
-                                                                        warningUnit = wUnit,
-                                                                        warningRepeatInterval =
-                                                                                wRInt,
-                                                                        warningRepeatUnit = wRUnit
-                                                                )
-                                                        )
-                                                }
-                                                showAddTaskDialog = false
-                                                taskToEdit = null
-                                        }
-                                )
-                        }
-
-                        if (showAddFolderDialog || folderToEdit != null) {
-                                AddFolderDialog(
-                                        folder = folderToEdit,
-                                        onDismiss = {
-                                                showAddFolderDialog = false
-                                                folderToEdit = null
-                                        },
-                                        onAdd = { name ->
-                                                if (folderToEdit != null) {
-                                                        taskViewModel.updateFolder(
-                                                                folderToEdit!!.copy(name = name)
-                                                        )
-                                                } else {
-                                                        taskViewModel.addFolder(name)
-                                                }
-                                                showAddFolderDialog = false
-                                                folderToEdit = null
-                                        }
-                                )
-                        }
-
-                        if (showMoveTasksDialog) {
-                                MoveTasksDialog(
-                                        folders = folders,
-                                        onDismiss = { showMoveTasksDialog = false },
-                                        onMove = { folderId ->
-                                                taskViewModel.moveTasksToFolder(
-                                                        selectedTaskIds.toList(),
-                                                        folderId
                                                 )
-                                                selectedTaskIds = emptySet()
-                                                showMoveTasksDialog = false
+                                        } else {
+                                                taskViewModel.addTask(
+                                                        Task(
+                                                                folderId = folderId,
+                                                                label = label,
+                                                                dueDate = dueDate,
+                                                                priority = priority,
+                                                                alarmLevel = alarm,
+                                                                type = type,
+                                                                repeatInterval = n,
+                                                                repeatUnit = unit,
+                                                                warningInterval = wInt,
+                                                                warningUnit = wUnit,
+                                                                warningRepeatInterval = wRInt,
+                                                                warningRepeatUnit = wRUnit
+                                                        )
+                                                )
                                         }
-                                )
-                        }
+                                        showAddTaskDialog = false
+                                        taskToEdit = null
+                                }
+                        )
+                }
+
+                if (showAddFolderDialog || folderToEdit != null) {
+                        AddFolderDialog(
+                                folder = folderToEdit,
+                                onDismiss = {
+                                        showAddFolderDialog = false
+                                        folderToEdit = null
+                                },
+                                onAdd = { name ->
+                                        if (folderToEdit != null) {
+                                                taskViewModel.updateFolder(
+                                                        folderToEdit!!.copy(name = name)
+                                                )
+                                        } else {
+                                                taskViewModel.addFolder(name)
+                                        }
+                                        showAddFolderDialog = false
+                                        folderToEdit = null
+                                }
+                        )
+                }
+
+                if (showMoveTasksDialog) {
+                        MoveTasksDialog(
+                                folders = folders,
+                                onDismiss = { showMoveTasksDialog = false },
+                                onMove = { folderId ->
+                                        taskViewModel.moveTasksToFolder(
+                                                selectedTaskIds.toList(),
+                                                folderId
+                                        )
+                                        selectedTaskIds = emptySet()
+                                        showMoveTasksDialog = false
+                                }
+                        )
                 }
         }
 }
@@ -665,7 +777,8 @@ fun TaskItem(
         onSelect: (Long) -> Unit,
         onToggle: (Task) -> Unit,
         onEdit: (Task) -> Unit,
-        onPostpone: (Task) -> Unit
+        onPostpone: (Task) -> Unit,
+        onQuickPostpone: (Task) -> Unit
 ) {
         val priorityColor =
                 when (task.priority) {
@@ -847,22 +960,53 @@ fun TaskItem(
                                                                                                 Color.Gray
                                                                                 }
 
-                                                                        Text(
-                                                                                text =
-                                                                                        task.dueDate
-                                                                                                .format(
-                                                                                                        DateTimeFormatter
-                                                                                                                .ofPattern(
-                                                                                                                        "EEEE dd MMM, HH:mm",
-                                                                                                                        java.util
-                                                                                                                                .Locale
-                                                                                                                                .FRENCH
-                                                                                                                )
+                                                                        Row(
+                                                                                verticalAlignment =
+                                                                                        Alignment
+                                                                                                .CenterVertically,
+                                                                                modifier =
+                                                                                        Modifier
+                                                                                                .clickable {
+                                                                                                        onPostpone(
+                                                                                                                task
+                                                                                                        )
+                                                                                                }
+                                                                        ) {
+                                                                                Icon(
+                                                                                        Icons.Default
+                                                                                                .AccessTime,
+                                                                                        contentDescription =
+                                                                                                null,
+                                                                                        modifier =
+                                                                                                Modifier.size(
+                                                                                                        12.dp
                                                                                                 ),
-                                                                                color =
-                                                                                        dueDateColor,
-                                                                                fontSize = 11.sp
-                                                                        )
+                                                                                        tint =
+                                                                                                dueDateColor
+                                                                                )
+                                                                                Spacer(
+                                                                                        Modifier.width(
+                                                                                                4.dp
+                                                                                        )
+                                                                                )
+                                                                                Text(
+                                                                                        text =
+                                                                                                task.dueDate
+                                                                                                        .format(
+                                                                                                                DateTimeFormatter
+                                                                                                                        .ofPattern(
+                                                                                                                                "HH:mm"
+                                                                                                                        )
+                                                                                                        ),
+                                                                                        color =
+                                                                                                dueDateColor,
+                                                                                        fontSize =
+                                                                                                12.sp,
+                                                                                        fontWeight =
+                                                                                                FontWeight
+                                                                                                        .Medium
+                                                                                )
+                                                                        }
                                                                 }
 
                                                                 if (task.type == TaskType.REPETITIVE
@@ -924,39 +1068,48 @@ fun TaskItem(
                                                                                 )
                                                                         }
                                                                 }
-                                                        }
-                                                }
-                                        }
 
-                                        Column(
-                                                modifier =
-                                                        Modifier.fillMaxHeight()
-                                                                .padding(vertical = 4.dp),
-                                                horizontalAlignment = Alignment.CenterHorizontally,
-                                                verticalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                                IconButton(
-                                                        onClick = { onPostpone(task) },
-                                                        modifier = Modifier.size(24.dp)
-                                                ) {
-                                                        Icon(
-                                                                Icons.Default.AccessTime,
-                                                                contentDescription = "Échéance",
-                                                                tint = Secondary,
-                                                                modifier = Modifier.size(18.dp)
-                                                        )
-                                                }
-                                                Spacer(Modifier.height(4.dp))
-                                                IconButton(
-                                                        onClick = { onEdit(task) },
-                                                        modifier = Modifier.size(24.dp)
-                                                ) {
-                                                        Icon(
-                                                                Icons.Default.MoreVert,
-                                                                contentDescription = "Modifier",
-                                                                tint = Color.Gray,
-                                                                modifier = Modifier.size(18.dp)
-                                                        )
+                                                                Spacer(Modifier.weight(1f))
+
+                                                                IconButton(
+                                                                        onClick = { onEdit(task) },
+                                                                        modifier =
+                                                                                Modifier.size(24.dp)
+                                                                ) {
+                                                                        Icon(
+                                                                                Icons.Default
+                                                                                        .MoreVert,
+                                                                                contentDescription =
+                                                                                        "Modifier",
+                                                                                tint = Color.Gray,
+                                                                                modifier =
+                                                                                        Modifier.size(
+                                                                                                18.dp
+                                                                                        )
+                                                                        )
+                                                                }
+
+                                                                IconButton(
+                                                                        onClick = {
+                                                                                onQuickPostpone(
+                                                                                        task
+                                                                                )
+                                                                        },
+                                                                        modifier =
+                                                                                Modifier.size(24.dp)
+                                                                ) {
+                                                                        Icon(
+                                                                                Icons.Default.Add,
+                                                                                contentDescription =
+                                                                                        "Reporter +1j",
+                                                                                tint = Secondary,
+                                                                                modifier =
+                                                                                        Modifier.size(
+                                                                                                18.dp
+                                                                                        )
+                                                                        )
+                                                                }
+                                                        }
                                                 }
                                         }
 
@@ -1023,7 +1176,8 @@ fun AddTaskDialog(
         // Update currentDueDate based on text parsing in real-time
         LaunchedEffect(text) {
                 if (text.isNotBlank()) {
-                        val (_, parsedDate) = SmartParser.parse(text)
+                        val defaultTime = task?.dueDate?.toLocalTime() ?: LocalTime.of(9, 0)
+                        val (_, parsedDate) = SmartParser.parse(text, defaultTime)
                         if (parsedDate != null) {
                                 currentDueDate = parsedDate
                         }
@@ -1331,6 +1485,13 @@ fun AddTaskDialog(
                                         IconButton(
                                                 onClick = {
                                                         val now = LocalDateTime.now()
+                                                        val initialDate =
+                                                                currentDueDate
+                                                                        ?: task?.dueDate
+                                                                                ?: now.withHour(9)
+                                                                                .withMinute(0)
+                                                                                .withSecond(0)
+                                                                                .withNano(0)
                                                         val datePicker =
                                                                 android.app.DatePickerDialog(
                                                                         context,
@@ -1355,15 +1516,24 @@ fun AddTaskDialog(
                                                                                                                                         mm
                                                                                                                                 )
                                                                                                         },
-                                                                                                        now.hour,
-                                                                                                        now.minute,
+                                                                                                        initialDate
+                                                                                                                .hour,
+                                                                                                        if (currentDueDate ==
+                                                                                                                        null &&
+                                                                                                                        task?.dueDate ==
+                                                                                                                                null
+                                                                                                        )
+                                                                                                                0
+                                                                                                        else
+                                                                                                                initialDate
+                                                                                                                        .minute,
                                                                                                         true
                                                                                                 )
                                                                                 timePicker.show()
                                                                         },
-                                                                        now.year,
-                                                                        now.monthValue - 1,
-                                                                        now.dayOfMonth
+                                                                        initialDate.year,
+                                                                        initialDate.monthValue - 1,
+                                                                        initialDate.dayOfMonth
                                                                 )
                                                         datePicker.show()
                                                 },

@@ -104,6 +104,9 @@ class IptvRepository(private val api: XtreamApi, private val dao: IptvDao) {
                 dao.trimRecents(profileId, type)
         }
 
+        suspend fun clearRecents(profileId: Int, type: String = "LIVE") =
+                dao.clearRecents(profileId, type)
+
         // --- Profiles Logic ---
         val allProfiles: Flow<List<ProfileEntity>> = dao.getAllProfiles()
         suspend fun getSelectedProfile(): ProfileEntity? = dao.getSelectedProfile()

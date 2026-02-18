@@ -27,15 +27,10 @@ import com.example.simpleradio.data.api.ImageScraper
 import com.example.simpleradio.data.api.LrcLibApi
 import com.example.simpleradio.data.api.TranslationApi
 import com.example.simpleradio.data.local.entities.RadioStationEntity
+import com.example.simpleradio.ui.components.*
 import com.example.simpleradio.ui.components.ArtworkDisplay
 import com.example.simpleradio.ui.components.BilingualLyrics
-import com.example.simpleradio.ui.components.CastButton
-import com.example.simpleradio.ui.components.LandscapeLyricsOverlay
-import com.example.simpleradio.ui.components.LandscapePlayerHeader
-import com.example.simpleradio.ui.components.MetadataInfoDisplay
-import com.example.simpleradio.ui.components.PlaybackControls
-import com.example.simpleradio.ui.components.PortraitLyricsOverlay
-import com.example.simpleradio.ui.components.StationInfoDisplay
+import com.example.simpleradio.upnp.UpnpButton
 import com.google.android.gms.cast.framework.CastSession
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -55,7 +50,8 @@ fun VideoPlayerView(
         sleepTimerTimeLeft: Long? = null,
         onSetSleepTimer: (Int?) -> Unit = {},
         showLyrics: Boolean = false,
-        onToggleLyrics: (Boolean) -> Unit = {}
+        onToggleLyrics: (Boolean) -> Unit = {},
+        upnpManager: UpnpManager? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -295,6 +291,7 @@ fun VideoPlayerView(
                     showLyricsButton =
                             lrcLibApi != null && !artist.isNullOrBlank() && !title.isNullOrBlank(),
                     castSession = castSession,
+                    upnpManager = upnpManager,
                     onCycleArtwork = {
                         artworkCycleIndex = (artworkCycleIndex + 1) % cycleList.size
                     }
@@ -336,6 +333,7 @@ fun PortraitPlayerLayout(
         radioList: List<RadioStationEntity>,
         showLyricsButton: Boolean,
         castSession: CastSession? = null,
+        upnpManager: UpnpManager? = null,
         onCycleArtwork: () -> Unit = {}
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
@@ -359,6 +357,9 @@ fun PortraitPlayerLayout(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
             ) {
+                // UPnP Button
+                upnpManager?.let { UpnpButton(upnpManager = it) }
+
                 // Cast Button
                 CastButton()
 

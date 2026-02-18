@@ -4,6 +4,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -15,7 +18,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.unit.dp
 import com.example.simpleiptv.data.local.entities.ChannelEntity
 import com.example.simpleiptv.ui.components.ChannelItem
@@ -56,8 +58,8 @@ fun MainContentLandscape(
             item {
                 Text(
                         text = "Pays",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.Gray,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(start = 8.dp, top = 8.dp, bottom = 4.dp)
                 )
             }
@@ -99,7 +101,8 @@ fun MainContentLandscape(
                                 viewModel.searchQuery = ""
                                 viewModel.lastGeneratorType = GeneratorType.RECENTS
                                 viewModel.refreshChannels()
-                            }
+                            },
+                            onDelete = { viewModel.clearRecents() }
                     )
                 }
                 item {
@@ -111,8 +114,8 @@ fun MainContentLandscape(
                     ) {
                         Text(
                                 text = "Favoris",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color.Gray,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.weight(1f)
                         )
                         IconButton(
@@ -149,11 +152,10 @@ fun MainContentLandscape(
             item {
                 Text(
                         text =
-                                if (viewModel.selectedCountryFilter == "ALL")
-                                        "Toutes les catégories"
+                                if (viewModel.selectedCountryFilter == "ALL") "Catégories"
                                 else "Catégories ${viewModel.selectedCountryFilter}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.Gray,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(start = 8.dp, top = 8.dp, bottom = 4.dp)
                 )
             }
@@ -180,53 +182,23 @@ fun MainContentLandscape(
         val isVod = viewModel.currentMediaMode == MediaMode.VOD
 
         if (isVod) {
-            val rows = viewModel.channels.chunked(2)
-            var pageIndex by remember(viewModel.channels) { mutableIntStateOf(0) }
-            val currentRow = rows.getOrNull(pageIndex) ?: emptyList()
-
             Box(modifier = Modifier.weight(0.55f).fillMaxHeight().padding(4.dp)) {
-                if (currentRow.isNotEmpty()) {
-                    Row(modifier = Modifier.fillMaxSize()) {
-                        currentRow.forEach { channel ->
+                if (viewModel.channels.isNotEmpty()) {
+                    LazyVerticalGrid(
+                            columns = GridCells.Fixed(2),
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(bottom = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        gridItems(viewModel.channels, key = { it.stream_id }) { channel ->
                             val isPlaying = viewModel.playingChannel?.stream_id == channel.stream_id
                             VodItem(
                                     channel = channel,
                                     isPlaying = isPlaying,
-                                    onClick = { onChannelClick(channel) },
-                                    modifier =
-                                            Modifier.weight(0.25f) // 25% of screen
-                                                    .fillMaxHeight(0.95f)
-                                                    .onKeyEvent { event ->
-                                                        if (event.nativeKeyEvent.action ==
-                                                                        android.view.KeyEvent
-                                                                                .ACTION_DOWN
-                                                        ) {
-                                                            when (event.nativeKeyEvent.keyCode) {
-                                                                android.view.KeyEvent
-                                                                        .KEYCODE_DPAD_DOWN -> {
-                                                                    if (pageIndex < rows.size - 1) {
-                                                                        pageIndex++
-                                                                        return@onKeyEvent true
-                                                                    }
-                                                                }
-                                                                android.view.KeyEvent
-                                                                        .KEYCODE_DPAD_UP -> {
-                                                                    if (pageIndex > 0) {
-                                                                        pageIndex--
-                                                                        return@onKeyEvent true
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                        false
-                                                    }
+                                    onClick = { onChannelClick(channel) }
                             )
                         }
-                        if (currentRow.size < 2) {
-                            Spacer(Modifier.weight(0.25f))
-                        }
-                        // Explicit spacing to make up the rest of the 55% column (5% of screen)
-                        Spacer(Modifier.weight(0.05f))
                     }
                 } else {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
