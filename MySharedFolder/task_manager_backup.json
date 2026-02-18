@@ -1,0 +1,143 @@
+{
+    "folders": [
+        {
+            "id": 6,
+            "name": "Immobilier "
+        },
+        {
+            "id": 7,
+            "name": "Finances "
+        },
+        {
+            "id": 8,
+            "name": "Voitures"
+        },
+        {
+            "id": 9,
+            "name": "KMZ consulting"
+        },
+        {
+            "id": 10,
+            "name": "rénovation "
+        },
+        {
+            "id": 11,
+            "name": " Courses"
+        }
+    ],
+    "tasks": [
+        {
+            "label": "visite technique clio",
+            "folderId": 8,
+            "type": "ONCE",
+            "dueDate": "2026-02-20T09:11:00",
+            "alarmLevel": "MEDIUM",
+            "priority": "MEDIUM",
+            "isDone": false,
+            "repeatInterval": 1,
+            "repeatUnit": "D",
+            "warningInterval": 30,
+            "warningUnit": "MINUTES",
+            "warningRepeatInterval": 5,
+            "warningRepeatUnit": "MINUTES"
+        },
+        {
+            "label": "taxe municipale ennasr",
+            "folderId": 6,
+            "type": "ONCE",
+            "dueDate": "2026-02-20T09:11:00",
+            "alarmLevel": "MEDIUM",
+            "priority": "MEDIUM",
+            "isDone": false,
+            "repeatInterval": 1,
+            "repeatUnit": "D",
+            "warningInterval": 15,
+            "warningUnit": "MINUTES",
+            "warningRepeatUnit": "MINUTES"
+        },
+        {
+            "label": "taxe municipale Gammarth",
+            "folderId": 6,
+            "type": "ONCE",
+            "dueDate": "2026-02-20T10:00:00",
+            "alarmLevel": "MEDIUM",
+            "priority": "MEDIUM",
+            "isDone": false,
+            "repeatInterval": 1,
+            "repeatUnit": "D",
+            "warningInterval": 15,
+            "warningUnit": "MINUTES",
+            "warningRepeatUnit": "MINUTES"
+        },
+        {
+            "label": "taxe municipale kram",
+            "folderId": 6,
+            "type": "ONCE",
+            "dueDate": "2026-02-20T09:11:00",
+            "alarmLevel": "MEDIUM",
+            "priority": "MEDIUM",
+            "isDone": false,
+            "repeatInterval": 1,
+            "repeatUnit": "D",
+            "warningInterval": 15,
+            "warningUnit": "MINUTES",
+            "warningRepeatUnit": "MINUTES"
+        },
+        {
+            "label": "vignette clio",
+            "folderId": 8,
+            "type": "ONCE",
+            "dueDate": "2026-03-02T09:00:00",
+            "alarmLevel": "MEDIUM",
+            "priority": "MEDIUM",
+            "isDone": false,
+            "repeatInterval": 1,
+            "repeatUnit": "D",
+            "warningInterval": 15,
+            "warningUnit": "MINUTES",
+            "warningRepeatUnit": "MINUTES"
+        },
+        {
+            "label": "neji",
+            "folderId": 10,
+            "type": "ONCE",
+            "dueDate": "2026-03-11T14:07:00",
+            "alarmLevel": "MEDIUM",
+            "priority": "MEDIUM",
+            "isDone": false,
+            "repeatInterval": 1,
+            "repeatUnit": "D",
+            "warningInterval": 15,
+            "warningUnit": "MINUTES",
+            "warningRepeatUnit": "MINUTES"
+        },
+        {
+            "label": "gel douche pt marseillais",
+            "folderId": 0,
+            "type": "ONCE",
+            "dueDate": "2026-02-20T10:11:00",
+            "alarmLevel": "HIGH",
+            "priority": "MEDIUM",
+            "isDone": false,
+            "repeatInterval": 1,
+            "repeatUnit": "D",
+            "warningInterval": 15,
+            "warningUnit": "MINUTES",
+            "warningRepeatUnit": "MINUTES"
+        },
+        {
+            "label": "poissons",
+            "folderId": 11,
+            "type": "ONCE",
+            "dueDate": "2026-02-19T09:00:00",
+            "alarmLevel": "MEDIUM",
+            "priority": "MEDIUM",
+            "isDone": false,
+            "repeatInterval": 1,
+            "repeatUnit": "D",
+            "warningInterval": 15,
+            "warningUnit": "MINUTES",
+            "warningRepeatUnit": "MINUTES"
+        }
+    ]
+}
