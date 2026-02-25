@@ -75,10 +75,9 @@ fun PriorityOption(priority: Priority, isSelected: Boolean, onClick: () -> Unit)
 
 fun getPriorityColor(priority: Priority): Color =
         when (priority) {
-                Priority.URGENT -> Color(0xFFF44336) // Rouge
-                Priority.IMPORTANT -> Color(0xFFFFB300) // Jaune-Orange
-                Priority.NORMAL -> Color(0xFF4CAF50) // Vert
-                Priority.OPTIONAL -> MediumGray // Gris Moyen
+                Priority.URGENT -> Color(0xFFF44336) // 🔴 Rouge
+                Priority.IMPORTANT -> Color(0xFFFFB300) // 🟡 Jaune-orange
+                Priority.NORMAL -> Color(0xFF4CAF50) // 🟢 Vert
         }
 
 /** Dialog de confirmation de suppression */
@@ -157,10 +156,9 @@ fun PriorityFilterButton(
 ) {
         val nextPriority =
                 when (filterPriority) {
-                        Priority.URGENT -> Priority.IMPORTANT
-                        Priority.IMPORTANT -> Priority.NORMAL
-                        Priority.NORMAL -> Priority.OPTIONAL
-                        Priority.OPTIONAL -> Priority.URGENT
+                        Priority.NORMAL -> Priority.IMPORTANT
+                        Priority.IMPORTANT -> Priority.URGENT
+                        Priority.URGENT -> Priority.NORMAL
                 }
         Box(
                 modifier =
@@ -184,55 +182,75 @@ fun BottomActionButtons(
         onFilterClick: (Priority) -> Unit,
         onMicClick: () -> Unit,
         onAddClick: () -> Unit,
+        onQuickAddClick: (() -> Unit)? = null,
         filterPriority: Priority,
         modifier: Modifier = Modifier,
         showFilter: Boolean = true
 ) {
-        Box(
-                modifier = modifier.fillMaxWidth().padding(16.dp),
-                contentAlignment = Alignment.BottomCenter
+        Row(
+                modifier = modifier.fillMaxWidth().padding(bottom = 20.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
         ) {
-                Row(
-                        modifier = Modifier.fillMaxWidth().height(70.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                // Filtre priorité (optionnel)
+                if (showFilter) {
+                        PriorityFilterButton(
+                                filterPriority = filterPriority,
+                                onFilterClick = onFilterClick,
+                                size = 56.dp,
+                                iconSize = 28.dp
+                        )
+                        Spacer(modifier = Modifier.width(20.dp))
+                }
+
+                // 🎤 Micro (vert)
+                FloatingActionButton(
+                        onClick = onMicClick,
+                        containerColor = AccentGreen,
+                        contentColor = White,
+                        shape = CircleShape,
+                        modifier = Modifier.size(56.dp)
                 ) {
-                        if (showFilter) {
-                                PriorityFilterButton(
-                                        filterPriority = filterPriority,
-                                        onFilterClick = onFilterClick,
-                                        size = 56.dp,
-                                        iconSize = 28.dp
-                                )
-                        } else {
-                                Spacer(modifier = Modifier.size(56.dp))
-                        }
+                        Icon(
+                                imageVector = Icons.Default.Mic,
+                                contentDescription = "Saisie vocale",
+                                modifier = Modifier.size(28.dp)
+                        )
+                }
+
+                // 🔍 Recherche rapide (violet)
+                if (onQuickAddClick != null) {
+                        Spacer(modifier = Modifier.width(20.dp))
                         FloatingActionButton(
-                                onClick = onMicClick,
-                                containerColor = AccentGreen,
+                                onClick = onQuickAddClick,
+                                containerColor = AccentViolet,
                                 contentColor = White,
                                 shape = CircleShape,
                                 modifier = Modifier.size(56.dp)
                         ) {
                                 Icon(
-                                        imageVector = Icons.Default.Mic,
-                                        contentDescription = "Saisie vocale",
-                                        modifier = Modifier.size(28.dp)
+                                        imageVector = Icons.Default.PlaylistAdd,
+                                        contentDescription = "Ajouter article existant",
+                                        modifier = Modifier.size(30.dp)
                                 )
                         }
-                        FloatingActionButton(
-                                onClick = onAddClick,
-                                containerColor = AccentBlue,
-                                contentColor = White,
-                                shape = CircleShape,
-                                modifier = Modifier.size(56.dp)
-                        ) {
-                                Icon(
-                                        imageVector = Icons.Default.Add,
-                                        contentDescription = "Ajouter",
-                                        modifier = Modifier.size(28.dp)
-                                )
-                        }
+                }
+
+                Spacer(modifier = Modifier.width(20.dp))
+
+                // ➕ Nouveau article (bleu)
+                FloatingActionButton(
+                        onClick = onAddClick,
+                        containerColor = AccentBlue,
+                        contentColor = White,
+                        shape = CircleShape,
+                        modifier = Modifier.size(56.dp)
+                ) {
+                        Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Ajouter",
+                                modifier = Modifier.size(28.dp)
+                        )
                 }
         }
 }

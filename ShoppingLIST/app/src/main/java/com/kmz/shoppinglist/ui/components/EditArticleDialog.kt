@@ -29,7 +29,8 @@ fun EditArticleDialog(
         article: Article?,
         categories: List<Category>,
         currentCategoryId: Long,
-        onSave: (name: String, frenchName: String, iconId: String, categoryId: Long) -> Unit,
+        // onSave retourne null si OK, sinon un message d'erreur
+        onSave: (name: String, frenchName: String, iconId: String, categoryId: Long) -> String?,
         onDelete: () -> Unit,
         onCreateNew: (categoryId: Long) -> Unit,
         onDismiss: () -> Unit
@@ -41,6 +42,7 @@ fun EditArticleDialog(
                 mutableLongStateOf(article?.categoryId ?: currentCategoryId)
         }
         var showDeleteConfirm by remember { mutableStateOf(false) }
+        var nameError by remember { mutableStateOf<String?>(null) }
 
         val context = LocalContext.current
         val iconProvider = remember { LocalIconProvider(context) }
@@ -105,14 +107,37 @@ fun EditArticleDialog(
                                 // Nom de l'article
                                 OutlinedTextField(
                                         value = name,
-                                        onValueChange = { name = it },
+                                        onValueChange = {
+                                                name = it
+                                                nameError =
+                                                        null // effacer l'erreur dès que l'user tape
+                                        },
                                         label = { Text("Nom de l'article", color = TextGray) },
+                                        isError = nameError != null,
+                                        supportingText = {
+                                                if (nameError != null) {
+                                                        Text(
+                                                                text = nameError!!,
+                                                                color =
+                                                                        androidx.compose.ui.graphics
+                                                                                .Color(0xFFFF5252)
+                                                        )
+                                                }
+                                        },
                                         colors =
                                                 OutlinedTextFieldDefaults.colors(
                                                         focusedTextColor = White,
                                                         unfocusedTextColor = White,
-                                                        focusedBorderColor = AccentBlue,
-                                                        unfocusedBorderColor = MediumGray,
+                                                        focusedBorderColor =
+                                                                if (nameError != null)
+                                                                        androidx.compose.ui.graphics
+                                                                                .Color(0xFFFF5252)
+                                                                else AccentBlue,
+                                                        unfocusedBorderColor =
+                                                                if (nameError != null)
+                                                                        androidx.compose.ui.graphics
+                                                                                .Color(0xFFFF5252)
+                                                                else MediumGray,
                                                         cursorColor = AccentBlue
                                                 ),
                                         singleLine = true,
@@ -164,12 +189,17 @@ fun EditArticleDialog(
                                                                         .filter { it != newIconId }
                                         },
                                         onSave = {
-                                                onSave(
-                                                        name.trim(),
-                                                        frenchName.trim(),
-                                                        iconId,
-                                                        selectedCategoryId
-                                                )
+                                                val trimmedName = name.trim()
+                                                val error =
+                                                        onSave(
+                                                                trimmedName,
+                                                                frenchName.trim(),
+                                                                iconId,
+                                                                selectedCategoryId
+                                                        )
+                                                if (error != null) {
+                                                        nameError = error
+                                                }
                                         },
                                         imagePickerLauncher = imagePickerLauncher,
                                         iconProvider = iconProvider

@@ -221,27 +221,3 @@ fun MainHeader(
                 }
         }
 }
-                                                                                Color.Black
-                                                                        else Color.White
-                                                        )
-                                                        Spacer(Modifier.width(8.dp))
-                                                        Text(
-                                                                "PLAYER",
-                                                                color =
-                                                                        if (isPlayerFocused)
-                                                                                Color.Black
-                                                                        else Color.White,
-                                                                fontWeight = FontWeight.ExtraBold,
-                                                                style =
-                                                                        MaterialTheme.typography
-                                                                                .labelLarge
-                                                        )
-                                                }
-                                        }
-                                } else {
-                                        Spacer(Modifier.width(48.dp))
-                                }
-                        }
-                }
-        }
-}

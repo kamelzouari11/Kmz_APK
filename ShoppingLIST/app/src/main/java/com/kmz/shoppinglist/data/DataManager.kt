@@ -14,6 +14,7 @@ class DataManager(private val context: Context) {
 
     private val prefs = context.getSharedPreferences("shopping_list_data", Context.MODE_PRIVATE)
     private val gson = Gson()
+    private val iconProvider = LocalIconProvider(context)
 
     companion object {
         private const val KEY_CATEGORIES = "categories"
@@ -30,11 +31,11 @@ class DataManager(private val context: Context) {
     fun setIconMode(enabled: Boolean) = prefs.edit().putBoolean(KEY_ICON_MODE, enabled).apply()
 
     fun getFilterPriority(): Priority {
-        val name = prefs.getString(KEY_FILTER_PRIORITY, Priority.OPTIONAL.name)
+        val name = prefs.getString(KEY_FILTER_PRIORITY, Priority.NORMAL.name)
         return try {
             Priority.valueOf(name!!)
         } catch (e: Exception) {
-            Priority.OPTIONAL
+            Priority.NORMAL // OPTIONAL n'existe plus → on revient à NORMAL
         }
     }
 
@@ -121,13 +122,18 @@ class DataManager(private val context: Context) {
         return try {
             val type = object : TypeToken<List<Article>>() {}.type
             val articles: List<Article> = gson.fromJson(json, type)
-            // Assurer que tous les articles ont un iconId valide
+            // Normaliser iconId et migrer les anciens OPTIONAL → NORMAL
             articles.map { article ->
-                if (article.iconId.isNullOrEmpty()) {
-                    article.copy(iconId = "panier")
-                } else {
-                    article
+                var fixed = article
+                if (fixed.iconId.isNullOrEmpty()) fixed = fixed.copy(iconId = "panier")
+                // Migration : OPTIONAL n'existe plus, priority null (désérialisation échouée) →
+                // NORMAL
+                try {
+                    Priority.valueOf(fixed.priority.name)
+                } catch (e: Exception) {
+                    fixed = fixed.copy(priority = Priority.NORMAL)
                 }
+                fixed
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -149,10 +155,31 @@ class DataManager(private val context: Context) {
         prefs.edit().putString(KEY_ARTICLES, gson.toJson(articles)).apply()
     }
 
-    fun addArticle(article: Article) {
+    /**
+     * Valide le nom d'un article avant insertion/modification.
+     * @param name Le nom à valider (déjà trimmé).
+     * @param excludeId L'id de l'article en cours de modification (null pour une création).
+     * @return null si valide, sinon un message d'erreur.
+     */
+    fun validateArticleName(name: String, excludeId: Long? = null): String? {
+        if (name.isEmpty()) return "Le nom ne peut pas être vide."
+        val duplicate =
+                getArticles().any { a ->
+                    a.name.equals(name, ignoreCase = true) && a.id != excludeId
+                }
+        if (duplicate) return "Un article \"$name\" existe déjà."
+        return null
+    }
+
+    /** Ajoute un article. Retourne null si OK, sinon un message d'erreur. */
+    fun addArticle(article: Article): String? {
+        val trimmed = article.copy(name = article.name.trim())
+        val error = validateArticleName(trimmed.name)
+        if (error != null) return error
         val articles = getArticles().toMutableList()
-        articles.add(article)
+        articles.add(trimmed)
         saveArticles(articles)
+        return null
     }
 
     fun deleteArticle(articleId: Long) {
@@ -188,8 +215,13 @@ class DataManager(private val context: Context) {
         val categories = getCategories().toMutableList()
         val index = categories.indexOfFirst { it.id == categoryId }
         if (index >= 0) {
+            val oldIconId = categories[index].iconId
             categories[index] = categories[index].copy(iconId = iconId)
             saveCategories(categories)
+            // Supprimer l'ancienne icône si elle n'est plus utilisée
+            if (!oldIconId.isNullOrBlank() && oldIconId != iconId) {
+                iconProvider.deleteIconIfOrphan(oldIconId, getArticles(), getCategories())
+            }
         }
     }
 
@@ -197,8 +229,13 @@ class DataManager(private val context: Context) {
         val articles = getArticles().toMutableList()
         val index = articles.indexOfFirst { it.id == articleId }
         if (index >= 0) {
+            val oldIconId = articles[index].iconId
             articles[index] = articles[index].copy(iconId = iconId)
             saveArticles(articles)
+            // Supprimer l'ancienne icône si elle n'est plus utilisée
+            if (!oldIconId.isNullOrBlank() && oldIconId != iconId) {
+                iconProvider.deleteIconIfOrphan(oldIconId, getArticles(), getCategories())
+            }
         }
     }
 
@@ -211,14 +248,23 @@ class DataManager(private val context: Context) {
         }
     }
 
-    /** Mise à jour complète d'un article */
-    fun updateArticle(article: Article) {
+    /** Mise à jour complète d'un article. Retourne null si OK, sinon un message d'erreur. */
+    fun updateArticle(article: Article): String? {
+        val trimmed = article.copy(name = article.name.trim())
+        val error = validateArticleName(trimmed.name, excludeId = trimmed.id)
+        if (error != null) return error
         val articles = getArticles().toMutableList()
-        val index = articles.indexOfFirst { it.id == article.id }
+        val index = articles.indexOfFirst { it.id == trimmed.id }
         if (index >= 0) {
-            articles[index] = article
+            val oldIconId = articles[index].iconId
+            articles[index] = trimmed
             saveArticles(articles)
+            // Supprimer l'ancienne icône si elle a changé et n'est plus utilisée
+            if (!oldIconId.isNullOrBlank() && oldIconId != trimmed.iconId) {
+                iconProvider.deleteIconIfOrphan(oldIconId, getArticles(), getCategories())
+            }
         }
+        return null
     }
 
     /** Mise à jour complète d'une catégorie */

@@ -27,6 +27,7 @@ fun LazyListScope.filterSidebarItems(
         selectedRadioCountry: String?,
         selectedRadioTag: String?,
         selectedRadioBitrate: Int?,
+        radioSearchQuery: String,
         isQualityExpanded: Boolean,
         isCountryExpanded: Boolean,
         isGenreExpanded: Boolean,
@@ -43,7 +44,7 @@ fun LazyListScope.filterSidebarItems(
     // 1. Recherche
     item {
         SidebarItem(
-                text = "Recherche",
+                text = if (radioSearchQuery.isNotBlank()) "Recherche : $radioSearchQuery" else "Recherche",
                 icon = Icons.Default.Search,
                 isSelected = false,
                 onClick = onSearchClick

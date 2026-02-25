@@ -119,6 +119,41 @@ class LocalIconProvider(private val context: Context) {
                     .trimEnd('_')
                     .ifBlank { "icon_${System.currentTimeMillis()}" }
 
+    /**
+     * Supprime le fichier icône [iconId] uniquement s'il n'est plus référencé par aucun article ni
+     * aucune catégorie. Les icônes par défaut ("panier", "categorie") ne sont jamais supprimées.
+     *
+     * @return true si le fichier a été supprimé, false sinon.
+     */
+    fun deleteIconIfOrphan(
+            iconId: String,
+            allArticles: List<Article>,
+            allCategories: List<Category>
+    ): Boolean {
+        // Protéger les icônes par défaut
+        val protected = setOf("panier", "categorie")
+        if (iconId.isBlank() || iconId in protected) return false
+
+        // Vérifier qu'aucun article ni catégorie n'utilise encore cet iconId
+        val usedByArticle = allArticles.any { it.iconId == iconId }
+        val usedByCategory = allCategories.any { it.iconId == iconId }
+        if (usedByArticle || usedByCategory) return false
+
+        // Chercher le fichier correspondant (toutes extensions)
+        val files = ICONS_PATH.listFiles() ?: return false
+        val target =
+                files.find { it.name.substringBeforeLast(".").equals(iconId, ignoreCase = true) }
+        return if (target != null && target.exists()) {
+            val deleted = target.delete()
+            Log.d(
+                    TAG,
+                    if (deleted) "🗑️ Icône orpheline supprimée : ${target.name}"
+                    else "⚠️ Échec suppression : ${target.name}"
+            )
+            deleted
+        } else false
+    }
+
     fun getIconsDirectory(): File = ICONS_PATH
 
     fun getIconsDirectoryPath(): String = ICONS_PATH.absolutePath

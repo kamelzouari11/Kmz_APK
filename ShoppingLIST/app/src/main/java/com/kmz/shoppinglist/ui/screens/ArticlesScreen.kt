@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -31,6 +32,7 @@ fun ArticlesScreen(
 ) {
     var articles by remember { mutableStateOf(dataManager.getArticlesByCategory(category.id)) }
     var showAddDialog by remember { mutableStateOf(false) }
+    var showQuickAddDialog by remember { mutableStateOf(false) }
     var articleToEdit by remember { mutableStateOf<Article?>(null) }
     var showEditDialog by remember { mutableStateOf(false) }
     var isIconMode by remember { mutableStateOf(dataManager.getIconMode()) }
@@ -194,17 +196,81 @@ fun ArticlesScreen(
             }
         }
 
-        BottomActionButtons(
-                onFilterClick = { updateFilterPriority(it) },
-                onMicClick = onMicClick,
-                onAddClick = {
-                    articleToEdit = null
-                    currentAddCategoryId = category.id
-                    showAddDialog = true
+        // ── 3 boutons en bas ─────────────────────────────────────────────────
+        Row(
+                modifier =
+                        Modifier.align(Alignment.BottomCenter)
+                                .fillMaxWidth()
+                                .padding(bottom = 24.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+        ) {
+            // 🎤 Micro (vert)
+            FloatingActionButton(
+                    onClick = onMicClick,
+                    containerColor = AccentGreen,
+                    contentColor = White,
+                    shape = CircleShape,
+                    modifier = Modifier.size(56.dp)
+            ) {
+                Icon(
+                        Icons.Default.Mic,
+                        contentDescription = "Micro",
+                        modifier = Modifier.size(28.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(20.dp))
+
+            // 🔍 Ajout rapide depuis articles existants (violet)
+            FloatingActionButton(
+                    onClick = { showQuickAddDialog = true },
+                    containerColor = AccentViolet,
+                    contentColor = White,
+                    shape = CircleShape,
+                    modifier = Modifier.size(56.dp)
+            ) {
+                Icon(
+                        Icons.Default.Search,
+                        contentDescription = "Recherche rapide",
+                        modifier = Modifier.size(28.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(20.dp))
+
+            // ➕ Créer nouvel article (bleu)
+            FloatingActionButton(
+                    onClick = {
+                        articleToEdit = null
+                        currentAddCategoryId = category.id
+                        showAddDialog = true
+                    },
+                    containerColor = AccentBlue,
+                    contentColor = White,
+                    shape = CircleShape,
+                    modifier = Modifier.size(56.dp)
+            ) {
+                Icon(
+                        Icons.Default.Add,
+                        contentDescription = "Ajouter",
+                        modifier = Modifier.size(28.dp)
+                )
+            }
+        }
+    }
+
+    // ── Dialog recherche rapide ──────────────────────────────────────────────
+    if (showQuickAddDialog) {
+        val allArticles = remember { dataManager.getArticles() }
+        QuickAddDialog(
+                allArticles = allArticles,
+                currentCategoryId = category.id,
+                onAddArticle = { article ->
+                    dataManager.addArticle(article)
+                    refreshArticles()
                 },
-                filterPriority = filterPriority,
-                showFilter = false,
-                modifier = Modifier.align(Alignment.BottomCenter)
+                onDismiss = { showQuickAddDialog = false }
         )
     }
 
@@ -214,18 +280,28 @@ fun ArticlesScreen(
                     article = null,
                     categories = categories,
                     currentCategoryId = currentAddCategoryId,
-                    onSave = { name, frenchName, iconId, categoryId ->
-                        dataManager.addArticle(
-                                Article(
-                                        name = name,
-                                        frenchName = frenchName,
-                                        iconId = iconId,
-                                        categoryId = categoryId
-                                )
-                        )
-                        refreshArticles()
-                        showAddDialog = false
-                    },
+                    onSave =
+                            fun(
+                                    name: String,
+                                    frenchName: String,
+                                    iconId: String,
+                                    categoryId: Long
+                            ): String? {
+                                val error =
+                                        dataManager.addArticle(
+                                                Article(
+                                                        name = name,
+                                                        frenchName = frenchName,
+                                                        iconId = iconId,
+                                                        categoryId = categoryId
+                                                )
+                                        )
+                                if (error == null) {
+                                    refreshArticles()
+                                    showAddDialog = false
+                                }
+                                return error
+                            },
                     onDelete = {},
                     onCreateNew = { categoryId ->
                         currentAddCategoryId = categoryId
@@ -241,21 +317,30 @@ fun ArticlesScreen(
                 article = articleToEdit,
                 categories = categories,
                 currentCategoryId = articleToEdit?.categoryId ?: category.id,
-                onSave = { name, frenchName, iconId, categoryId ->
-                    articleToEdit?.let { article ->
-                        dataManager.updateArticle(
-                                article.copy(
-                                        name = name,
-                                        frenchName = frenchName,
-                                        iconId = iconId,
-                                        categoryId = categoryId
-                                )
-                        )
-                    }
-                    refreshArticles()
-                    showEditDialog = false
-                    articleToEdit = null
-                },
+                onSave =
+                        fun(
+                                name: String,
+                                frenchName: String,
+                                iconId: String,
+                                categoryId: Long
+                        ): String? {
+                            val currentArticle = articleToEdit ?: return null
+                            val error =
+                                    dataManager.updateArticle(
+                                            currentArticle.copy(
+                                                    name = name,
+                                                    frenchName = frenchName,
+                                                    iconId = iconId,
+                                                    categoryId = categoryId
+                                            )
+                                    )
+                            if (error == null) {
+                                refreshArticles()
+                                showEditDialog = false
+                                articleToEdit = null
+                            }
+                            return error
+                        },
                 onDelete = {
                     articleToEdit?.let { article -> dataManager.deleteArticle(article.id) }
                     refreshArticles()

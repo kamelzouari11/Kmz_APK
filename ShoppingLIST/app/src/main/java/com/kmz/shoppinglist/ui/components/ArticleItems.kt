@@ -20,7 +20,6 @@ import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -131,14 +130,13 @@ fun BoughtArticleTextItem(
                                         ColorFilter.colorMatrix(
                                                 ColorMatrix().apply { setToSaturation(0f) }
                                         ),
-                                modifier = Modifier.size(30.dp).alpha(0.8f)
+                                modifier = Modifier.size(30.dp)
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
                                 text = article.name,
-                                color = White.copy(alpha = 0.8f),
+                                color = Color(0xFFAAAAAA),
                                 fontSize = 15.sp,
-                                textDecoration = TextDecoration.LineThrough,
                                 maxLines = 1,
                                 modifier = Modifier.weight(1f)
                         )
@@ -186,9 +184,7 @@ fun ArticleIconItem(
                                                         ColorMatrix().apply { setToSaturation(0f) }
                                                 )
                                         else null,
-                                modifier =
-                                        Modifier.fillMaxSize()
-                                                .alpha(if (article.isBought) 0.8f else 1f)
+                                modifier = Modifier.fillMaxSize()
                         )
                         if (!article.isBought) {
                                 Box(
@@ -220,12 +216,9 @@ fun ArticleIconItem(
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                         text = article.name,
-                        color = if (article.isBought) White.copy(alpha = 0.8f) else White,
+                        color = if (article.isBought) Color(0xFFAAAAAA) else White,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium,
-                        textDecoration =
-                                if (article.isBought) TextDecoration.LineThrough
-                                else TextDecoration.None,
                         maxLines = 1,
                         modifier = Modifier.padding(bottom = 6.dp)
                 )
@@ -258,7 +251,7 @@ fun ArticleCard(
                 colors =
                         CardDefaults.cardColors(
                                 containerColor =
-                                        if (article.isBought) DarkGray.copy(alpha = 0.5f)
+                                        if (article.isBought) DarkGray.copy(alpha = 0f)
                                         else MediumGray
                         )
         ) {
@@ -288,23 +281,16 @@ fun ArticleCard(
                                                                 }
                                                         )
                                                 else null,
-                                        modifier =
-                                                Modifier.size(36.dp)
-                                                        .alpha(if (article.isBought) 0.8f else 1f)
+                                        modifier = Modifier.size(36.dp)
                                 )
                         }
                         Spacer(modifier = Modifier.width(16.dp))
                         Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                         text = article.name,
-                                        color =
-                                                if (article.isBought) White.copy(alpha = 0.8f)
-                                                else White,
+                                        color = if (article.isBought) Color(0xFFAAAAAA) else White,
                                         fontSize = 18.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        textDecoration =
-                                                if (article.isBought) TextDecoration.LineThrough
-                                                else TextDecoration.None
+                                        fontWeight = FontWeight.Bold
                                 )
                                 val frenchName = article.frenchName
                                 if (frenchName != null &&

@@ -255,31 +255,42 @@ fun IconManagerScreen(dataManager: DataManager, onBackClick: () -> Unit) {
                                                         article = item,
                                                         categories = categories,
                                                         currentCategoryId = item.categoryId,
-                                                        onSave = {
-                                                                name,
-                                                                frenchName,
-                                                                iconId,
-                                                                categoryId ->
-                                                                val updatedArticle =
-                                                                        item.copy(
-                                                                                name = name,
-                                                                                frenchName =
-                                                                                        frenchName,
-                                                                                iconId = iconId,
-                                                                                categoryId =
-                                                                                        categoryId
-                                                                        )
-                                                                if (item.id == -1L)
-                                                                        dataManager.addArticle(
-                                                                                updatedArticle
-                                                                        )
-                                                                else
-                                                                        dataManager.updateArticle(
-                                                                                updatedArticle
-                                                                        )
-                                                                articles = dataManager.getArticles()
-                                                                selectedItem = null
-                                                        },
+                                                        onSave =
+                                                                fun(
+                                                                        name: String,
+                                                                        frenchName: String,
+                                                                        iconId: String,
+                                                                        categoryId: Long
+                                                                ): String? {
+                                                                        val updatedArticle =
+                                                                                item.copy(
+                                                                                        name = name,
+                                                                                        frenchName =
+                                                                                                frenchName,
+                                                                                        iconId =
+                                                                                                iconId,
+                                                                                        categoryId =
+                                                                                                categoryId
+                                                                                )
+                                                                        val error =
+                                                                                if (item.id == -1L)
+                                                                                        dataManager
+                                                                                                .addArticle(
+                                                                                                        updatedArticle
+                                                                                                )
+                                                                                else
+                                                                                        dataManager
+                                                                                                .updateArticle(
+                                                                                                        updatedArticle
+                                                                                                )
+                                                                        if (error == null) {
+                                                                                articles =
+                                                                                        dataManager
+                                                                                                .getArticles()
+                                                                                selectedItem = null
+                                                                        }
+                                                                        return error
+                                                                },
                                                         onDelete = {
                                                                 if (item.id != -1L)
                                                                         dataManager.deleteArticle(

@@ -1,9 +1,11 @@
 package com.example.simpleradio.ui.components.dialogs
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -12,6 +14,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 
@@ -92,8 +96,21 @@ fun SearchDialog(initialQuery: String, onDismiss: () -> Unit, onSearch: (String)
                         singleLine = true,
                         trailingIcon = {
                             if (tempQuery.isNotEmpty()) {
-                                IconButton(onClick = { tempQuery = "" }) {
-                                    Icon(Icons.Default.Close, contentDescription = "Réinitialiser")
+                                var isClearFocused by remember { mutableStateOf(false) }
+                                IconButton(
+                                        onClick = { tempQuery = "" },
+                                        modifier = Modifier
+                                                .onFocusChanged { isClearFocused = it.isFocused }
+                                                .background(
+                                                        if (isClearFocused) Color.White else Color.Transparent,
+                                                        CircleShape
+                                                )
+                                ) {
+                                    Icon(
+                                            Icons.Default.Close, 
+                                            contentDescription = "Réinitialiser",
+                                            tint = if (isClearFocused) Color.Black else Color.White
+                                    )
                                 }
                             }
                         },
@@ -102,9 +119,27 @@ fun SearchDialog(initialQuery: String, onDismiss: () -> Unit, onSearch: (String)
                 )
             },
             confirmButton = {
-                TextButton(onClick = { onSearch(tempQuery) }) { Text("Rechercher") }
+                var isConfirmFocused by remember { mutableStateOf(false) }
+                Button(
+                        onClick = { onSearch(tempQuery) },
+                        modifier = Modifier.onFocusChanged { isConfirmFocused = it.isFocused },
+                        colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isConfirmFocused) Color.White else MaterialTheme.colorScheme.primary,
+                                contentColor = if (isConfirmFocused) Color.Black else Color.White
+                        )
+                ) { Text("Rechercher") }
             },
-            dismissButton = { TextButton(onClick = onDismiss) { Text("Annuler") } }
+            dismissButton = {
+                var isCancelFocused by remember { mutableStateOf(false) }
+                Button(
+                        onClick = onDismiss,
+                        modifier = Modifier.onFocusChanged { isCancelFocused = it.isFocused },
+                        colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isCancelFocused) Color.White else MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = if (isCancelFocused) Color.Black else Color.White
+                        )
+                ) { Text("Annuler") }
+            }
     )
 }
 

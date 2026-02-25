@@ -51,7 +51,8 @@ class CastHelper(
             if (GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context) ==
                             ConnectionResult.SUCCESS
             ) {
-                CastContext.getSharedInstance(context) != null
+                CastContext.getSharedInstance(context)
+                true
             } else false
         } catch (_: Exception) {
             false

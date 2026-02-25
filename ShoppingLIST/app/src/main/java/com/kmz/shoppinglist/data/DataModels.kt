@@ -2,10 +2,9 @@ package com.kmz.shoppinglist.data
 
 /** Niveaux de priorité des articles */
 enum class Priority(val displayOrder: Int) {
-    URGENT(0), // 🔴 Rouge pâle
-    IMPORTANT(1), // 🟠 Orange
-    NORMAL(2), // ⚪ Blanc
-    OPTIONAL(3) // Gris
+    URGENT(0), // 🔴 Rouge — très important
+    IMPORTANT(1), // 🟡 Jaune-orange — important
+    NORMAL(2) // 🟢 Vert — ordinaire
 }
 
 /** Représente un article dans la liste */
