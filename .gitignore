@@ -1,5 +1,7 @@
-# Fichiers de sauvegarde Cloud (gérés par les applis)
-MySharedFolder/
+# Fichiers de sauvegarde Cloud - Les JSON sont gérés par les apps via GitHub API
+# Le dossier MySharedFolder/ DOIT exister sur GitHub pour que l'API puisse écrire dedans
+# On ignore uniquement les fichiers JSON locaux (qui seront écrasés par l'API)
+MySharedFolder/*.json
 
 # Sécurité - JAMAIS commiter ces fichiers
 github_token.txt
