@@ -43,7 +43,6 @@ class MainViewModel(
         private set
     var selectedRadioFavoriteListId by
             mutableStateOf(prefs.getInt("selectedRadioFavoriteListId", -1).takeIf { it != -1 })
-        private set
     var radioSearchQuery by mutableStateOf(prefs.getString("radioSearchQuery", "") ?: "")
         private set
 
@@ -83,6 +82,22 @@ class MainViewModel(
         } else {
             prefs.edit { remove("selectedRadioBitrate") }
         }
+    }
+
+    fun setSelectedFavoriteListId(id: Int?) {
+        selectedRadioFavoriteListId = id
+        if (id != null) {
+            prefs.edit { putInt("selectedRadioFavoriteListId", id) }
+        } else {
+            prefs.edit { remove("selectedRadioFavoriteListId") }
+        }
+    }
+
+    fun retourAuxCategories() {
+        isViewingRadioResults = false
+        showRecentRadiosOnly = false
+        selectedRadioFavoriteListId = null
+        prefs.edit { remove("selectedRadioFavoriteListId") }
     }
 
     fun updateSearchQuery(query: String) {
@@ -152,6 +167,7 @@ class MainViewModel(
     }
 
     fun onApplyFilters() {
+        updateSearchQuery("")
         showRecentRadiosOnly = false
         selectedRadioFavoriteListId = null
         isViewingRadioResults = true

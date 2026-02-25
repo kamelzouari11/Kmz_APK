@@ -1,9 +1,20 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.devtools.ksp)
 }
+
+// Lire le local.properties COMMUN à la racine de KmzAPK (partagé par toutes les apps)
+// Chemin: app/ -> TaskManager/ -> KmzAPK/local.properties
+val localProperties = Properties()
+val localPropertiesFile = rootProject.rootDir.parentFile.resolve("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.inputStream().use { localProperties.load(it) }
+}
+val githubToken: String = localProperties.getProperty("github.token", "")
 
 android {
     namespace = "com.kmz.taskmanager"
@@ -15,6 +26,8 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
+        // Token GitHub injecté depuis local.properties commun (jamais dans le code)
+        buildConfigField("String", "GITHUB_TOKEN", "\"$githubToken\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -37,8 +50,10 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true   // nécessaire pour BuildConfig.GITHUB_TOKEN
     }
 }
+
 
 dependencies {
     implementation(libs.androidx.core.ktx)

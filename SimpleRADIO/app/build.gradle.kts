@@ -1,9 +1,21 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
 }
+
+// Lire le local.properties COMMUN à la racine de KmzAPK (partagé par toutes les apps)
+// Chemin: app/ -> SimpleRADIO/ -> KmzAPK/local.properties
+val localProperties = Properties()
+val localPropertiesFile = rootProject.rootDir.parentFile.resolve("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.inputStream().use { localProperties.load(it) }
+}
+val githubToken: String = localProperties.getProperty("github.token", "")
+
 
 android {
     namespace = "com.example.simpleradio"
@@ -15,7 +27,10 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
+        // Token GitHub injecté depuis local.properties (jamais dans le code)
+        buildConfigField("String", "GITHUB_TOKEN", "\"$githubToken\"")
     }
+
 
     signingConfigs {
         create("release") {
@@ -54,7 +69,9 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true   // nécessaire pour BuildConfig.GITHUB_TOKEN
     }
+
 }
 
 dependencies {

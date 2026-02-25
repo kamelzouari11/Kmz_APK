@@ -1,20 +1,23 @@
 # Fichiers de sauvegarde Cloud (gérés par les applis)
 MySharedFolder/
 
-# Sécurité
+# Sécurité - JAMAIS commiter ces fichiers
 github_token.txt
-
-# Android / Gradle
-.gradle/
-build/
-*/build/
-captures/
-.externalNativeBuild/
-.cxx/
+*token*.txt
+*secret*.txt
+**/local.properties
 local.properties
 
+# Android / Gradle
+**/.gradle/
+build/
+**/build/
+captures/
+**/.externalNativeBuild/
+**/.cxx/
+
 # IDE (Android Studio / IntelliJ)
-.idea/
+**/.idea/
 *.iml
 *.iws
 *.ipr

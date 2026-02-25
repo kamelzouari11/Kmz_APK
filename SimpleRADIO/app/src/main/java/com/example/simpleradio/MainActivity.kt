@@ -123,9 +123,12 @@ fun MainScreen(viewModel: MainViewModel, radioRepository: RadioRepository, lrcLi
                         showLyricsGlobal = false
                 } else if (viewModel.isFullScreenPlayer) {
                         viewModel.isFullScreenPlayer = false
-                } else if (viewModel.isViewingRadioResults) {
-                        // Retour intelligent vers les catégories sans reset
-                        viewModel.isViewingRadioResults = false
+                } else if (viewModel.isViewingRadioResults ||
+                                viewModel.selectedRadioFavoriteListId != null
+                ) {
+                        // Retour à l'écran A (catégories + filtres) depuis n'importe quelle
+                        // condition
+                        viewModel.retourAuxCategories()
                 } else {
                         (context as? Activity)?.moveTaskToBack(true)
                 }
@@ -279,6 +282,39 @@ fun MainScreen(viewModel: MainViewModel, radioRepository: RadioRepository, lrcLi
                                                 onToggleViewingResults = { shouldView ->
                                                         viewModel.isViewingRadioResults = shouldView
                                                 },
+                                                onRetourAuxCategories = {
+                                                        viewModel.retourAuxCategories()
+                                                },
+                                                radioFavoriteLists = radioFavoriteLists,
+                                                selectedRadioFavoriteListId =
+                                                        viewModel.selectedRadioFavoriteListId,
+                                                onFavoriteListSelected = { listId ->
+                                                        viewModel.setSelectedFavoriteListId(listId)
+                                                        viewModel.showRecentRadiosOnly = false
+                                                        viewModel.isViewingRadioResults = true
+                                                },
+                                                onDeleteFavoriteList = { list ->
+                                                        scope.launch {
+                                                                radioRepository.removeFavoriteList(
+                                                                        list
+                                                                )
+                                                                if (viewModel
+                                                                                .selectedRadioFavoriteListId ==
+                                                                                list.id
+                                                                ) {
+                                                                        viewModel
+                                                                                .setSelectedFavoriteListId(
+                                                                                        null
+                                                                                )
+                                                                        viewModel
+                                                                                .isViewingRadioResults =
+                                                                                false
+                                                                }
+                                                        }
+                                                },
+                                                onCreateFavoriteList = {
+                                                        viewModel.showAddListDialog = true
+                                                },
                                                 onRadioSelected = { radio ->
                                                         viewModel.currentArtist = null
                                                         viewModel.currentTitle = null
@@ -372,12 +408,6 @@ fun MainScreen(viewModel: MainViewModel, radioRepository: RadioRepository, lrcLi
                                 },
                                 onIncrementSearchTrigger = { viewModel.incrementSearchTrigger() },
                                 radioToFavorite = viewModel.radioToFavorite,
-                                onSetRadioToFavorite = { viewModel.radioToFavorite = it },
-                                radioFavoriteLists = radioFavoriteLists
-                        )
-                }
-        }
-}
                                 onSetRadioToFavorite = { viewModel.radioToFavorite = it },
                                 radioFavoriteLists = radioFavoriteLists
                         )
