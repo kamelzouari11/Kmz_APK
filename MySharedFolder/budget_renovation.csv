@@ -1,7 +1,7 @@
 Lot,Sous-Lot,Article,Quantite,Unite,Prix_Unitaire
-Faux plafond,placo platre,faux plafonds,1,ft,400000
-Faux plafond,placo platre,cloisons plâtre,1,ft,100000
-Électricité,électricité,électricité,1,ft,1000000
+Faux plafond,placo platre,faux plafonds,1,ft,4000
+Faux plafond,placo platre,cloisons plâtre,1,ft,1000
+Électricité,électricité,électricité,1,ft,10000
 Plomberie sanitaire,travaux,plombier,1,ft,500000
 Plomberie sanitaire,fournitures,fournitures,1,ft,1000000
 Menuiserie Bois,menuiserie bois,,,,
