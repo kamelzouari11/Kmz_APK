@@ -41,6 +41,7 @@ import fr.kmz.projects.data.model.Lot
 import fr.kmz.projects.ui.components.LotCard
 import fr.kmz.projects.ui.components.RecapCard
 import fr.kmz.projects.ui.viewmodel.LotViewModel
+import fr.kmz.projects.ui.viewmodel.SyncState
 import fr.kmz.projects.utils.FormattingUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -48,11 +49,13 @@ import fr.kmz.projects.utils.FormattingUtils
 fun LotsScreen(
         viewModel: LotViewModel,
         onLotSelected: (Long, String) -> Unit,
+        isTabletMode: Boolean = false,
         modifier: Modifier = Modifier
 ) {
     val lots by viewModel.lots.collectAsState()
     val lotTotals by viewModel.lotTotals.collectAsState()
     val projectTotal by viewModel.projectTotal.collectAsState()
+    val syncState by viewModel.syncState.collectAsState()
     var showDialog by remember { mutableStateOf(false) }
     var editingLot by remember { mutableStateOf<Lot?>(null) }
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -61,23 +64,25 @@ fun LotsScreen(
 
     Scaffold(
             topBar = {
-                TopAppBar(
-                        title = { Text("Budget Rénovation") },
-                        actions = {
-                            IconButton(onClick = { /* TODO: Download from GitHub */}) {
-                                Icon(
-                                        Icons.Filled.CloudDownload,
-                                        contentDescription = "Télécharger depuis GitHub"
-                                )
+                if (!isTabletMode) {
+                    TopAppBar(
+                            title = { Text("Budget Rénovation") },
+                            actions = {
+                                IconButton(onClick = { viewModel.downloadFromGitHub() }) {
+                                    Icon(
+                                            Icons.Filled.CloudDownload,
+                                            contentDescription = "Télécharger depuis GitHub"
+                                    )
+                                }
+                                IconButton(onClick = { viewModel.uploadToGitHub() }) {
+                                    Icon(
+                                            Icons.Filled.CloudUpload,
+                                            contentDescription = "Sauvegarder sur GitHub"
+                                    )
+                                }
                             }
-                            IconButton(onClick = { /* TODO: Upload to GitHub */}) {
-                                Icon(
-                                        Icons.Filled.CloudUpload,
-                                        contentDescription = "Sauvegarder sur GitHub"
-                                )
-                            }
-                        }
-                )
+                    )
+                }
             },
             floatingActionButton = {
                 FloatingActionButton(
@@ -114,7 +119,8 @@ fun LotsScreen(
                                 nomInput = lot.nom
                                 showDialog = true
                             },
-                            onNavigate = { onLotSelected(lot.id, lot.nom) }
+                            onNavigate = { onLotSelected(lot.id, lot.nom) },
+                            isTabletMode = isTabletMode
                     )
                 }
                 item {
@@ -212,6 +218,38 @@ fun LotsScreen(
                 },
                 dismissButton = { TextButton(onClick = { showDialog = false }) { Text("Annuler") } }
         )
+    }
+
+    when (val state = syncState) {
+        is SyncState.Loading -> {
+            AlertDialog(
+                    onDismissRequest = {},
+                    title = { Text("Synchronisation") },
+                    text = { Text("Veuillez patienter... Communication avec GitHub en cours.") },
+                    confirmButton = {}
+            )
+        }
+        is SyncState.Success -> {
+            AlertDialog(
+                    onDismissRequest = { viewModel.resetSyncState() },
+                    title = { Text("Succès") },
+                    text = { Text(state.message) },
+                    confirmButton = {
+                        TextButton(onClick = { viewModel.resetSyncState() }) { Text("OK") }
+                    }
+            )
+        }
+        is SyncState.Error -> {
+            AlertDialog(
+                    onDismissRequest = { viewModel.resetSyncState() },
+                    title = { Text("Erreur", color = Color.Red) },
+                    text = { Text(state.message) },
+                    confirmButton = {
+                        TextButton(onClick = { viewModel.resetSyncState() }) { Text("OK") }
+                    }
+            )
+        }
+        else -> {}
     }
 }
 

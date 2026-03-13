@@ -10,18 +10,16 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ArticleDao {
-    @Insert
-    suspend fun insert(article: Article): Long
+    @Insert suspend fun insert(article: Article): Long
 
-    @Update
-    suspend fun update(article: Article)
+    @Update suspend fun update(article: Article)
 
-    @Delete
-    suspend fun delete(article: Article)
+    @Delete suspend fun delete(article: Article)
+
+    @Query("DELETE FROM articles") suspend fun clearAllArticles()
 
     @Query("SELECT * FROM articles WHERE sousLotId = :sousLotId ORDER BY dateCreation DESC")
     fun getArticlesBySousLotId(sousLotId: Long): Flow<List<Article>>
 
-    @Query("SELECT * FROM articles WHERE id = :id")
-    suspend fun getArticleById(id: Long): Article?
+    @Query("SELECT * FROM articles WHERE id = :id") suspend fun getArticleById(id: Long): Article?
 }

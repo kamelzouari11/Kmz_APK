@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     kotlin("android")
@@ -14,6 +17,19 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0.0"
+
+        val properties = Properties()
+        val localPropertiesFile = rootProject.rootDir.parentFile.resolve("local.properties")
+        val localProjectPropertiesFallback = rootProject.file("local.properties")
+        
+        if (localPropertiesFile.exists()) {
+            properties.load(FileInputStream(localPropertiesFile))
+        } else if (localProjectPropertiesFallback.exists()) {
+            properties.load(FileInputStream(localProjectPropertiesFallback))
+        }
+        val githubToken = properties.getProperty("github.token", "")
+
+        buildConfigField("String", "GITHUB_TOKEN", "\"$githubToken\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -42,6 +58,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     composeOptions {

@@ -21,11 +21,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.kmz.taskmanager.R
 import com.kmz.taskmanager.data.*
 import com.kmz.taskmanager.util.SmartParser
 import com.kmz.taskmanager.viewmodel.TaskViewModel
@@ -73,7 +77,7 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel()) {
                 drawerState = drawerState,
                 drawerContent = {
                         ModalDrawerSheet(
-                                drawerContainerColor = Color(0xFF1A1A1A), // Fond un peu plus clair
+                                drawerContainerColor = SelectedTaskBg, // Fond un peu plus clair
                                 modifier = Modifier.fillMaxWidth(0.8f),
                                 drawerShape = RoundedCornerShape(topEnd = 0.dp, bottomEnd = 0.dp)
                         ) {
@@ -103,16 +107,16 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel()) {
                                                 selectedFolderId = null
                                                 scope.launch { drawerState.close() }
                                         },
-                                        shape = RoundedCornerShape(8.dp),
+                                        shape = RoundedCornerShape(6.dp),
                                         modifier =
                                                 Modifier.padding(
-                                                        horizontal = 12.dp,
+                                                        horizontal = 6.dp,
                                                         vertical = 2.dp
                                                 ),
                                         colors =
                                                 NavigationDrawerItemDefaults.colors(
                                                         selectedContainerColor = Secondary,
-                                                        selectedTextColor = Black,
+                                                        selectedTextColor = Color.White,
                                                         unselectedTextColor = Color.White,
                                                         unselectedContainerColor = Color.Transparent
                                                 )
@@ -122,7 +126,7 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel()) {
                                         Box(
                                                 modifier =
                                                         Modifier.padding(
-                                                                horizontal = 12.dp,
+                                                                horizontal = 6.dp,
                                                                 vertical = 1.dp // Hauteur réduite
                                                         )
                                         ) {
@@ -135,7 +139,7 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel()) {
                                                                 selectedFolderId = folder.id
                                                                 scope.launch { drawerState.close() }
                                                         },
-                                                        shape = RoundedCornerShape(8.dp),
+                                                        shape = RoundedCornerShape(6.dp),
                                                         badge = {
                                                                 IconButton(
                                                                         onClick = {
@@ -144,7 +148,7 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel()) {
                                                                         },
                                                                         modifier =
                                                                                 Modifier.offset(
-                                                                                        x = 8.dp
+                                                                                        x = 6.dp
                                                                                 ) // Pousse vers la
                                                                         // droite
                                                                         ) {
@@ -161,12 +165,12 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel()) {
                                                                 NavigationDrawerItemDefaults.colors(
                                                                         selectedContainerColor =
                                                                                 Secondary,
-                                                                        selectedTextColor = Black,
+                                                                        selectedTextColor = Color.White,
                                                                         unselectedTextColor =
                                                                                 Color.White,
                                                                         unselectedContainerColor =
                                                                                 if (showFolderMenu)
-                                                                                        MidnightGreen
+                                                                                        SelectedTaskBg
                                                                                 else
                                                                                         Color.Transparent
                                                                 )
@@ -176,7 +180,7 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel()) {
                                                         onDismissRequest = {
                                                                 showFolderMenu = false
                                                         },
-                                                        containerColor = MidnightGreen
+                                                        containerColor = SelectedTaskBg
                                                 ) {
                                                         DropdownMenuItem(
                                                                 text = {
@@ -232,17 +236,47 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel()) {
                         topBar = {
                                 TopAppBar(
                                         title = {
-                                                Text(
-                                                        if (selectedFolderId == null) "TaskManager"
-                                                        else
-                                                                folders
-                                                                        .find { folder ->
-                                                                                folder.id ==
-                                                                                        selectedFolderId
-                                                                        }
-                                                                        ?.name
-                                                                        ?: "TaskManager"
-                                                )
+                                                Row(
+                                                        verticalAlignment =
+                                                                Alignment.CenterVertically
+                                                ) {
+                                                        Image(
+                                                                painter =
+                                                                        painterResource(
+                                                                                id =
+                                                                                        R.drawable
+                                                                                                .app_logo
+                                                                        ),
+                                                                contentDescription = null,
+                                                                modifier =
+                                                                        Modifier.size(48.dp)
+                                                                                .padding(end = 6.dp)
+                                                        )
+                                                        Text(
+                                                                text =
+                                                                        if (selectedFolderId == null
+                                                                        )
+                                                                                stringResource(
+                                                                                        R.string
+                                                                                                .app_name
+                                                                                )
+                                                                        else
+                                                                                folders
+                                                                                        .find {
+                                                                                                folder
+                                                                                                ->
+                                                                                                folder.id ==
+                                                                                                        selectedFolderId
+                                                                                        }
+                                                                                        ?.name
+                                                                                        ?: stringResource(
+                                                                                                R.string
+                                                                                                        .app_name
+                                                                                        ),
+                                                                fontSize = 14.sp,
+                                                                fontWeight = FontWeight.Bold
+                                                        )
+                                                }
                                         },
                                         navigationIcon = {
                                                 IconButton(
@@ -277,6 +311,7 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel()) {
                                                                         tint = Secondary
                                                                 )
                                                         }
+                                                        Spacer(Modifier.width(6.dp))
                                                         IconButton(
                                                                 onClick = {
                                                                         val tasksToDelete =
@@ -321,6 +356,7 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel()) {
                                                                         tint = Secondary
                                                                 )
                                                         }
+                                                        Spacer(Modifier.width(6.dp))
                                                         IconButton(
                                                                 onClick = {
                                                                         taskViewModel
@@ -343,6 +379,7 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel()) {
                                                                         tint = Secondary
                                                                 )
                                                         }
+                                                        Spacer(Modifier.width(6.dp))
                                                         IconButton(
                                                                 onClick = {
                                                                         showAddFolderDialog = true
@@ -365,7 +402,7 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel()) {
                                 FloatingActionButton(
                                         onClick = { showAddTaskDialog = true },
                                         containerColor = Secondary,
-                                        contentColor = Black
+                                        contentColor = Color.White
                                 ) { Icon(Icons.Default.Add, contentDescription = "Ajouter Tâche") }
                         },
                         containerColor = Black
@@ -376,10 +413,10 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel()) {
                                         modifier =
                                                 Modifier.fillMaxWidth()
                                                         .padding(
-                                                                horizontal = 12.dp,
+                                                                horizontal = 6.dp,
                                                                 vertical = 4.dp
                                                         ),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
                                         listOf(
                                                         ViewType.ALL,
@@ -412,7 +449,7 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel()) {
                                                                                         selectedContainerColor =
                                                                                                 Secondary,
                                                                                         selectedLabelColor =
-                                                                                                Black,
+                                                                                                Color.White,
                                                                                         containerColor =
                                                                                                 SurfaceVariant,
                                                                                         labelColor =
@@ -468,14 +505,18 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel()) {
                                                                         fontWeight =
                                                                                 FontWeight.Bold,
                                                                         modifier =
-                                                                                Modifier.padding(
-                                                                                        start =
-                                                                                                16.dp,
-                                                                                        end = 16.dp,
-                                                                                        top = 16.dp,
-                                                                                        bottom =
-                                                                                                4.dp
-                                                                                )
+                                                                                Modifier.fillMaxWidth()
+                                                                                        .padding(
+                                                                                                start =
+                                                                                                        16.dp,
+                                                                                                end =
+                                                                                                        16.dp,
+                                                                                                top =
+                                                                                                        16.dp,
+                                                                                                bottom =
+                                                                                                        4.dp
+                                                                                        ),
+                                                                        textAlign = TextAlign.Center
                                                                 )
                                                                 HorizontalDivider(
                                                                         modifier =
@@ -742,7 +783,7 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel()) {
 fun MoveTasksDialog(folders: List<Folder>, onDismiss: () -> Unit, onMove: (Long) -> Unit) {
         AlertDialog(
                 onDismissRequest = onDismiss,
-                containerColor = Color(0xFF1A1A1A),
+                containerColor = SelectedTaskBg,
                 title = { Text("Déplacer vers...", color = Color.White) },
                 text = {
                         LazyColumn {
@@ -791,7 +832,7 @@ fun TaskItem(
 
         val containerColor =
                 when {
-                        isSelected -> MidnightGreen
+                        isSelected -> SelectedTaskBg
                         isExpired -> ExpiredTaskBg
                         else -> SurfaceVariant
                 }
@@ -825,11 +866,14 @@ fun TaskItem(
                 Card(
                         modifier =
                                 Modifier.fillMaxWidth()
-                                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                                        .padding(horizontal = 6.dp, vertical = 4.dp)
                                         .clickable { onToggle(task) },
                         colors = CardDefaults.cardColors(containerColor = containerColor),
                         shape = RoundedCornerShape(12.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                        border =
+                                if (isSelected) BorderStroke(1.dp, Secondary.copy(alpha = 0.5f))
+                                else null
                 ) {
                         Box {
                                 if (isSelected) {
@@ -845,10 +889,7 @@ fun TaskItem(
                                 }
                                 Row(
                                         modifier =
-                                                Modifier.padding(
-                                                                horizontal = 12.dp,
-                                                                vertical = 6.dp
-                                                        )
+                                                Modifier.padding(horizontal = 6.dp, vertical = 6.dp)
                                                         .fillMaxWidth()
                                                         .height(IntrinsicSize.Min),
                                         verticalAlignment = Alignment.CenterVertically
@@ -877,7 +918,7 @@ fun TaskItem(
                                                                         )
                                                         )
                                                         if (task.alarmLevel != AlarmLevel.MEDIUM) {
-                                                                Spacer(Modifier.width(8.dp))
+                                                                Spacer(Modifier.width(6.dp))
                                                                 Icon(
                                                                         imageVector =
                                                                                 if (task.alarmLevel ==
@@ -951,9 +992,7 @@ fun TaskItem(
                                                                                         isPast ->
                                                                                                 Color.Red
                                                                                         isToday ->
-                                                                                                Color(
-                                                                                                        0xFF4CAF50
-                                                                                                )
+                                                                                                Secondary
                                                                                         isThisWeek ->
                                                                                                 Color.White
                                                                                         else ->
@@ -1020,10 +1059,7 @@ fun TaskItem(
                                                                                         Modifier.size(
                                                                                                 10.dp
                                                                                         ),
-                                                                                tint =
-                                                                                        Color(
-                                                                                                0xFF4CAF50
-                                                                                        )
+                                                                                tint = Secondary
                                                                         )
                                                                 }
 
@@ -1084,7 +1120,7 @@ fun TaskItem(
                                                                                 tint = Color.Gray,
                                                                                 modifier =
                                                                                         Modifier.size(
-                                                                                                18.dp
+                                                                                                16.dp
                                                                                         )
                                                                         )
                                                                 }
@@ -1105,7 +1141,7 @@ fun TaskItem(
                                                                                 tint = Secondary,
                                                                                 modifier =
                                                                                         Modifier.size(
-                                                                                                18.dp
+                                                                                                16.dp
                                                                                         )
                                                                         )
                                                                 }
@@ -1120,7 +1156,7 @@ fun TaskItem(
                                                         tint = Secondary,
                                                         modifier =
                                                                 Modifier.size(20.dp)
-                                                                        .padding(start = 8.dp)
+                                                                        .padding(start = 6.dp)
                                                 )
                                         }
                                 }
@@ -1230,7 +1266,7 @@ fun AddTaskDialog(
                                                 Icons.Default.Check,
                                                 contentDescription = "Valider",
                                                 tint = Secondary,
-                                                modifier = Modifier.size(28.dp)
+                                                modifier = Modifier.size(26.dp)
                                         )
                                 }
                         }
@@ -1266,7 +1302,7 @@ fun AddTaskDialog(
                                                         )
                                         )
                                         folders.forEach { folder ->
-                                                Spacer(Modifier.width(8.dp))
+                                                Spacer(Modifier.width(6.dp))
                                                 FilterChip(
                                                         selected = selectedFolderId == folder.id,
                                                         onClick = { selectedFolderId = folder.id },
@@ -1294,7 +1330,7 @@ fun AddTaskDialog(
                                                         fontSize = 12.sp,
                                                         color = Color.Gray
                                                 )
-                                                Row(modifier = Modifier.padding(top = 8.dp)) {
+                                                Row(modifier = Modifier.padding(top = 6.dp)) {
                                                         Priority.entries.forEach { p ->
                                                                 val pColor =
                                                                         when (p) {
@@ -1315,7 +1351,7 @@ fun AddTaskDialog(
                                                                                                 if (priority ==
                                                                                                                 p
                                                                                                 )
-                                                                                                        28.dp
+                                                                                                        26.dp
                                                                                                 else
                                                                                                         24.dp
                                                                                         )
@@ -1347,7 +1383,7 @@ fun AddTaskDialog(
 
                                         Column(horizontalAlignment = Alignment.End) {
                                                 Text("Alarme", fontSize = 12.sp, color = Color.Gray)
-                                                Row(modifier = Modifier.padding(top = 8.dp)) {
+                                                Row(modifier = Modifier.padding(top = 6.dp)) {
                                                         AlarmLevel.entries.forEach { level ->
                                                                 val icon =
                                                                         when (level) {
@@ -1370,13 +1406,13 @@ fun AddTaskDialog(
                                                                                         24.dp
                                                                                 AlarmLevel
                                                                                         .VERY_HIGH ->
-                                                                                        28.dp
+                                                                                        26.dp
                                                                         }
                                                                 Box(
                                                                         modifier =
                                                                                 Modifier.padding(
                                                                                                 start =
-                                                                                                        8.dp
+                                                                                                        6.dp
                                                                                         )
                                                                                         .size(32.dp)
                                                                                         .border(
@@ -1447,7 +1483,8 @@ fun AddTaskDialog(
                                                 modifier =
                                                         Modifier.fillMaxWidth()
                                                                 .padding(vertical = 4.dp),
-                                                fontWeight = FontWeight.Medium
+                                                fontWeight = FontWeight.Medium,
+                                                textAlign = TextAlign.Center
                                         )
                                 }
                                         ?: Text(
@@ -1456,7 +1493,8 @@ fun AddTaskDialog(
                                                 color = Color.Gray,
                                                 modifier =
                                                         Modifier.fillMaxWidth()
-                                                                .padding(vertical = 4.dp)
+                                                                .padding(vertical = 4.dp),
+                                                textAlign = TextAlign.Center
                                         )
 
                                 Row(
@@ -1582,7 +1620,7 @@ fun AddTaskDialog(
                                                                                 Color.White
                                                                 )
                                                 )
-                                                Spacer(Modifier.width(8.dp))
+                                                Spacer(Modifier.width(6.dp))
                                                 repeatUnitDropdown(
                                                         selectedUnit = repeatUnit,
                                                         onUnitSelected = { repeatUnit = it }
@@ -1620,14 +1658,14 @@ fun AddTaskDialog(
                                                                 unfocusedTextColor = Color.White
                                                         )
                                         )
-                                        Spacer(Modifier.width(8.dp))
+                                        Spacer(Modifier.width(6.dp))
                                         repeatUnitDropdown(
                                                 selectedUnit = warningUnit,
                                                 onUnitSelected = { warningUnit = it }
                                         )
                                 }
 
-                                Spacer(modifier = Modifier.height(8.dp))
+                                Spacer(modifier = Modifier.height(6.dp))
                                 Text(
                                         "Répétition d'avertissement (optionnel)",
                                         fontSize = 12.sp,
@@ -1658,7 +1696,7 @@ fun AddTaskDialog(
                                                                 unfocusedTextColor = Color.White
                                                         )
                                         )
-                                        Spacer(Modifier.width(8.dp))
+                                        Spacer(Modifier.width(6.dp))
                                         repeatUnitDropdown(
                                                 selectedUnit = warningRepeatUnit,
                                                 onUnitSelected = { warningRepeatUnit = it }
@@ -1691,7 +1729,7 @@ fun repeatUnitDropdown(selectedUnit: RepeatUnit, onUnitSelected: (RepeatUnit) ->
                 DropdownMenu(
                         expanded = expanded,
                         onDismissRequest = { expanded = false },
-                        containerColor = Color(0xFF303030) // Gris plus clair
+                        containerColor = SelectedTaskBg // Gris plus clair
                 ) {
                         RepeatUnit.entries.forEach { unit ->
                                 val uLabel =
@@ -1742,7 +1780,7 @@ fun AddFolderDialog(folder: Folder? = null, onDismiss: () -> Unit, onAdd: (Strin
                                 colors =
                                         ButtonDefaults.buttonColors(
                                                 containerColor = Secondary,
-                                                contentColor = Black
+                                                contentColor = Color.White
                                         )
                         ) { Text(if (folder == null) "Créer" else "Sauvegarder") }
                 },

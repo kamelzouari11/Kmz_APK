@@ -268,7 +268,9 @@ fun VideoPlayerView(
                     sleepTimerTimeLeft = sleepTimerTimeLeft,
                     onSetSleepTimer = onSetSleepTimer,
                     onCycleArtwork = {
-                        artworkCycleIndex = (artworkCycleIndex + 1) % cycleList.size
+                        if (cycleList.isNotEmpty()) {
+                            artworkCycleIndex = (artworkCycleIndex + 1) % cycleList.size
+                        }
                     },
                     onTranslate = { toggleTranslation() },
                     isTranslating = isTranslating,
@@ -293,7 +295,9 @@ fun VideoPlayerView(
                     castSession = castSession,
                     upnpManager = upnpManager,
                     onCycleArtwork = {
-                        artworkCycleIndex = (artworkCycleIndex + 1) % cycleList.size
+                        if (cycleList.isNotEmpty()) {
+                            artworkCycleIndex = (artworkCycleIndex + 1) % cycleList.size
+                        }
                     }
             )
 

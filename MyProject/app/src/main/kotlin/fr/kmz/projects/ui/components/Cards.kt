@@ -3,6 +3,7 @@ package fr.kmz.projects.ui.components
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -25,13 +26,20 @@ fun LotCard(
         isValidated: Boolean,
         onEdit: () -> Unit,
         onNavigate: () -> Unit,
+        isTabletMode: Boolean = false,
         modifier: Modifier = Modifier
 ) {
+        val paddingAmount = if (isTabletMode) 4.dp else 8.dp
+        val elevation = if (isTabletMode) 1.dp else 4.dp
         Card(
                 modifier =
                         modifier.fillMaxWidth()
-                                .padding(8.dp)
+                                .padding(horizontal = paddingAmount, vertical = paddingAmount / 2)
                                 .combinedClickable(onClick = onNavigate, onLongClick = onEdit),
+                elevation = CardDefaults.cardElevation(defaultElevation = elevation),
+                shape =
+                        if (isTabletMode) androidx.compose.foundation.shape.RoundedCornerShape(4.dp)
+                        else CardDefaults.shape,
                 colors =
                         CardDefaults.cardColors(
                                 containerColor =
@@ -40,18 +48,23 @@ fun LotCard(
                         )
         ) {
                 Row(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        modifier =
+                                Modifier.fillMaxWidth().padding(if (isTabletMode) 8.dp else 16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                 ) {
                         Text(
                                 text = lotName,
-                                style = MaterialTheme.typography.titleMedium,
+                                style =
+                                        if (isTabletMode) MaterialTheme.typography.bodyMedium
+                                        else MaterialTheme.typography.titleMedium,
                                 modifier = Modifier.weight(1f)
                         )
                         Text(
                                 text = total,
-                                style = MaterialTheme.typography.titleMedium,
+                                style =
+                                        if (isTabletMode) MaterialTheme.typography.bodyMedium
+                                        else MaterialTheme.typography.titleMedium,
                                 color = Color.White,
                                 modifier = Modifier.weight(1f),
                                 textAlign = TextAlign.End
@@ -101,13 +114,21 @@ fun SousLotCard(
         nbArticles: Int,
         onEdit: () -> Unit,
         onNavigate: () -> Unit,
+        isTabletMode: Boolean = false,
         modifier: Modifier = Modifier
 ) {
+        val paddingAmount = if (isTabletMode) 4.dp else 8.dp
+        val elevation = if (isTabletMode) 1.dp else 4.dp
+
         Card(
                 modifier =
                         modifier.fillMaxWidth()
-                                .padding(8.dp)
+                                .padding(horizontal = paddingAmount, vertical = paddingAmount / 2)
                                 .combinedClickable(onClick = onNavigate, onLongClick = onEdit),
+                elevation = CardDefaults.cardElevation(defaultElevation = elevation),
+                shape =
+                        if (isTabletMode) androidx.compose.foundation.shape.RoundedCornerShape(4.dp)
+                        else CardDefaults.shape,
                 colors =
                         CardDefaults.cardColors(
                                 containerColor =
@@ -116,25 +137,33 @@ fun SousLotCard(
                         )
         ) {
                 Row(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        modifier =
+                                Modifier.fillMaxWidth().padding(if (isTabletMode) 8.dp else 16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                 ) {
-                        androidx.compose.foundation.layout.Column(modifier = Modifier.weight(1f)) {
+                        Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                         text = sousLotName,
-                                        style = MaterialTheme.typography.titleMedium
+                                        style =
+                                                if (isTabletMode)
+                                                        MaterialTheme.typography.bodyMedium
+                                                else MaterialTheme.typography.titleMedium
                                 )
-                                Text(
-                                        text = "$nbArticles Articles",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                )
+                                if (!isTabletMode) {
+                                        Text(
+                                                text = "$nbArticles Articles",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                }
                         }
 
                         Text(
                                 text = total,
-                                style = MaterialTheme.typography.titleMedium,
+                                style =
+                                        if (isTabletMode) MaterialTheme.typography.bodyMedium
+                                        else MaterialTheme.typography.titleMedium,
                                 color = Color.White,
                                 modifier = Modifier.weight(1f),
                                 textAlign = TextAlign.End

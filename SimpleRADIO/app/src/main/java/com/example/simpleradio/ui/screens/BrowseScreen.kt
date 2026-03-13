@@ -60,8 +60,12 @@ fun BrowseScreen(
         onAddFavorite: (RadioStationEntity) -> Unit,
         onResetFilters: () -> Unit,
         onSearchClick: () -> Unit,
-        onApplyFilters: () -> Unit
+        onApplyFilters: () -> Unit,
+        onMoveFavorite: (Int, Int) -> Unit = { _, _ -> },
+        allFavoriteUuids: Set<String> = emptySet()
 ) {
+    var isReorderMode by remember { mutableStateOf(false) }
+
     if (isPortrait) {
         Box(modifier = Modifier.fillMaxWidth().fillMaxHeight()) {
             // En portrait : on montre les catégories si on ne visualise pas les résultats
@@ -134,11 +138,35 @@ fun BrowseScreen(
                         Button(
                                 // Toujours revenir à l'écran A quelles que soient les conditions
                                 onClick = onRetourAuxCategories,
-                                modifier = Modifier.fillMaxWidth()
+                                modifier =
+                                        if (selectedRadioFavoriteListId != null) Modifier.weight(1f)
+                                        else Modifier.fillMaxWidth()
                         ) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
                             Spacer(Modifier.width(8.dp))
-                            Text("Retour aux catégories")
+                            Text("Retour")
+                        }
+                        if (selectedRadioFavoriteListId != null) {
+                            Button(
+                                    onClick = { isReorderMode = !isReorderMode },
+                                    modifier = Modifier.weight(1f),
+                                    colors =
+                                            ButtonDefaults.buttonColors(
+                                                    containerColor =
+                                                            if (isReorderMode)
+                                                                    MaterialTheme.colorScheme
+                                                                            .secondary
+                                                            else MaterialTheme.colorScheme.primary
+                                            )
+                            ) {
+                                Icon(
+                                        if (isReorderMode) Icons.Default.Check
+                                        else Icons.Default.Reorder,
+                                        null
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(if (isReorderMode) "Terminer" else "Organiser")
+                            }
                         }
                     }
                     RadioStationList(
@@ -148,6 +176,9 @@ fun BrowseScreen(
                             listFocusRequester = listFocusRequester,
                             onRadioSelected = onRadioSelected,
                             onAddFavorite = onAddFavorite,
+                            onMove = onMoveFavorite,
+                            isReorderMode = isReorderMode,
+                            allFavoriteUuids = allFavoriteUuids,
                             modifier = Modifier.padding(8.dp)
                     )
                 }
@@ -260,7 +291,10 @@ fun BrowseScreen(
                         resultsListState = resultsListState,
                         listFocusRequester = listFocusRequester,
                         onRadioSelected = onRadioSelected,
-                        onAddFavorite = onAddFavorite
+                        onAddFavorite = onAddFavorite,
+                        onMove = onMoveFavorite,
+                        isReorderMode = isReorderMode,
+                        allFavoriteUuids = allFavoriteUuids
                 )
             }
         }

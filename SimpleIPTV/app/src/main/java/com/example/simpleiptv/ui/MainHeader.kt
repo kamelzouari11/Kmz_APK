@@ -81,7 +81,7 @@ fun MainHeader(
                                         AsyncImage(
                                                 model = "file:///android_asset/app_logo.jpg",
                                                 contentDescription = null,
-                                                modifier = Modifier.size(60.dp),
+                                                modifier = Modifier.size(50.dp),
                                                 contentScale = ContentScale.Fit
                                         )
 

@@ -1,11 +1,16 @@
 package com.example.simpleiptv.ui.components
 
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import com.example.simpleiptv.data.local.entities.ProfileEntity
 import com.example.simpleiptv.ui.dialogs.GenericFavoriteDialog
 import com.example.simpleiptv.ui.dialogs.ProfileFormDialog
@@ -87,30 +92,56 @@ fun MainDialogs(viewModel: MainViewModel) {
         )
     }
 
-    if (viewModel.syncError != null) {
+    if (viewModel.failedProfileToReload != null) {
         AlertDialog(
-                onDismissRequest = { viewModel.syncError = null },
-                title = { Text("Échec de synchronisation") },
-                text = { Text(viewModel.syncError!!) },
+                onDismissRequest = { viewModel.failedProfileToReload = null },
+                title = { Text("Profil Invalide") },
+                text = {
+                    Text(
+                            "Le profil '${viewModel.failedProfileToReload?.profileName}' n'a pas pu être chargé. Il est peut-être invalide ou l'URL est expirée."
+                    )
+                },
                 confirmButton = {
-                    Button(onClick = { viewModel.syncError = null }) { Text("D'accord") }
+                    var isFocused by remember { mutableStateOf(false) }
+                    Box(
+                            modifier =
+                                    Modifier.onFocusChanged { isFocused = it.isFocused }
+                                            .clickable { viewModel.failedProfileToReload = null }
+                                            .focusable()
+                                            .background(
+                                                    if (isFocused) Color.White
+                                                    else Color.Transparent,
+                                                    MaterialTheme.shapes.small
+                                            )
+                                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                                "Garder",
+                                color =
+                                        if (isFocused) Color.Black
+                                        else MaterialTheme.colorScheme.primary
+                        )
+                    }
                 },
                 dismissButton = {
-                    val activeProfile =
-                            viewModel.profiles.find { it.id == viewModel.activeProfileId }
-                    if (activeProfile != null) {
-                        TextButton(
-                                onClick = {
-                                    viewModel.deleteProfile(activeProfile)
-                                    viewModel.syncError = null
-                                }
-                        ) {
-                            Text(
-                                    "Supprimer ce profil",
-                                    color = androidx.compose.ui.graphics.Color.Red
-                            )
-                        }
-                    }
+                    var isFocused by remember { mutableStateOf(false) }
+                    Box(
+                            modifier =
+                                    Modifier.onFocusChanged { isFocused = it.isFocused }
+                                            .clickable {
+                                                viewModel.failedProfileToReload?.let {
+                                                    viewModel.deleteProfile(it)
+                                                }
+                                                viewModel.failedProfileToReload = null
+                                            }
+                                            .focusable()
+                                            .background(
+                                                    if (isFocused) Color.White
+                                                    else Color.Transparent,
+                                                    MaterialTheme.shapes.small
+                                            )
+                                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) { Text("Supprimer", color = if (isFocused) Color.Black else Color.Red) }
                 }
         )
     }

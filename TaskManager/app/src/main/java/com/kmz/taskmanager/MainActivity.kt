@@ -10,7 +10,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.kmz.taskmanager.ui.MainScreen
-import com.kmz.taskmanager.ui.TaskManagerTheme
+import com.kmz.taskmanager.ui.MyTasksTheme
 import com.kmz.taskmanager.util.NotificationHelper
 
 class MainActivity : ComponentActivity() {
@@ -21,7 +21,7 @@ class MainActivity : ComponentActivity() {
         requestPermissions()
 
         enableEdgeToEdge()
-        setContent { TaskManagerTheme { MainScreen() } }
+        setContent { MyTasksTheme { MainScreen() } }
     }
 
     private fun requestPermissions() {

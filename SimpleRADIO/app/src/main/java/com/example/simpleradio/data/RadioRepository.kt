@@ -8,6 +8,7 @@ import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
 class RadioRepository(
@@ -45,6 +46,7 @@ class RadioRepository(
 
     val allFavoriteLists: Flow<List<RadioFavoriteListEntity>> = dao.getAllRadioFavoriteLists()
     val recentRadios: Flow<List<RadioStationEntity>> = dao.getRecentRadios()
+    val allFavoriteUuids: Flow<Set<String>> = dao.getAllFavoriteUuids().map { it.toSet() }
 
     // --- SAUVEGARDE / EXPORT ---
     suspend fun exportFavoritesToJson(): String {
@@ -153,7 +155,26 @@ class RadioRepository(
         if (currentLists.contains(listId)) {
             dao.removeRadioFromFavorite(RadioFavoriteCrossRef(uuid, listId))
         } else {
-            dao.addRadioToFavorite(RadioFavoriteCrossRef(uuid, listId))
+            val maxPos = dao.getMaxPositionForList(listId) ?: -1
+            dao.addRadioToFavorite(RadioFavoriteCrossRef(uuid, listId, position = maxPos + 1))
+        }
+    }
+
+    suspend fun moveRadio(
+            listId: Int,
+            fromIndex: Int,
+            toIndex: Int,
+            currentList: List<RadioStationEntity>
+    ) {
+        val mutableList = currentList.toMutableList()
+        if (fromIndex !in mutableList.indices || toIndex !in mutableList.indices) return
+
+        val item = mutableList.removeAt(fromIndex)
+        mutableList.add(toIndex, item)
+
+        // Mettre à jour toutes les positions dans la base
+        mutableList.forEachIndexed { index, station ->
+            dao.updateRadioPosition(station.stationuuid, listId, index)
         }
     }
 

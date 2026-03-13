@@ -57,7 +57,13 @@ fun VideoPlayerView(
 ) {
         var isOverlayVisible by remember { mutableStateOf(false) }
         var showFullOverlay by remember(isLandscape) { mutableStateOf(isLandscape) }
-        val focusRequester = remember { FocusRequester() }
+        // boxFocusRequester: gives focus to the main Box so onKeyEvent captures OK.
+        // Without this, the native PlayerView steals focus and OK is never intercepted.
+        val boxFocusRequester = remember { FocusRequester() }
+        // Two separate FocusRequesters to avoid IllegalStateException when both
+        // a category item and the playing channel item are visible at the same time.
+        val categoryFocusRequester = remember { FocusRequester() }
+        val channelFocusRequester = remember { FocusRequester() }
         val vodFocusRequester = remember { FocusRequester() }
         val isVod = playingChannel?.type == "VOD"
 
@@ -68,12 +74,54 @@ fun VideoPlayerView(
         val categoryState = categoriesScrollState ?: rememberLazyListState()
         val channelState = channelsScrollState ?: rememberLazyListState()
 
+        // On first composition, request focus on the Box so key events work immediately.
+        LaunchedEffect(isVod) {
+                if (!isVod && interactive) {
+                        try {
+                                boxFocusRequester.requestFocus()
+                        } catch (e: IllegalStateException) {
+                                /* not yet attached */
+                        }
+                }
+        }
+
+        val playingIndex =
+                remember(currentChannels, playingChannel) {
+                        currentChannels.indexOfFirst { it.stream_id == playingChannel?.stream_id }
+                }
+
         LaunchedEffect(isOverlayVisible, isVod) {
                 if (isVod) {
-                        vodFocusRequester.requestFocus()
+                        try {
+                                vodFocusRequester.requestFocus()
+                        } catch (e: IllegalStateException) {
+                                /* not yet attached */
+                        }
                 } else if (isOverlayVisible && interactive) {
-                        // Priority: Focus the playing channel item if visible in the memory
-                        focusRequester.requestFocus()
+                        // Priority: focus the playing channel if it exists in the list.
+                        // We scroll to it first to ensure the FocusRequester is attached.
+                        if (playingIndex >= 0) {
+                                try {
+                                        channelState.scrollToItem(playingIndex)
+                                        channelFocusRequester.requestFocus()
+                                } catch (e: Exception) {
+                                        categoryFocusRequester.requestFocus()
+                                }
+                        } else {
+                                // Default fallback: focus the selected category item.
+                                try {
+                                        categoryFocusRequester.requestFocus()
+                                } catch (e: IllegalStateException) {
+                                        /* not yet attached */
+                                }
+                        }
+                } else if (!isOverlayVisible && interactive) {
+                        // Overlay closed: return focus to the Box so OK works again.
+                        try {
+                                boxFocusRequester.requestFocus()
+                        } catch (e: IllegalStateException) {
+                                /* ignore */
+                        }
                 }
         }
 
@@ -87,14 +135,16 @@ fun VideoPlayerView(
                                 .background(Color.Black)
                                 .then(
                                         if (!isVod) {
-                                                Modifier.clickable(enabled = interactive) {
-                                                        if (!isOverlayVisible) {
-                                                                showFullOverlay = isLandscape
-                                                                isOverlayVisible = true
-                                                        } else {
-                                                                isOverlayVisible = false
+                                                Modifier.focusRequester(boxFocusRequester)
+                                                        .clickable(enabled = interactive) {
+                                                                if (!isOverlayVisible) {
+                                                                        showFullOverlay =
+                                                                                isLandscape
+                                                                        isOverlayVisible = true
+                                                                } else {
+                                                                        isOverlayVisible = false
+                                                                }
                                                         }
-                                                }
                                                         .focusable()
                                                         .onKeyEvent { event ->
                                                                 if (event.nativeKeyEvent.action ==
@@ -151,8 +201,11 @@ fun VideoPlayerView(
                                         player = exoPlayer
                                         useController = isVod
                                         keepScreenOn = true
-                                        isFocusable = true
-                                        isFocusableInTouchMode = true
+                                        // In LIVE mode, the Box handles all key events.
+                                        // Making the PlayerView non-focusable prevents it
+                                        // from stealing focus and swallowing the OK key.
+                                        isFocusable = isVod
+                                        isFocusableInTouchMode = isVod
                                         playerViewRef = this
                                 }
                         },
@@ -254,7 +307,7 @@ fun VideoPlayerView(
                                                                 modifier = Modifier.padding(16.dp),
                                                                 style =
                                                                         MaterialTheme.typography
-                                                                                .titleMedium
+                                                                                .titleSmall
                                                         )
                                                         LazyColumn(
                                                                 state = countryState,
@@ -328,7 +381,7 @@ fun VideoPlayerView(
                                                                                         style =
                                                                                                 MaterialTheme
                                                                                                         .typography
-                                                                                                        .titleLarge,
+                                                                                                        .bodyLarge,
                                                                                         maxLines =
                                                                                                 1,
                                                                                         overflow =
@@ -348,7 +401,7 @@ fun VideoPlayerView(
                                                         text = "Catégories",
                                                         color = Color.White,
                                                         modifier = Modifier.padding(16.dp),
-                                                        style = MaterialTheme.typography.titleMedium
+                                                        style = MaterialTheme.typography.titleSmall
                                                 )
                                                 LazyColumn(
                                                         state = categoryState,
@@ -381,7 +434,7 @@ fun VideoPlayerView(
                                                                                                 if (isInitialFocus
                                                                                                 )
                                                                                                         Modifier.focusRequester(
-                                                                                                                focusRequester
+                                                                                                                categoryFocusRequester
                                                                                                         )
                                                                                                 else
                                                                                                         Modifier
@@ -438,7 +491,7 @@ fun VideoPlayerView(
                                                                                 style =
                                                                                         MaterialTheme
                                                                                                 .typography
-                                                                                                .titleLarge,
+                                                                                                .bodyLarge,
                                                                                 maxLines = 1,
                                                                                 overflow =
                                                                                         TextOverflow
@@ -465,7 +518,7 @@ fun VideoPlayerView(
                                                 text = "Chaînes",
                                                 color = Color.White,
                                                 modifier = Modifier.padding(16.dp),
-                                                style = MaterialTheme.typography.titleMedium
+                                                style = MaterialTheme.typography.titleSmall
                                         )
                                         LazyColumn(
                                                 state = channelState,
@@ -492,7 +545,7 @@ fun VideoPlayerView(
                                                                                         if (isPlaying
                                                                                         )
                                                                                                 Modifier.focusRequester(
-                                                                                                        focusRequester
+                                                                                                        channelFocusRequester
                                                                                                 )
                                                                                         else
                                                                                                 Modifier
@@ -555,7 +608,7 @@ fun VideoPlayerView(
                                                                         style =
                                                                                 MaterialTheme
                                                                                         .typography
-                                                                                        .titleLarge,
+                                                                                        .bodyLarge,
                                                                         overflow =
                                                                                 TextOverflow
                                                                                         .Ellipsis,

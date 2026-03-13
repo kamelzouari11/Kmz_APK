@@ -19,6 +19,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -125,14 +126,27 @@ fun MainContentPortrait(viewModel: MainViewModel, onChannelClick: (ChannelEntity
                                         color = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.weight(1f)
                                 )
+                                var isAddFocused by remember { mutableStateOf(false) }
                                 IconButton(
                                         onClick = { viewModel.showAddListDialog = true },
-                                        modifier = Modifier.size(32.dp)
+                                        modifier =
+                                                Modifier.size(40.dp).onFocusChanged {
+                                                    isAddFocused = it.isFocused
+                                                }
                                 ) {
                                     Icon(
                                             Icons.Default.Add,
                                             null,
-                                            tint = MaterialTheme.colorScheme.primary
+                                            tint =
+                                                    if (isAddFocused) Color.Black
+                                                    else MaterialTheme.colorScheme.primary,
+                                            modifier =
+                                                    Modifier.size(24.dp)
+                                                            .background(
+                                                                    if (isAddFocused) Color.White
+                                                                    else Color.Transparent,
+                                                                    MaterialTheme.shapes.small
+                                                            )
                                     )
                                 }
                             }

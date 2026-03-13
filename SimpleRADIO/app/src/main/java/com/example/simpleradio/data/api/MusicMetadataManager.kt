@@ -1,9 +1,6 @@
-
-
 package com.example.simpleradio.data.api
 
 import android.net.Uri
-import android.util.Log
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -12,41 +9,42 @@ import okhttp3.Request
 import org.json.JSONObject
 
 /**
- * Gestionnaire de métadonnées musicales multi-sources (Deezer/iTunes).
- * Priorité à la qualité et aux pochettes HD pour les titres radios.
+ * Gestionnaire de métadonnées musicales multi-sources (Deezer/iTunes). Priorité à la qualité et aux
+ * pochettes HD pour les titres radios.
  */
 data class OfficialTrackMetadata(
-    val title: String,
-    val artist: String,
-    val album: String?,
-    val durationMs: Long,
-    val coverUrl: String?,
-    val coverUrlHD: String?,
-    val source: String
+        val title: String,
+        val artist: String,
+        val album: String?,
+        val durationMs: Long,
+        val coverUrl: String?,
+        val coverUrlHD: String?,
+        val source: String
 )
 
 class MusicMetadataManager {
-    private val client = OkHttpClient.Builder()
-        .connectTimeout(10, TimeUnit.SECONDS)
-        .readTimeout(10, TimeUnit.SECONDS)
-        .build()
+    private val client =
+            OkHttpClient.Builder()
+                    .connectTimeout(10, TimeUnit.SECONDS)
+                    .readTimeout(10, TimeUnit.SECONDS)
+                    .build()
 
     companion object {
         private const val TAG = "MusicMetadata"
     }
 
     suspend fun getOfficialMetadata(artist: String, title: String): OfficialTrackMetadata? =
-        withContext(Dispatchers.IO) {
-            // 1. Deezer
-            val deezerResult = searchDeezer(artist, title)
-            if (deezerResult != null) return@withContext deezerResult
+            withContext(Dispatchers.IO) {
+                // 1. Deezer
+                val deezerResult = searchDeezer(artist, title)
+                if (deezerResult != null) return@withContext deezerResult
 
-            // 2. iTunes
-            val itunesResult = searchiTunes(artist, title)
-            if (itunesResult != null) return@withContext itunesResult
+                // 2. iTunes
+                val itunesResult = searchiTunes(artist, title)
+                if (itunesResult != null) return@withContext itunesResult
 
-            null
-        }
+                null
+            }
 
     private fun searchDeezer(artist: String, title: String): OfficialTrackMetadata? {
         return try {
@@ -69,14 +67,15 @@ class MusicMetadataManager {
             val artistObj = track.optJSONObject("artist")
 
             OfficialTrackMetadata(
-                title = track.getString("title"),
-                artist = artistObj?.getString("name") ?: artist,
-                album = albumObj?.optString("title"),
-                durationMs = track.getLong("duration") * 1000,
-                coverUrl = albumObj?.optString("cover_medium"),
-                coverUrlHD = albumObj?.optString("cover_big")?.replace("500x500", "600x600")
-                    ?: albumObj?.optString("cover_medium")?.replace("250x250", "600x600"),
-                source = "deezer"
+                    title = track.getString("title"),
+                    artist = artistObj?.getString("name") ?: artist,
+                    album = albumObj?.optString("title"),
+                    durationMs = track.getLong("duration") * 1000,
+                    coverUrl = albumObj?.optString("cover_medium"),
+                    coverUrlHD = albumObj?.optString("cover_big")?.replace("500x500", "600x600")
+                                    ?: albumObj?.optString("cover_medium")
+                                            ?.replace("250x250", "600x600"),
+                    source = "deezer"
             )
         } catch (e: Exception) {
             null
@@ -102,14 +101,15 @@ class MusicMetadataManager {
             val artistObj = track.optJSONObject("artist")
 
             OfficialTrackMetadata(
-                title = track.getString("title"),
-                artist = artistObj?.getString("name") ?: artist,
-                album = albumObj?.optString("title"),
-                durationMs = track.getLong("duration") * 1000,
-                coverUrl = albumObj?.optString("cover_medium"),
-                coverUrlHD = albumObj?.optString("cover_big")?.replace("500x500", "600x600")
-                    ?: albumObj?.optString("cover_medium")?.replace("250x250", "600x600"),
-                source = "deezer"
+                    title = track.getString("title"),
+                    artist = artistObj?.getString("name") ?: artist,
+                    album = albumObj?.optString("title"),
+                    durationMs = track.getLong("duration") * 1000,
+                    coverUrl = albumObj?.optString("cover_medium"),
+                    coverUrlHD = albumObj?.optString("cover_big")?.replace("500x500", "600x600")
+                                    ?: albumObj?.optString("cover_medium")
+                                            ?.replace("250x250", "600x600"),
+                    source = "deezer"
             )
         } catch (e: Exception) {
             null
@@ -134,13 +134,13 @@ class MusicMetadataManager {
             val artworkUrl = track.optString("artworkUrl100", "")
 
             OfficialTrackMetadata(
-                title = track.getString("trackName"),
-                artist = track.getString("artistName"),
-                album = track.optString("collectionName"),
-                durationMs = track.getLong("trackTimeMillis"),
-                coverUrl = artworkUrl.replace("100x100bb", "300x300bb"),
-                coverUrlHD = artworkUrl.replace("100x100bb", "600x600bb"),
-                source = "itunes"
+                    title = track.getString("trackName"),
+                    artist = track.getString("artistName"),
+                    album = track.optString("collectionName"),
+                    durationMs = track.getLong("trackTimeMillis"),
+                    coverUrl = artworkUrl.replace("100x100bb", "300x300bb"),
+                    coverUrlHD = artworkUrl.replace("100x100bb", "600x600bb"),
+                    source = "itunes"
             )
         } catch (e: Exception) {
             null
@@ -148,6 +148,14 @@ class MusicMetadataManager {
     }
 
     private fun cleanSearchTerm(term: String): String {
-        return term.replace("\"", "").replace("'", "'").replace(":", " ").replace("/", " ").trim()
+        return term.replace("\"", "")
+                .replace("'", "")
+                .replace("(", "")
+                .replace(")", "")
+                .replace("[", "")
+                .replace("]", "")
+                .replace(":", " ")
+                .replace("/", " ")
+                .trim()
     }
 }

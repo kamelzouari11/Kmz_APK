@@ -39,12 +39,24 @@ interface RadioDao {
         SELECT radio_stations.* FROM radio_stations 
         INNER JOIN radio_favorites ON radio_stations.stationuuid = radio_favorites.stationuuid 
         WHERE radio_favorites.listId = :listId
+        ORDER BY radio_favorites.position ASC
     """
     )
     fun getRadiosByFavoriteList(listId: Int): Flow<List<RadioStationEntity>>
 
+    @Query("SELECT MAX(position) FROM radio_favorites WHERE listId = :listId")
+    suspend fun getMaxPositionForList(listId: Int): Int?
+
+    @Query(
+            "UPDATE radio_favorites SET position = :newPosition WHERE stationuuid = :uuid AND listId = :listId"
+    )
+    suspend fun updateRadioPosition(uuid: String, listId: Int, newPosition: Int)
+
     @Query("SELECT listId FROM radio_favorites WHERE stationuuid = :uuid")
     suspend fun getListIdsForRadio(uuid: String): List<Int>
+
+    @Query("SELECT DISTINCT stationuuid FROM radio_favorites")
+    fun getAllFavoriteUuids(): Flow<List<String>>
 
     // --- WEB RADIOS Recents ---
     @Insert(onConflict = OnConflictStrategy.REPLACE)

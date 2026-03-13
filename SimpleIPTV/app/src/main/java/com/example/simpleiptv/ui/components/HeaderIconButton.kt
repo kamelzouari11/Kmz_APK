@@ -26,7 +26,7 @@ fun HeaderIconButton(
         IconButton(
                 onClick = onClick,
                 modifier =
-                        modifier.size(60.dp)
+                        modifier.size(50.dp)
                                 .onFocusChanged { state -> isFocused = state.isFocused }
                                 .scale(if (isFocused) 1.05f else 1f)
                                 .background(
@@ -42,7 +42,7 @@ fun HeaderIconButton(
                         icon,
                         desc,
                         tint = if (isFocused) Color.Black else tintNormal,
-                        modifier = Modifier.size(48.dp)
+                        modifier = Modifier.size(32.dp)
                 )
         }
 }

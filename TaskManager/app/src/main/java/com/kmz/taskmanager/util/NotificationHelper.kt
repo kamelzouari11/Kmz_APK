@@ -318,7 +318,7 @@ object NotificationHelper {
                                 )
                                 .setColor(
                                         if (isLate) android.graphics.Color.RED else 0x4CAF50
-                                ) // Vert TaskManager
+                                ) // Vert MyTasks
                                 .setPriority(
                                         if (isLate || alarmLevel == AlarmLevel.VERY_HIGH)
                                                 NotificationCompat.PRIORITY_MAX

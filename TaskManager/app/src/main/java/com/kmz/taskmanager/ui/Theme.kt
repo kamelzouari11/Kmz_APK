@@ -11,7 +11,7 @@ private val DarkColorScheme =
                 background = Black,
                 surface = DarkGray,
                 onPrimary = Color.Black,
-                onSecondary = Color.Black,
+                onSecondary = Color.White,
                 onBackground = Color.White,
                 onSurface = Color.White,
                 surfaceVariant = SurfaceVariant,
@@ -19,6 +19,6 @@ private val DarkColorScheme =
         )
 
 @Composable
-fun TaskManagerTheme(content: @Composable () -> Unit) {
+fun MyTasksTheme(content: @Composable () -> Unit) {
     MaterialTheme(colorScheme = DarkColorScheme, typography = Typography(), content = content)
 }

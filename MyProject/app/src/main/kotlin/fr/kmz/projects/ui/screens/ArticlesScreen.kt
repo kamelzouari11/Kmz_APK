@@ -48,6 +48,7 @@ fun ArticlesScreen(
         viewModel: ArticleViewModel,
         sousLotName: String,
         onBackClick: () -> Unit,
+        isTabletMode: Boolean = false,
         modifier: Modifier = Modifier
 ) {
     val articles by viewModel.articles.collectAsState()
@@ -64,17 +65,19 @@ fun ArticlesScreen(
 
     Scaffold(
             topBar = {
-                TopAppBar(
-                        title = { Text(sousLotName) },
-                        navigationIcon = {
-                            IconButton(onClick = onBackClick) {
-                                Icon(
-                                        Icons.AutoMirrored.Filled.ArrowBack,
-                                        contentDescription = "Retour"
-                                )
+                if (!isTabletMode) {
+                    TopAppBar(
+                            title = { Text(sousLotName) },
+                            navigationIcon = {
+                                IconButton(onClick = onBackClick) {
+                                    Icon(
+                                            Icons.AutoMirrored.Filled.ArrowBack,
+                                            contentDescription = "Retour"
+                                    )
+                                }
                             }
-                        }
-                )
+                    )
+                }
             },
             floatingActionButton = {
                 FloatingActionButton(
@@ -112,9 +115,10 @@ fun ArticlesScreen(
                                 nomInput = article.nom
                                 quantiteInput = article.quantite.toString()
                                 uniteInput = article.unite
-                                prixInput = (article.prixUnitaire / 100.0).toString()
+                                prixInput = (article.prixUnitaire / 1000.0).toString()
                                 showDialog = true
-                            }
+                            },
+                            isTabletMode = isTabletMode
                     )
                 }
 

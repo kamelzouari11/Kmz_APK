@@ -75,6 +75,7 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
     var showRestoreConfirmDialog by mutableStateOf(false)
     var backupJsonToRestore by mutableStateOf("")
     var syncError by mutableStateOf<String?>(null)
+    var failedProfileToReload by mutableStateOf<ProfileEntity?>(null)
 
     // Coroutine Jobs to avoid multiple collectors
     private var channelsJob: kotlinx.coroutines.Job? = null
@@ -115,6 +116,7 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
                     try {
                         repository.refreshDatabase(profile)
                     } catch (e: Exception) {
+                        failedProfileToReload = profile
                         syncError =
                                 "Erreur d'importation : ${e.localizedMessage ?: "Erreur inconnue"}"
                     } finally {
@@ -144,6 +146,9 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
                                             else null
                                         }
                                         .distinct()
+                                        .filter {
+                                            it != "ALL"
+                                        } // avoid duplicate with the prepended "ALL"
                         countryFilters = listOf("ALL") + groups
                     }
                 }
@@ -295,6 +300,8 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
         isLoading = true
         try {
             repository.refreshDatabase(profile)
+        } catch (e: Exception) {
+            failedProfileToReload = profile
         } finally {
             isLoading = false
         }

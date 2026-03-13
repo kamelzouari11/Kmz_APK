@@ -17,14 +17,14 @@
         android:banner="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.TaskManager">
+        android:theme="@style/Theme.MyTasks">
         
         <receiver android:name=".util.TaskReminderReceiver" android:exported="false" />
         
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.TaskManager">
+            android:theme="@style/Theme.MyTasks">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

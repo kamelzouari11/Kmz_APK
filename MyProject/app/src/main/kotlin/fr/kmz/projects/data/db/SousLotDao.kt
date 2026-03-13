@@ -12,20 +12,18 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface SousLotDao {
-    @Insert
-    suspend fun insert(sousLot: SousLot): Long
+    @Insert suspend fun insert(sousLot: SousLot): Long
 
-    @Update
-    suspend fun update(sousLot: SousLot)
+    @Update suspend fun update(sousLot: SousLot)
 
-    @Delete
-    suspend fun delete(sousLot: SousLot)
+    @Delete suspend fun delete(sousLot: SousLot)
+
+    @Query("DELETE FROM sous_lots") suspend fun clearAllSousLots()
 
     @Query("SELECT * FROM sous_lots WHERE lotId = :lotId ORDER BY dateCreation DESC")
     fun getSousLotsByLotId(lotId: Long): Flow<List<SousLot>>
 
-    @Query("SELECT * FROM sous_lots WHERE id = :id")
-    suspend fun getSousLotById(id: Long): SousLot?
+    @Query("SELECT * FROM sous_lots WHERE id = :id") suspend fun getSousLotById(id: Long): SousLot?
 
     @Transaction
     @Query("SELECT * FROM sous_lots WHERE id = :id")

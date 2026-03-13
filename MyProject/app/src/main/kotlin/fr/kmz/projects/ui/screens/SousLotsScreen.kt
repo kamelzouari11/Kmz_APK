@@ -49,6 +49,7 @@ fun SousLotsScreen(
         lotName: String,
         onBackClick: () -> Unit,
         onSousLotSelected: (Long, String) -> Unit,
+        isTabletMode: Boolean = false,
         modifier: Modifier = Modifier
 ) {
     val sousLots by viewModel.sousLots.collectAsState()
@@ -64,17 +65,19 @@ fun SousLotsScreen(
 
     Scaffold(
             topBar = {
-                TopAppBar(
-                        title = { Text(lotName) },
-                        navigationIcon = {
-                            IconButton(onClick = onBackClick) {
-                                Icon(
-                                        Icons.AutoMirrored.Filled.ArrowBack,
-                                        contentDescription = "Retour"
-                                )
+                if (!isTabletMode) {
+                    TopAppBar(
+                            title = { Text(lotName) },
+                            navigationIcon = {
+                                IconButton(onClick = onBackClick) {
+                                    Icon(
+                                            Icons.AutoMirrored.Filled.ArrowBack,
+                                            contentDescription = "Retour"
+                                    )
+                                }
                             }
-                        }
-                )
+                    )
+                }
             },
             floatingActionButton = {
                 FloatingActionButton(
@@ -110,7 +113,8 @@ fun SousLotsScreen(
                                 nomInput = sousLot.nom
                                 showDialog = true
                             },
-                            onNavigate = { onSousLotSelected(sousLot.id, sousLot.nom) }
+                            onNavigate = { onSousLotSelected(sousLot.id, sousLot.nom) },
+                            isTabletMode = isTabletMode
                     )
                 }
                 item {

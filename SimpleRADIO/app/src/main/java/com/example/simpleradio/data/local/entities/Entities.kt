@@ -22,7 +22,7 @@ data class RadioFavoriteListEntity(
 )
 
 @Entity(tableName = "radio_favorites", primaryKeys = ["stationuuid", "listId"])
-data class RadioFavoriteCrossRef(val stationuuid: String, val listId: Int)
+data class RadioFavoriteCrossRef(val stationuuid: String, val listId: Int, val position: Int = 0)
 
 @Entity(tableName = "radio_recent")
 data class RadioRecentEntity(@PrimaryKey val stationuuid: String, val timestamp: Long)

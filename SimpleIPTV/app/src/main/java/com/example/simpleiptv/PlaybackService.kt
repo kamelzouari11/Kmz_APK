@@ -10,6 +10,8 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.trackselection.AdaptiveTrackSelection
+import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 
@@ -33,17 +35,28 @@ class PlaybackService : MediaSessionService() {
                 val loadControl =
                         androidx.media3.exoplayer.DefaultLoadControl.Builder()
                                 .setBufferDurationsMs(
-                                        10_000, // minBufferMs: Lower for faster seek/start
-                                        // capability
-                                        50_000, // maxBufferMs: High top-end for stability
-                                        1_000, // bufferForPlaybackMs: START FAST (1s instead of 2s)
-                                        2_000 // bufferForPlaybackAfterRebufferMs: Resume fairly
-                                        // quickly
+                                        15_000, // minBufferMs: More buffer for stability
+                                        60_000, // maxBufferMs: Allow up to 1 min of cache
+                                        2_000, // bufferForPlaybackMs: Wait for 2s before start
+                                        4_000 // bufferForPlaybackAfterRebufferMs: Be more cautious
+                                        // when resuming
                                         )
-                                .setPrioritizeTimeOverSizeThresholds(
-                                        true
-                                ) // Ensure time rules override byte size rules
+                                .setPrioritizeTimeOverSizeThresholds(true)
                                 .build()
+
+                // Configure TrackSelection to be aggressive for IPTV
+                // Higher duration for increase (don't rush to 4K/HD)
+                // Lower duration for decrease (Drop to SD fast if buffer is low)
+                val trackSelectionFactory =
+                        AdaptiveTrackSelection.Factory(
+                                20_000, // minDurationForQualityIncreaseMs: Wait 20s of stability
+                                // before going HD
+                                3_000, // maxDurationForQualityDecreaseMs: Drop to SD in 3s if it
+                                // lags
+                                10_000, // minDurationToRetainAfterDiscardMs
+                                AdaptiveTrackSelection.DEFAULT_BANDWIDTH_FRACTION
+                        )
+                val trackSelector = DefaultTrackSelector(this, trackSelectionFactory)
 
                 val player =
                         ExoPlayer.Builder(this)
@@ -53,6 +66,7 @@ class PlaybackService : MediaSessionService() {
                                                 )
                                                 .setDataSourceFactory(httpDataSourceFactory)
                                 )
+                                .setTrackSelector(trackSelector)
                                 .setLoadControl(loadControl)
                                 .setAudioAttributes(
                                         androidx.media3.common.AudioAttributes.DEFAULT,

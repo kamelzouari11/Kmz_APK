@@ -27,39 +27,80 @@ fun ArticleCard(
         prixUnitaire: String,
         total: String,
         onEdit: () -> Unit,
+        isTabletMode: Boolean = false,
         modifier: Modifier = Modifier
 ) {
-    Card(
-            modifier =
-                    modifier.fillMaxWidth()
-                            .padding(8.dp)
-                            .combinedClickable(
-                                    onClick = {}, /* no action on simple click */
-                                    onLongClick = onEdit
-                            ),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-        Row(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = nom, style = MaterialTheme.typography.titleMedium)
-                Text(
-                        text = "$quantite $unite × $prixUnitaire",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface
-                )
-            }
+        val paddingAmount = if (isTabletMode) 4.dp else 8.dp
+        val elevation = if (isTabletMode) 1.dp else 4.dp // less elevation for row feel
 
-            Text(
-                    text = total,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color.White,
-                    modifier = Modifier.weight(1f),
-                    textAlign = TextAlign.End
-            )
+        Card(
+                modifier =
+                        modifier.fillMaxWidth()
+                                .padding(horizontal = paddingAmount, vertical = paddingAmount / 2)
+                                .combinedClickable(
+                                        onClick = onEdit, /* easy click in tableur mode */
+                                        onLongClick = onEdit
+                                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = elevation),
+                shape =
+                        if (isTabletMode) androidx.compose.foundation.shape.RoundedCornerShape(4.dp)
+                        else CardDefaults.shape,
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+                Row(
+                        modifier =
+                                Modifier.fillMaxWidth().padding(if (isTabletMode) 8.dp else 16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                ) {
+                        if (isTabletMode) {
+                                // Table row mode: Nom | Qté | Prix U. | Total
+                                Text(
+                                        text = nom,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.weight(2f)
+                                )
+                                Text(
+                                        text = "$quantite $unite",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.weight(1f)
+                                )
+                                Text(
+                                        text = prixUnitaire,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        textAlign = TextAlign.End,
+                                        modifier = Modifier.weight(1f)
+                                )
+                                Text(
+                                        text = total,
+                                        style = MaterialTheme.typography.titleSmall,
+                                        color = Color.White,
+                                        modifier = Modifier.weight(1f),
+                                        textAlign = TextAlign.End
+                                )
+                        } else {
+                                // Original Card Mode
+                                Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                                text = nom,
+                                                style = MaterialTheme.typography.titleMedium
+                                        )
+                                        Text(
+                                                text = "$quantite $unite × $prixUnitaire",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                }
+
+                                Text(
+                                        text = total,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = Color.White,
+                                        modifier = Modifier.weight(1f),
+                                        textAlign = TextAlign.End
+                                )
+                        }
+                }
         }
-    }
 }

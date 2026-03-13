@@ -1,7 +1,10 @@
 package com.example.simpleradio.ui
 
 import android.content.SharedPreferences
-import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.core.content.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -139,6 +142,11 @@ class MainViewModel(
                 isLoading = false
             }
         }
+    }
+
+    fun moveFavorite(fromIndex: Int, toIndex: Int, currentList: List<RadioStationEntity>) {
+        val listId = selectedRadioFavoriteListId ?: return
+        viewModelScope.launch { radioRepository.moveRadio(listId, fromIndex, toIndex, currentList) }
     }
 
     fun onRecentClick() {

@@ -116,6 +116,8 @@ fun MainScreen(viewModel: MainViewModel, radioRepository: RadioRepository, lrcLi
         val radioFavoriteLists by
                 radioRepository.allFavoriteLists.collectAsState(initial = emptyList())
         val recentRadios by radioRepository.recentRadios.collectAsState(initial = emptyList())
+        val allFavoriteUuids by
+                radioRepository.allFavoriteUuids.collectAsState(initial = emptySet())
 
         // --- NAVIGATION BACK ---
         BackHandler(enabled = true) {
@@ -363,7 +365,15 @@ fun MainScreen(viewModel: MainViewModel, radioRepository: RadioRepository, lrcLi
                                                 onAddFavorite = { viewModel.radioToFavorite = it },
                                                 onResetFilters = { viewModel.onResetFilters() },
                                                 onSearchClick = { showSearchDialog = true },
-                                                onApplyFilters = { viewModel.onApplyFilters() }
+                                                onApplyFilters = { viewModel.onApplyFilters() },
+                                                onMoveFavorite = { from, to ->
+                                                        viewModel.moveFavorite(
+                                                                from,
+                                                                to,
+                                                                currentRadioList
+                                                        )
+                                                },
+                                                allFavoriteUuids = allFavoriteUuids
                                         )
                                 }
                         }

@@ -23,7 +23,7 @@ object BackupUtils {
                 val base64Content = Base64.encodeToString(json.toByteArray(), Base64.NO_WRAP)
                 
                 val bodyJson = JSONObject().apply {
-                    put("message", "Mise à jour du backup TaskManager")
+                    put("message", "Mise à jour du backup MyTasks")
                     put("content", base64Content)
                     if (sha != null) put("sha", sha)
                 }
