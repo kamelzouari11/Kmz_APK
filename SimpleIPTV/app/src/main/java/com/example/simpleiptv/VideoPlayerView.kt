@@ -79,7 +79,7 @@ fun VideoPlayerView(
                 if (!isVod && interactive) {
                         try {
                                 boxFocusRequester.requestFocus()
-                        } catch (e: IllegalStateException) {
+                        } catch (e: Exception) {
                                 /* not yet attached */
                         }
                 }
@@ -94,7 +94,7 @@ fun VideoPlayerView(
                 if (isVod) {
                         try {
                                 vodFocusRequester.requestFocus()
-                        } catch (e: IllegalStateException) {
+                        } catch (e: Exception) {
                                 /* not yet attached */
                         }
                 } else if (isOverlayVisible && interactive) {
@@ -105,13 +105,17 @@ fun VideoPlayerView(
                                         channelState.scrollToItem(playingIndex)
                                         channelFocusRequester.requestFocus()
                                 } catch (e: Exception) {
-                                        categoryFocusRequester.requestFocus()
+                                        try {
+                                                categoryFocusRequester.requestFocus()
+                                        } catch (e2: Exception) {
+                                                /* ignore */
+                                        }
                                 }
                         } else {
                                 // Default fallback: focus the selected category item.
                                 try {
                                         categoryFocusRequester.requestFocus()
-                                } catch (e: IllegalStateException) {
+                                } catch (e: Exception) {
                                         /* not yet attached */
                                 }
                         }
@@ -119,7 +123,7 @@ fun VideoPlayerView(
                         // Overlay closed: return focus to the Box so OK works again.
                         try {
                                 boxFocusRequester.requestFocus()
-                        } catch (e: IllegalStateException) {
+                        } catch (e: Exception) {
                                 /* ignore */
                         }
                 }

@@ -76,6 +76,8 @@ class PlaybackService : MediaSessionService() {
                                 .setWakeMode(androidx.media3.common.C.WAKE_MODE_NETWORK)
                                 .build()
 
+                player.repeatMode = Player.REPEAT_MODE_ONE
+
                 val wifiManager =
                         applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
                 val lockType =
@@ -140,6 +142,18 @@ class PlaybackService : MediaSessionService() {
                                 ) {
                                         if (wifiLock?.isHeld == false) wifiLock?.acquire()
                                         if (wakeLock?.isHeld == false) wakeLock?.acquire()
+                                }
+
+                                override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                                        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                                                try {
+                                                        if (player.playbackState != Player.STATE_READY) {
+                                                                player.seekToDefaultPosition()
+                                                                player.prepare()
+                                                                player.play()
+                                                        }
+                                                } catch(e: Exception) {}
+                                        }, 4000)
                                 }
                         }
                 )

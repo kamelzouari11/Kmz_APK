@@ -196,12 +196,12 @@ fun MainHeader(
                                         )
                                         HeaderIconButton(
                                                 icon = Icons.Default.CloudUpload,
-                                                desc = "Sauvegarder",
+                                                desc = "Upload to Github",
                                                 onClick = onSave
                                         )
                                         HeaderIconButton(
                                                 icon = Icons.Default.CloudDownload,
-                                                desc = "Restaurer",
+                                                desc = "Download from Github",
                                                 onClick = onRestore
                                         )
                                         HeaderIconButton(
@@ -330,12 +330,12 @@ fun MainHeader(
                                                 )
                                                 HeaderIconButton(
                                                         icon = Icons.Default.CloudUpload,
-                                                        desc = "Sauvegarder",
+                                                        desc = "Upload to Github",
                                                         onClick = onSave
                                                 )
                                                 HeaderIconButton(
                                                         icon = Icons.Default.CloudDownload,
-                                                        desc = "Restaurer",
+                                                        desc = "Download from Github",
                                                         onClick = onRestore
                                                 )
                                                 if (viewModel.playingChannel != null) {

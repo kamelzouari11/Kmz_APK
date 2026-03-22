@@ -64,6 +64,7 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
     var isFullScreenPlayer by mutableStateOf(false)
     var isLoading by mutableStateOf(false)
     var isSearchVisibleOnMobile by mutableStateOf(false)
+    var isShowingChannelsPortrait by mutableStateOf(false)
     var lastGeneratorType by mutableStateOf(GeneratorType.RECENTS)
 
     // Dialog States

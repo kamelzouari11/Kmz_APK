@@ -42,9 +42,8 @@ object BackupUtils {
 
                 client.newCall(request).execute().use { response ->
                     if (response.isSuccessful) {
-                        showToast(context, "Cloud: Backup synchronisé !")
+                        showToast(context, "Upload to Github réussi !")
                     } else {
-                        val errorBody = response.body?.string() ?: ""
                         throw Exception("Erreur GitHub (${response.code})")
                     }
                 }
@@ -71,8 +70,7 @@ object BackupUtils {
                         val contentRelay = jsonResponse.getString("content")
                         val cleanContent = contentRelay.replace("\n", "").replace("\r", "")
                         val decodedBytes = Base64.decode(cleanContent, Base64.DEFAULT)
-
-                        showToast(context, "Cloud: Backup récupéré !")
+                        showToast(context, "Download from Github réussi !")
                         return@withContext String(decodedBytes)
                     } else if (response.code == 404) {
                         throw Exception("Aucun backup trouvé sur GitHub")

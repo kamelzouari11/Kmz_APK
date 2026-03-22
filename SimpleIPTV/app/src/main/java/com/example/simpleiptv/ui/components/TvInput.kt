@@ -104,9 +104,9 @@ fun TvInput(
                                         before: Int,
                                         count: Int
                                 ) {
-                                    if (s.toString() != value) {
-                                        onValueChange(s.toString())
-                                    }
+                                    val currentText = s?.toString() ?: ""
+                                    // Remove the buggy `currentText != value` check since `value` is captured from the initial composition
+                                    onValueChange(currentText)
                                 }
                                 override fun afterTextChanged(s: android.text.Editable?) {}
                             }

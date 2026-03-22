@@ -27,6 +27,8 @@ fun MobileSearchRow(viewModel: MainViewModel) {
                 value = viewModel.searchQuery,
                 onValueChange = {
                     viewModel.searchQuery = it
+                    viewModel.lastGeneratorType = com.example.simpleiptv.ui.viewmodel.GeneratorType.SEARCH
+                    viewModel.isShowingChannelsPortrait = true
                     viewModel.refreshChannels(debounce = true)
                 },
                 label = "Filtrer les chaînes...",

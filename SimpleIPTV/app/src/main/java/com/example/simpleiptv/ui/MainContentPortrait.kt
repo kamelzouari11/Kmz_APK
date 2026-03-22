@@ -33,16 +33,14 @@ import com.example.simpleiptv.ui.viewmodel.MediaMode
 
 @Composable
 fun MainContentPortrait(viewModel: MainViewModel, onChannelClick: (ChannelEntity) -> Unit) {
-    // Local state to manage Screen A1 vs Screen A2
-    var isShowingChannels by remember { mutableStateOf(false) }
 
     // If we are showing channels, handle Back button to return to selection
-    if (isShowingChannels) {
-        BackHandler { isShowingChannels = false }
+    if (viewModel.isShowingChannelsPortrait) {
+        BackHandler { viewModel.isShowingChannelsPortrait = false }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        if (!isShowingChannels) {
+        if (!viewModel.isShowingChannelsPortrait) {
             // --- SCREEN A1: SELECTION (Pays 2 / Categories 7) ---
             Row(modifier = Modifier.fillMaxSize()) {
                 // Left Column: Pays / Groups (Weight 2)
@@ -108,7 +106,7 @@ fun MainContentPortrait(viewModel: MainViewModel, onChannelClick: (ChannelEntity
                                         viewModel.searchQuery = ""
                                         viewModel.lastGeneratorType = GeneratorType.RECENTS
                                         viewModel.refreshChannels()
-                                        isShowingChannels = true
+                                        viewModel.isShowingChannelsPortrait = true
                                     },
                                     onDelete = { viewModel.clearRecents() }
                             )
@@ -162,7 +160,7 @@ fun MainContentPortrait(viewModel: MainViewModel, onChannelClick: (ChannelEntity
                                         viewModel.searchQuery = ""
                                         viewModel.lastGeneratorType = GeneratorType.FAVORITES
                                         viewModel.refreshChannels()
-                                        isShowingChannels = true
+                                        viewModel.isShowingChannelsPortrait = true
                                     },
                                     onDelete = { viewModel.removeFavoriteList(list) }
                             )
@@ -190,7 +188,7 @@ fun MainContentPortrait(viewModel: MainViewModel, onChannelClick: (ChannelEntity
                                     viewModel.searchQuery = ""
                                     viewModel.lastGeneratorType = GeneratorType.CATEGORY
                                     viewModel.refreshChannels()
-                                    isShowingChannels = true
+                                    viewModel.isShowingChannelsPortrait = true
                                 }
                         )
                     }
@@ -204,7 +202,7 @@ fun MainContentPortrait(viewModel: MainViewModel, onChannelClick: (ChannelEntity
                         modifier = Modifier.fillMaxWidth().padding(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = { isShowingChannels = false }) {
+                    IconButton(onClick = { viewModel.isShowingChannelsPortrait = false }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
                     }
                     Text(

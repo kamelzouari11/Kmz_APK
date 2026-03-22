@@ -63,6 +63,21 @@ class BackupService(private val dao: IptvDao) {
 
     suspend fun importDatabaseFromJson(json: String) {
         val backup = moshi.adapter(FullDatabaseBackup::class.java).fromJson(json) ?: return
+        
+        // Clear existing profiles and their associated data
+        val existingProfiles = dao.getAllProfiles().first()
+        existingProfiles.forEach { profile ->
+            listOf("LIVE", "VOD").forEach { type ->
+                dao.clearCategories(profile.id, type)
+                dao.clearChannels(profile.id, type)
+                dao.clearChannelCategoryLinks(profile.id, type)
+                dao.clearFavoriteLists(profile.id, type)
+                dao.clearChannelFavorites(profile.id, type)
+                dao.clearRecents(profile.id, type)
+            }
+            dao.deleteProfile(profile)
+        }
+
         backup.profileBackups.forEach { profileBackup ->
             dao.insertProfile(profileBackup.profile)
             val allProfiles = dao.getAllProfiles().first()
