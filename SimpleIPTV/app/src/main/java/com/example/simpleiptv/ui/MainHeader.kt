@@ -1,19 +1,31 @@
 package com.example.simpleiptv.ui
 
 import android.app.Activity
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
@@ -21,22 +33,27 @@ import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tv
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.input.key.*
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
+import androidx.compose.ui.zIndex
 import androidx.media3.common.Player
 import coil.compose.AsyncImage
 import com.example.simpleiptv.ui.components.HeaderIconButton
@@ -49,318 +66,259 @@ import kotlinx.coroutines.launch
 @Composable
 fun MainHeader(
         viewModel: MainViewModel,
-        isLandscape: Boolean,
-        onSave: () -> Unit,
-        onRestore: () -> Unit,
-        player: Player?
+        onSave: () -> Unit = {},
+        onRestore: () -> Unit = {},
+        player: Player? = null,
+        onGoToPlayer: () -> Unit = {}
 ) {
         val context = LocalContext.current
+        val activity = context as? Activity
         val scope = rememberCoroutineScope()
         val focusManager = LocalFocusManager.current
-        val focusRequester = remember { FocusRequester() }
+        val density = LocalDensity.current
 
-        LaunchedEffect(isLandscape) {
-                if (isLandscape) {
-                        try {
-                                focusRequester.requestFocus()
-                        } catch (e: Exception) {}
-                }
+        // --- Logique commune de l'historique ---
+        var searchFieldFocused by remember { mutableStateOf(false) }
+        val showHistory = searchFieldFocused &&
+                viewModel.searchHistory.isNotEmpty() &&
+                viewModel.searchQuery.isBlank()
+        
+        val searchFieldFocusRequester = remember { FocusRequester() }
+        val firstHistItemFocusRequester = remember { FocusRequester() }
+        val liveButtonFocusRequester = remember { FocusRequester() }
+
+        LaunchedEffect(Unit) {
+            try {
+                liveButtonFocusRequester.requestFocus()
+            } catch (e: Exception) {}
         }
 
+        val popupOffsetY = with(density) { 62.dp.roundToPx() }
+
+        @Composable
+        fun HistoryPopup() {
+            if (showHistory) {
+                // Ce BackHandler est plus prioritaire que le BackHandler global de MainScreen.
+                // BACK depuis la liste historique → retour au champ de recherche (sans fermer l'app).
+                BackHandler {
+                    searchFieldFocused = false
+                    try { searchFieldFocusRequester.requestFocus() } catch (e: Exception) {}
+                }
+                Popup(
+                    alignment = Alignment.TopEnd,
+                    offset = IntOffset(0, popupOffsetY),
+                    onDismissRequest = {
+                        searchFieldFocused = false
+                        try { searchFieldFocusRequester.requestFocus() } catch (e: Exception) {}
+                    },
+                    properties = PopupProperties(focusable = true, dismissOnBackPress = true, dismissOnClickOutside = true)
+                ) {
+                    Card(
+                        modifier = Modifier
+                            .width(280.dp)
+                            .heightIn(max = 350.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF232323)),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 15.dp)
+                    ) {
+                        LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                            itemsIndexed(viewModel.searchHistory) { index, histQuery ->
+                                var isItemFocused by remember { mutableStateOf(false) }
+                                Surface(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .onFocusChanged { isItemFocused = it.isFocused }
+                                        .then(if (index == 0) Modifier.focusRequester(firstHistItemFocusRequester) else Modifier)
+                                        .onPreviewKeyEvent { event ->
+                                            when {
+                                                // Flèche UP sur le 1er item → retour au champ de recherche
+                                                index == 0 && event.key == Key.DirectionUp && event.type == KeyEventType.KeyDown -> {
+                                                    searchFieldFocusRequester.requestFocus()
+                                                    true
+                                                }
+                                                // BACK depuis n'importe quel item → ferme la liste
+                                                event.key == Key.Back && event.type == KeyEventType.KeyDown -> {
+                                                    searchFieldFocused = false
+                                                    try { searchFieldFocusRequester.requestFocus() } catch (e: Exception) {}
+                                                    true
+                                                }
+                                                else -> false
+                                            }
+                                        },
+                                    onClick = {
+                                        viewModel.searchQuery = histQuery
+                                        viewModel.commitSearchToHistory() // Met à jour le timestamp → remonte en 1ère position
+                                        viewModel.lastGeneratorType = GeneratorType.GLOBAL_SEARCH
+                                        viewModel.refreshChannels()
+                                        searchFieldFocused = false
+                                    },
+                                    color = if (isItemFocused) Color.White else Color.Transparent,
+                                    contentColor = if (isItemFocused) Color.Black else Color.White
+                                ) {
+                                    Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.History, null, modifier = Modifier.size(18.dp), tint = if (isItemFocused) Color.Black else Color.Gray)
+                                        Spacer(Modifier.width(12.dp))
+                                        Text(histQuery, fontSize = 15.sp, maxLines = 1)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // ----------------------------------------
+
         Card(
-                modifier = Modifier.fillMaxWidth().padding(8.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)),
+                shape = RectangleShape,
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {
                 Column {
-                        if (isLandscape) {
                                 Row(
-                                        modifier = Modifier.fillMaxWidth().padding(8.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(25.dp)
+                                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                        AsyncImage(
-                                                model = "file:///android_asset/app_logo.jpg",
-                                                contentDescription = null,
-                                                modifier = Modifier.size(50.dp),
-                                                contentScale = ContentScale.Fit
-                                        )
+                                        AsyncImage(model = "file:///android_asset/app_logo.jpg", null, modifier = Modifier.size(50.dp), contentScale = ContentScale.Fit)
 
-                                        TvInput(
-                                                value = viewModel.searchQuery,
-                                                onValueChange = {
+                                        Spacer(modifier = Modifier.width(24.dp))
+
+                                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                            HeaderIconButton(
+                                                icon = Icons.Default.Tv, 
+                                                desc = "Live TV", 
+                                                onClick = { viewModel.setMediaMode(MediaMode.LIVE) }, 
+                                                isSelected = (viewModel.currentMediaMode == MediaMode.LIVE),
+                                                modifier = Modifier.focusRequester(liveButtonFocusRequester)
+                                            )
+                                            HeaderIconButton(Icons.Default.Movie, "Movies", { viewModel.setMediaMode(MediaMode.VOD) }, isSelected = (viewModel.currentMediaMode == MediaMode.VOD))
+                                        }
+
+                                        Spacer(modifier = Modifier.width(32.dp))
+
+                                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                            HeaderIconButton(Icons.Default.CloudDownload, "Import", onRestore)
+                                            HeaderIconButton(Icons.Default.CloudUpload, "Export", onSave)
+                                            HeaderIconButton(Icons.Default.Refresh, "Sync", { 
+                                                viewModel.profiles.find { it.id == viewModel.activeProfileId }?.let { scope.launch { viewModel.refreshDatabase(it) } }
+                                            })
+                                            HeaderIconButton(Icons.Default.Person, "Profiles", { viewModel.showProfileManager = true })
+                                        }
+
+                                        Spacer(modifier = Modifier.width(32.dp))
+
+                                        HeaderIconButton(Icons.Default.PowerSettingsNew, "Exit", { activity?.finish() }, tintNormal = Color.Red)
+
+                                        Spacer(modifier = Modifier.width(48.dp))
+
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Box(modifier = Modifier.width(220.dp).height(60.dp)) {
+                                                TvInput(
+                                                    value = viewModel.searchQuery,
+                                                    onValueChange = {
                                                         viewModel.searchQuery = it
-                                                        viewModel.lastGeneratorType =
-                                                                GeneratorType.SEARCH
+                                                        viewModel.lastGeneratorType = GeneratorType.GLOBAL_SEARCH
                                                         viewModel.refreshChannels(debounce = true)
-                                                },
-                                                label = "Rechercher...",
-                                                focusManager = focusManager,
-                                                leadingIcon = Icons.Default.Search,
-                                                modifier = Modifier.width(180.dp)
-                                        )
-
-                                        HeaderIconButton(
-                                                icon = Icons.Default.Tv,
-                                                desc = "Live TV",
-                                                onClick = {
-                                                        viewModel.setMediaMode(
-                                                                com.example.simpleiptv.ui.viewmodel
-                                                                        .MediaMode.LIVE
-                                                        )
-                                                },
-                                                tintNormal =
-                                                        if (viewModel.currentMediaMode ==
-                                                                        com.example.simpleiptv.ui
-                                                                                .viewmodel.MediaMode
-                                                                                .LIVE
-                                                        )
-                                                                Color.Cyan
-                                                        else Color.Gray,
-                                                isSelected =
-                                                        viewModel.currentMediaMode ==
-                                                                com.example.simpleiptv.ui.viewmodel
-                                                                        .MediaMode.LIVE
-                                        )
-
-                                        HeaderIconButton(
-                                                icon = Icons.Default.Movie,
-                                                desc = "VOD",
-                                                onClick = {
-                                                        viewModel.setMediaMode(
-                                                                com.example.simpleiptv.ui.viewmodel
-                                                                        .MediaMode.VOD
-                                                        )
-                                                },
-                                                tintNormal =
-                                                        if (viewModel.currentMediaMode ==
-                                                                        com.example.simpleiptv.ui
-                                                                                .viewmodel.MediaMode
-                                                                                .VOD
-                                                        )
-                                                                Color.Cyan
-                                                        else Color.Gray,
-                                                isSelected =
-                                                        viewModel.currentMediaMode ==
-                                                                com.example.simpleiptv.ui.viewmodel
-                                                                        .MediaMode.VOD
-                                        )
-
-                                        if (viewModel.searchQuery.isNotBlank()) {
-                                                HeaderIconButton(
-                                                        icon = Icons.Default.Close,
-                                                        desc = "Effacer",
-                                                        onClick = {
-                                                                viewModel.searchQuery = ""
-                                                                viewModel.refreshChannels()
-                                                                focusManager.clearFocus()
-                                                        },
-                                                        tintNormal = MaterialTheme.colorScheme.error
+                                                    },
+                                                    label = "Rechercher...",
+                                                    focusManager = focusManager,
+                                                    leadingIcon = Icons.Default.Search,
+                                                    modifier = Modifier.fillMaxSize().focusRequester(searchFieldFocusRequester),
+                                                    onNativeFocus = { searchFieldFocused = it },
+                                                    onFocusChanged = { searchFieldFocused = it.isFocused },
+                                                    onDownPressed = { if (showHistory) firstHistItemFocusRequester.requestFocus() },
+                                                    onConfirm = { 
+                                                        viewModel.commitSearchToHistory()
+                                                    }
                                                 )
+                                                HistoryPopup()
+                                            }
+                                                
+                                            if (viewModel.searchQuery.isNotEmpty()) {
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                HeaderIconButton(
+                                                    icon = Icons.Default.Close,
+                                                    desc = "Effacer",
+                                                    onClick = { 
+                                                        viewModel.searchQuery = ""
+                                                        viewModel.refreshChannels()
+                                                    },
+                                                    tintNormal = Color.Gray
+                                                )
+                                            }
                                         }
-
-                                        HeaderIconButton(
-                                                icon = Icons.Default.PlayArrow,
-                                                desc = "Player",
-                                                onClick = { viewModel.isFullScreenPlayer = true },
-                                                modifier = Modifier.focusRequester(focusRequester),
-                                                tintNormal =
-                                                        if (viewModel.playingChannel != null)
-                                                                Color.Green
-                                                        else Color.Gray
-                                        )
-
-                                        HeaderIconButton(
-                                                icon = Icons.Default.Person,
-                                                desc = "Profils",
-                                                onClick = { viewModel.showProfileManager = true }
-                                        )
-                                        HeaderIconButton(
-                                                icon = Icons.Default.Refresh,
-                                                desc = "Actualiser",
-                                                onClick = {
-                                                        scope.launch {
-                                                                viewModel.profiles
-                                                                        .find {
-                                                                                it.id ==
-                                                                                        viewModel
-                                                                                                .activeProfileId
-                                                                        }
-                                                                        ?.let {
-                                                                                viewModel
-                                                                                        .refreshDatabase(
-                                                                                                it
-                                                                                        )
-                                                                        }
-                                                        }
-                                                }
-                                        )
-                                        HeaderIconButton(
-                                                icon = Icons.Default.CloudUpload,
-                                                desc = "Upload to Github",
-                                                onClick = onSave
-                                        )
-                                        HeaderIconButton(
-                                                icon = Icons.Default.CloudDownload,
-                                                desc = "Download from Github",
-                                                onClick = onRestore
-                                        )
-                                        HeaderIconButton(
-                                                icon = Icons.Default.PowerSettingsNew,
-                                                desc = "Quitter",
-                                                onClick = {
-                                                        player?.stop()
-                                                        (context as? Activity)?.finishAffinity()
-                                                },
-                                                tintNormal = Color.Red
-                                        )
                                 }
-                        } else {
-                                Column(modifier = Modifier.padding(12.dp)) {
-                                        Row(
-                                                modifier = Modifier.fillMaxWidth().padding(8.dp),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                        ) {
-                                                AsyncImage(
-                                                        model =
-                                                                "file:///android_asset/app_logo.jpg",
-                                                        contentDescription = null,
-                                                        modifier = Modifier.size(40.dp),
-                                                        contentScale =
-                                                                androidx.compose.ui.layout
-                                                                        .ContentScale.Fit
+
+                        // --- Profil courant (commun aux deux modes) ---
+                        viewModel.profiles.find { it.id == viewModel.activeProfileId }?.let { currentProfile ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f))
+                                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.Person,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(14.dp),
+                                    tint = Color(0xFF4CAF50)
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    text = "${currentProfile.profileName}  •  ${currentProfile.url}",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontSize = 17.sp,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+
+                        // Lecture en cours — cliquable pour revenir au player
+                        if (player != null && (player.isPlaying || player.mediaItemCount > 0) && viewModel.playingChannel != null) {
+                                var isNowPlayingFocused by remember { mutableStateOf(false) }
+                                Row(
+                                        modifier = Modifier
+                                                .fillMaxWidth()
+                                                .onFocusChanged { isNowPlayingFocused = it.isFocused }
+                                                .scale(if (isNowPlayingFocused) 1.02f else 1f)
+                                                .background(
+                                                        if (isNowPlayingFocused)
+                                                                Color.White.copy(alpha = 0.95f)
+                                                        else
+                                                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
                                                 )
-                                                HeaderIconButton(
-                                                        icon = Icons.Default.Search,
-                                                        desc = "Recherche",
-                                                        onClick = {
-                                                                viewModel.isSearchVisibleOnMobile =
-                                                                        !viewModel
-                                                                                .isSearchVisibleOnMobile
-                                                        },
-                                                        tintNormal = Color.White
-                                                )
-                                                HeaderIconButton(
-                                                        icon = Icons.Default.Tv,
-                                                        desc = "Live",
-                                                        onClick = {
-                                                                viewModel.setMediaMode(
-                                                                        com.example.simpleiptv.ui
-                                                                                .viewmodel.MediaMode
-                                                                                .LIVE
-                                                                )
-                                                        },
-                                                        tintNormal =
-                                                                if (viewModel.currentMediaMode ==
-                                                                                com.example
-                                                                                        .simpleiptv
-                                                                                        .ui
-                                                                                        .viewmodel
-                                                                                        .MediaMode
-                                                                                        .LIVE
-                                                                )
-                                                                        Color.Cyan
-                                                                else Color.White,
-                                                        isSelected =
-                                                                viewModel.currentMediaMode ==
-                                                                        com.example.simpleiptv.ui
-                                                                                .viewmodel.MediaMode
-                                                                                .LIVE
-                                                )
-                                                HeaderIconButton(
-                                                        icon = Icons.Default.Movie,
-                                                        desc = "VOD",
-                                                        onClick = {
-                                                                viewModel.setMediaMode(
-                                                                        com.example.simpleiptv.ui
-                                                                                .viewmodel.MediaMode
-                                                                                .VOD
-                                                                )
-                                                        },
-                                                        tintNormal =
-                                                                if (viewModel.currentMediaMode ==
-                                                                                com.example
-                                                                                        .simpleiptv
-                                                                                        .ui
-                                                                                        .viewmodel
-                                                                                        .MediaMode
-                                                                                        .VOD
-                                                                )
-                                                                        Color.Cyan
-                                                                else Color.White,
-                                                        isSelected =
-                                                                viewModel.currentMediaMode ==
-                                                                        com.example.simpleiptv.ui
-                                                                                .viewmodel.MediaMode
-                                                                                .VOD
-                                                )
-                                        }
-                                        Spacer(Modifier.height(8.dp))
-                                        Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                        ) {
-                                                HeaderIconButton(
-                                                        icon = Icons.Default.Person,
-                                                        desc = "Profils",
-                                                        onClick = {
-                                                                viewModel.showProfileManager = true
-                                                        }
-                                                )
-                                                HeaderIconButton(
-                                                        icon = Icons.Default.Refresh,
-                                                        desc = "Actualiser",
-                                                        onClick = {
-                                                                scope.launch {
-                                                                        viewModel.profiles
-                                                                                .find {
-                                                                                        it.id ==
-                                                                                                viewModel
-                                                                                                        .activeProfileId
-                                                                                }
-                                                                                ?.let {
-                                                                                        viewModel
-                                                                                                .refreshDatabase(
-                                                                                                        it
-                                                                                                )
-                                                                                }
-                                                                }
-                                                        }
-                                                )
-                                                HeaderIconButton(
-                                                        icon = Icons.Default.CloudUpload,
-                                                        desc = "Upload to Github",
-                                                        onClick = onSave
-                                                )
-                                                HeaderIconButton(
-                                                        icon = Icons.Default.CloudDownload,
-                                                        desc = "Download from Github",
-                                                        onClick = onRestore
-                                                )
-                                                if (viewModel.playingChannel != null) {
-                                                        HeaderIconButton(
-                                                                icon = Icons.Default.PlayArrow,
-                                                                desc = "Retour Player",
-                                                                onClick = {
-                                                                        viewModel
-                                                                                .isFullScreenPlayer =
-                                                                                true
-                                                                },
-                                                                tintNormal = Color.Green
-                                                        )
-                                                }
-                                                HeaderIconButton(
-                                                        icon = Icons.Default.PowerSettingsNew,
-                                                        desc = "Quitter",
-                                                        onClick = {
-                                                                player?.stop()
-                                                                (context as? Activity)
-                                                                        ?.finishAffinity()
-                                                        },
-                                                        tintNormal = Color.Red
-                                                )
-                                        }
+                                                .clickable { onGoToPlayer() }
+                                                .focusable()
+                                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                        Icon(
+                                                Icons.Default.PlayArrow,
+                                                null,
+                                                modifier = Modifier.size(24.dp),
+                                                tint = if (isNowPlayingFocused) Color.Black else MaterialTheme.colorScheme.primary
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(
+                                                text = "▶  ${viewModel.playingChannel!!.name}" +
+                                                        (viewModel.profiles.find { it.id == viewModel.activeProfileId }
+                                                                ?.profileName?.let { "  •  $it" } ?: ""),
+                                                style = MaterialTheme.typography.titleMedium,
+                                                color = if (isNowPlayingFocused) Color.Black else MaterialTheme.colorScheme.onPrimaryContainer,
+                                                modifier = Modifier.weight(1f),
+                                                maxLines = 1,
+                                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(
+                                                text = "Retour au player ›",
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                                color = if (isNowPlayingFocused) Color.Black else MaterialTheme.colorScheme.primary
+                                        )
                                 }
                         }
                 }

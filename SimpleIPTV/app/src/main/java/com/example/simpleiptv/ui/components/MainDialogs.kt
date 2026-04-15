@@ -32,7 +32,8 @@ fun MainDialogs(viewModel: MainViewModel) {
                     viewModel.profileToEdit = profile
                     viewModel.showAddProfileDialog = true
                 },
-                onPurge = { viewModel.purgeProfiles() }
+                onPurge = { viewModel.purgeProfiles() },
+                loadedProfileIds = viewModel.loadedProfileIds
         )
     }
 
@@ -80,11 +81,11 @@ fun MainDialogs(viewModel: MainViewModel) {
     if (viewModel.channelToFavorite != null) {
         GenericFavoriteDialog(
                 title = "Ajouter '${viewModel.channelToFavorite?.name}' à :",
-                lists = viewModel.favoriteLists,
+                lists = viewModel.targetFavoriteLists,
                 onDismiss = { viewModel.channelToFavorite = null },
                 onConfirm = { listId: Int ->
                     viewModel.addChannelToFavoriteList(
-                            viewModel.channelToFavorite!!.stream_id,
+                            viewModel.channelToFavorite!!,
                             listId
                     )
                     viewModel.channelToFavorite = null

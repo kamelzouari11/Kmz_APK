@@ -26,10 +26,12 @@ import com.example.simpleiptv.data.local.entities.ChannelEntity
 fun ChannelItem(
         channel: ChannelEntity,
         isPlaying: Boolean,
+        isFavorite: Boolean = false,
         onClick: () -> Unit,
         onFavoriteClick: () -> Unit,
         modifier: Modifier = Modifier,
-        debugInfo: String = ""
+        debugInfo: String = "",
+        profile: com.example.simpleiptv.data.local.entities.ProfileEntity? = null
 ) {
         var isChannelFocused by remember { mutableStateOf(false) }
         var isFavFocused by remember { mutableStateOf(false) }
@@ -76,18 +78,33 @@ fun ChannelItem(
                                         contentScale = ContentScale.Fit
                                 )
                                 Spacer(Modifier.width(12.dp))
-                                Text(
-                                        text = channel.name,
-                                        color =
-                                                when {
-                                                        isChannelFocused -> Color.Black
-                                                        isPlaying -> Color.Green
-                                                        else -> MaterialTheme.colorScheme.onSurface
-                                                },
-                                        maxLines = 1,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        modifier = Modifier.weight(1f)
-                                )
+                                Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                                text = channel.name,
+                                                color =
+                                                        when {
+                                                                isChannelFocused -> Color.Black
+                                                                isPlaying -> Color.Green
+                                                                else -> MaterialTheme.colorScheme.onSurface
+                                                        },
+                                                maxLines = 1,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                        )
+                                        if (profile != null) {
+                                                Text(
+                                                        text = "${profile.profileName}  •  ${profile.url}",
+                                                        color = if (isChannelFocused)
+                                                                Color.DarkGray
+                                                        else
+                                                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                                        maxLines = 1,
+                                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        fontSize = androidx.compose.ui.unit.TextUnit(12f, androidx.compose.ui.unit.TextUnitType.Sp)
+                                                )
+                                        }
+                                }
                                 if (isPlaying) {
                                         Spacer(Modifier.width(8.dp))
                                         Icon(
@@ -126,7 +143,7 @@ fun ChannelItem(
                                 Icon(
                                         imageVector = Icons.Default.Star,
                                         contentDescription = null,
-                                        tint = if (isFavFocused) Color.Black else Color.Gray,
+                                        tint = if (isFavorite) Color.Green else if (isFavFocused) Color.Black else Color.Gray,
                                         modifier = Modifier.size(32.dp)
                                 )
                         }

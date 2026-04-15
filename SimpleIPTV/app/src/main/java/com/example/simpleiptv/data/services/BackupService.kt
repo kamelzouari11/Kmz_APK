@@ -30,6 +30,11 @@ class BackupService(private val dao: IptvDao) {
         importBackupData(profileId, backup.favoriteLists)
     }
 
+    /**
+     * Exporte les profils, favoris et historique UNIQUEMENT.
+     * Les catégories/chaînes NE SONT PAS exportées — elles restent en cache local
+     * et ne sont rechargées que lors d'un Sync manuel ou pour un nouveau profil.
+     */
     suspend fun exportDatabaseToJson(): String {
         val profiles = dao.getAllProfiles().first()
         val profileBackups =
@@ -57,44 +62,76 @@ class BackupService(private val dao: IptvDao) {
                             favoriteLists = backupLists
                     )
                 }
-        val backup = FullDatabaseBackup(profileBackups = profileBackups)
+        val searchHistoryEntries = dao.getSearchHistory().map { it.query }
+        val backup = FullDatabaseBackup(profileBackups = profileBackups, searchHistory = searchHistoryEntries)
         return moshi.adapter(FullDatabaseBackup::class.java).toJson(backup)
     }
 
+    /**
+     * Importe les profils, favoris et historique depuis un backup GitHub.
+     * 
+     * IMPORTANT : Les catégories et chaînes en cache local sont PRÉSERVÉES.
+     * Seuls les profils (et leurs favoris) qui n'existent pas encore sont ajoutés.
+     * Les profils existants (même URL+user ou URL+MAC) sont mis à jour sans toucher
+     * à leur base de données de chaînes.
+     */
     suspend fun importDatabaseFromJson(json: String) {
         val backup = moshi.adapter(FullDatabaseBackup::class.java).fromJson(json) ?: return
         
-        // Clear existing profiles and their associated data
         val existingProfiles = dao.getAllProfiles().first()
-        existingProfiles.forEach { profile ->
-            listOf("LIVE", "VOD").forEach { type ->
-                dao.clearCategories(profile.id, type)
-                dao.clearChannels(profile.id, type)
-                dao.clearChannelCategoryLinks(profile.id, type)
-                dao.clearFavoriteLists(profile.id, type)
-                dao.clearChannelFavorites(profile.id, type)
-                dao.clearRecents(profile.id, type)
-            }
-            dao.deleteProfile(profile)
-        }
 
         backup.profileBackups.forEach { profileBackup ->
-            dao.insertProfile(profileBackup.profile)
-            val allProfiles = dao.getAllProfiles().first()
-            val newProfile =
-                    allProfiles.find {
-                        it.profileName == profileBackup.profile.profileName &&
-                                it.url == profileBackup.profile.url
-                    }
-            if (newProfile != null) {
-                importBackupData(newProfile.id, profileBackup.favoriteLists)
+            val incoming = profileBackup.profile
+            
+            // Chercher un profil existant avec la même identité
+            val existingProfile = existingProfiles.find { existing ->
+                if (incoming.type == "stalker") {
+                    existing.url == incoming.url && existing.macAddress == incoming.macAddress
+                } else {
+                    existing.url == incoming.url && existing.username == incoming.username && existing.password == incoming.password
+                }
             }
+
+            val targetProfileId: Int
+
+            if (existingProfile != null) {
+                // Profil déjà existant : mettre à jour le nom seulement, GARDER la base intacte
+                dao.updateProfile(existingProfile.copy(profileName = incoming.profileName))
+                targetProfileId = existingProfile.id
+            } else {
+                // Nouveau profil : l'insérer (la base de chaînes sera chargée automatiquement
+                // par le ViewModel grâce au check getCategoryCount == 0)
+                dao.insertProfile(incoming)
+                val allProfiles = dao.getAllProfiles().first()
+                val newProfile = allProfiles.find {
+                    if (incoming.type == "stalker") {
+                        it.url == incoming.url && it.macAddress == incoming.macAddress
+                    } else {
+                        it.url == incoming.url && it.username == incoming.username && it.password == incoming.password
+                    }
+                }
+                targetProfileId = newProfile?.id ?: return@forEach
+            }
+
+            // Importer les favoris (fusionner sans écraser les existants)
+            importBackupData(targetProfileId, profileBackup.favoriteLists)
         }
+
+        // Restaurer l'historique de recherche (fusionner)
+        backup.searchHistory.forEach { query ->
+            dao.insertSearchHistory(
+                com.example.simpleiptv.data.local.entities.SearchHistoryEntity(
+                    query = query,
+                    timestamp = System.currentTimeMillis()
+                )
+            )
+        }
+        dao.trimSearchHistory()
     }
 
     private suspend fun importBackupData(profileId: Int, favoriteLists: List<BackupFavoriteList>) {
         favoriteLists.forEach { backupList ->
-            val mediaType = backupList.type // Use the type from backup
+            val mediaType = backupList.type
             dao.insertFavoriteList(
                     FavoriteListEntity(
                             name = backupList.name,

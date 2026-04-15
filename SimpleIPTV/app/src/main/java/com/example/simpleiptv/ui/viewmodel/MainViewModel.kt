@@ -6,10 +6,12 @@ import androidx.lifecycle.viewModelScope
 import com.example.simpleiptv.data.IptvRepository
 import com.example.simpleiptv.data.local.entities.*
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 enum class GeneratorType {
     SEARCH,
+    GLOBAL_SEARCH,
     RECENTS,
     FAVORITES,
     CATEGORY
@@ -41,6 +43,32 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
         private set
     var channels by mutableStateOf<List<ChannelEntity>>(emptyList())
         private set
+    var globalSearchResults by mutableStateOf<List<com.example.simpleiptv.data.local.ChannelWithProfile>>(emptyList())
+        private set
+
+    /**
+     * Retourne toujours la dernière liste de chaînes chargée, quelle que soit la source.
+     * En mode GLOBAL_SEARCH, convertit les résultats en ChannelEntity.
+     * Le player utilise cette liste pour le zapping.
+     */
+    val lastList: List<ChannelEntity> by derivedStateOf {
+        if (lastGeneratorType == GeneratorType.GLOBAL_SEARCH) {
+            globalSearchResults.map { it.toChannelEntity() }
+        } else {
+            channels
+        }
+    }
+
+    /** Label lisible pour la liste courante (affiché dans le player). */
+    val lastListLabel: String by derivedStateOf {
+        when (lastGeneratorType) {
+            GeneratorType.RECENTS -> "Récents"
+            GeneratorType.SEARCH -> "Recherche : $searchQuery"
+            GeneratorType.GLOBAL_SEARCH -> "Recherche globale : $searchQuery"
+            GeneratorType.FAVORITES -> favoriteLists.find { it.id == selectedFavoriteListId }?.name ?: "Favoris"
+            GeneratorType.CATEGORY -> filteredCategories.find { it.category_id == selectedCategoryId }?.category_name ?: "Catégorie"
+        }
+    }
 
     var activeProfileId by mutableIntStateOf(-1)
     var selectedCategoryId by mutableStateOf<String?>(null)
@@ -63,8 +91,7 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
     var playingChannel by mutableStateOf<ChannelEntity?>(null)
     var isFullScreenPlayer by mutableStateOf(false)
     var isLoading by mutableStateOf(false)
-    var isSearchVisibleOnMobile by mutableStateOf(false)
-    var isShowingChannelsPortrait by mutableStateOf(false)
+    // (portrait state removed — landscape-only app)
     var lastGeneratorType by mutableStateOf(GeneratorType.RECENTS)
 
     // Dialog States
@@ -73,10 +100,30 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
     var profileToEdit by mutableStateOf<ProfileEntity?>(null)
     var showAddListDialog by mutableStateOf(false)
     var channelToFavorite by mutableStateOf<ChannelEntity?>(null)
+    var targetFavoriteLists by mutableStateOf<List<FavoriteListEntity>>(emptyList())
+        private set
+
+    fun initFavoriteAction(channel: ChannelEntity) {
+        channelToFavorite = channel
+        viewModelScope.launch {
+            targetFavoriteLists = repository.getFavoriteLists(channel.profileId, currentMediaMode.name).first()
+        }
+    }
+    
     var showRestoreConfirmDialog by mutableStateOf(false)
     var backupJsonToRestore by mutableStateOf("")
     var syncError by mutableStateOf<String?>(null)
     var failedProfileToReload by mutableStateOf<ProfileEntity?>(null)
+
+    // Historique des 20 dernières recherches
+    var searchHistory by mutableStateOf<List<String>>(emptyList())
+        private set
+
+    var loadedProfileIds by mutableStateOf<Set<Int>>(emptySet())
+        private set
+
+    var allFavoriteIds by mutableStateOf<Set<String>>(emptySet())
+        private set
 
     // Coroutine Jobs to avoid multiple collectors
     private var channelsJob: kotlinx.coroutines.Job? = null
@@ -85,6 +132,17 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
 
     init {
         observeProfiles()
+        observeLoadedProfiles()
+        observeFavorites()
+        viewModelScope.launch { searchHistory = repository.getSearchHistory() }
+    }
+
+    private fun observeFavorites() {
+        viewModelScope.launch {
+            repository.allFavoriteIdsFlow.collect {
+                allFavoriteIds = it.toSet()
+            }
+        }
     }
 
     private fun observeProfiles() {
@@ -103,13 +161,21 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
         }
     }
 
+    private fun observeLoadedProfiles() {
+        viewModelScope.launch {
+            repository.loadedProfileIds.collect {
+                loadedProfileIds = it.toSet()
+            }
+        }
+    }
+
     fun selectProfile(id: Int) {
         activeProfileId = id
         viewModelScope.launch {
             repository.selectProfile(id)
 
-            // Auto-sync if DB is empty for this profile
-            val count = repository.getChannelCount(id)
+            // Auto-sync if DB is empty for this profile (meaning no categories are loaded)
+            val count = repository.getCategoryCount(id)
             if (count == 0) {
                 val profile = profiles.find { it.id == id }
                 if (profile != null) {
@@ -190,6 +256,15 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
     }
 
     private suspend fun executeRefresh() {
+        if (lastGeneratorType == GeneratorType.GLOBAL_SEARCH) {
+            // Recherche globale multi-profils
+            globalSearchResults = emptyList()
+            repository.searchChannelsAllProfiles(searchQuery, currentMediaMode.name)
+                    .collect { globalSearchResults = it }
+            return
+        }
+        // Reset global results when not in global search
+        globalSearchResults = emptyList()
         val flow =
                 when (lastGeneratorType) {
                     GeneratorType.SEARCH ->
@@ -212,6 +287,7 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
                                     activeProfileId,
                                     currentMediaMode.name
                             )
+                    GeneratorType.GLOBAL_SEARCH -> return // handled above
                 }
         flow.collect { channels = it }
     }
@@ -254,6 +330,23 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
         }
     }
 
+    /** Sauvegarde la requête courante dans l'historique (appelé lors de la validation). */
+    fun commitSearchToHistory() {
+        val q = searchQuery.trim()
+        if (q.length < 2) return
+        viewModelScope.launch {
+            repository.addToSearchHistory(q)
+            searchHistory = repository.getSearchHistory()
+        }
+    }
+
+    fun clearSearchHistory() {
+        viewModelScope.launch {
+            repository.clearSearchHistory()
+            searchHistory = emptyList()
+        }
+    }
+
     fun addFavoriteList(name: String) {
         viewModelScope.launch {
             repository.addFavoriteList(name, activeProfileId, currentMediaMode.name)
@@ -264,9 +357,9 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
         viewModelScope.launch { repository.removeFavoriteList(list) }
     }
 
-    fun addChannelToFavoriteList(streamId: String, listId: Int) {
+    fun addChannelToFavoriteList(channel: ChannelEntity, listId: Int) {
         viewModelScope.launch {
-            repository.addChannelToFavoriteList(streamId, listId, activeProfileId)
+            repository.addChannelToFavoriteList(channel.stream_id, listId, channel.profileId, currentMediaMode.name)
         }
     }
 
@@ -314,5 +407,6 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
 
     suspend fun importDatabaseFromJson(json: String) {
         repository.importDatabaseFromJson(json)
+        searchHistory = repository.getSearchHistory()
     }
 }

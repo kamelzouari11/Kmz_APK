@@ -1,6 +1,7 @@
 package com.example.simpleiptv
 
 import android.content.ComponentName
+import android.content.pm.ActivityInfo
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -38,6 +39,7 @@ class MainActivity : ComponentActivity() {
 
         override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
+                requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
                 window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
                 lifecycleScope.launch {
@@ -139,12 +141,15 @@ class MainActivity : ComponentActivity() {
                                                                 }
                                                         }
                                                 },
-                                                getStreamUrl = { streamId ->
+                                                getStreamUrl = { streamId, profileId ->
+                                                        // Si un profileId explicite est fourni (recherche globale),
+                                                        // utiliser ce profil même s'il n'est pas le profil actif.
                                                         val profile =
-                                                                viewModel!!.profiles.find {
-                                                                        it.id ==
-                                                                                viewModel!!
-                                                                                        .activeProfileId
+                                                                if (profileId != null) {
+                                                                        viewModel!!.profiles.find { it.id == profileId }
+                                                                                ?: viewModel!!.profiles.find { it.id == viewModel!!.activeProfileId }
+                                                                } else {
+                                                                        viewModel!!.profiles.find { it.id == viewModel!!.activeProfileId }
                                                                 }
                                                         if (profile != null)
                                                                 iptvRepository!!.getStreamUrl(
@@ -160,7 +165,21 @@ class MainActivity : ComponentActivity() {
         }
 
         override fun onDestroy() {
+                // Stopper le player et tuer le service proprement
+                // pour que l'audio ne continue pas en arrière-plan
+                controllerFuture?.let { future ->
+                        if (future.isDone) {
+                                try {
+                                        future.get()?.let { controller ->
+                                                controller.stop()
+                                                controller.clearMediaItems()
+                                        }
+                                } catch (e: Exception) {}
+                        }
+                        MediaController.releaseFuture(future)
+                }
+                // Tuer le service PlaybackService explicitement
+                stopService(android.content.Intent(this, PlaybackService::class.java))
                 super.onDestroy()
-                controllerFuture?.let { MediaController.releaseFuture(it) }
         }
 }

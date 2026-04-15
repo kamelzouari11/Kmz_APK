@@ -39,8 +39,55 @@ class IptvRepository(private val api: XtreamApi, private val dao: IptvDao) {
                 profileId: Int,
                 type: String = "LIVE"
         ): Flow<List<ChannelEntity>> = dao.searchChannels(query, profileId, type)
+
+        /**
+         * Recherche intelligente multi-profils.
+         * Les mots de [query] sont mis en séquence : "abc xyz" → LIKE '%abc%xyz%'
+         * Chaque résultat contient le nom de la chaîne + le nom du profil + l'URL du serveur.
+         */
+        fun searchChannelsAllProfiles(
+                query: String,
+                type: String = "LIVE"
+        ): Flow<List<com.example.simpleiptv.data.local.ChannelWithProfile>> {
+                val tokens = query.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
+                // Construit le pattern séquentiel : %tok1%tok2%teg%
+                val pattern = "%" + tokens.joinToString("%") + "%"
+                val sql = androidx.sqlite.db.SimpleSQLiteQuery(
+                        """
+                        SELECT
+                            c.stream_id, c.name, c.stream_icon,
+                            c.profileId, c.type, c.extraParams, c.sortOrder,
+                            p.profileName, p.url AS profileUrl
+                        FROM channels c
+                        INNER JOIN profiles p ON c.profileId = p.id
+                        WHERE c.type = ?
+                          AND c.name LIKE ? ESCAPE '\'
+                        ORDER BY p.profileName ASC, c.sortOrder ASC
+                        LIMIT 200
+                        """.trimIndent(),
+                        arrayOf(type, pattern)
+                )
+                return dao.searchChannelsAllProfilesRaw(sql)
+        }
         suspend fun getChannelCount(profileId: Int, type: String = "LIVE"): Int =
                 dao.getChannelCount(profileId, type)
+        suspend fun getCategoryCount(profileId: Int, type: String = "LIVE"): Int =
+                dao.getCategoryCount(profileId, type)
+
+        // --- Historique de recherche ---
+        suspend fun getSearchHistory(): List<String> =
+                dao.getSearchHistory().map { it.query }
+
+        suspend fun addToSearchHistory(query: String) {
+                val q = query.trim()
+                if (q.isEmpty()) return
+                dao.insertSearchHistory(
+                        com.example.simpleiptv.data.local.entities.SearchHistoryEntity(query = q)
+                )
+                dao.trimSearchHistory()
+        }
+
+        suspend fun clearSearchHistory() = dao.clearSearchHistory()
 
         // --- Favorites Logic ---
         suspend fun addFavoriteList(name: String, profileId: Int, type: String = "LIVE") =
@@ -59,6 +106,8 @@ class IptvRepository(private val api: XtreamApi, private val dao: IptvDao) {
                         ChannelFavoriteCrossRef(streamId, listId, profileId, type, maxPos + 1)
                 )
         }
+
+        val allFavoriteIdsFlow: Flow<List<String>> = dao.getAllFavoriteIdsFlow()
 
         suspend fun toggleChannelFavorite(
                 channelId: String,
@@ -85,17 +134,6 @@ class IptvRepository(private val api: XtreamApi, private val dao: IptvDao) {
                 }
         }
 
-        @Suppress("UNUSED_PARAMETER")
-        suspend fun moveChannelInList(
-                channelId: String,
-                listId: Int,
-                profileId: Int,
-                type: String,
-                up: Boolean
-        ) {
-                // Shared logic could stay here or move to a PlaylistService if it becomes too large
-        }
-
         // --- Recents Logic ---
         suspend fun addToRecents(channelId: String, profileId: Int, type: String = "LIVE") {
                 dao.insertRecent(
@@ -109,6 +147,7 @@ class IptvRepository(private val api: XtreamApi, private val dao: IptvDao) {
 
         // --- Profiles Logic ---
         val allProfiles: Flow<List<ProfileEntity>> = dao.getAllProfiles()
+        val loadedProfileIds: Flow<List<Int>> = dao.getLoadedProfileIdsFlow()
         suspend fun getSelectedProfile(): ProfileEntity? = dao.getSelectedProfile()
         suspend fun addProfile(profile: ProfileEntity) = dao.insertProfile(profile)
         suspend fun updateProfile(profile: ProfileEntity) = dao.updateProfile(profile)

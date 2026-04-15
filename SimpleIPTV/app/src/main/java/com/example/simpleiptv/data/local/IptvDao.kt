@@ -4,6 +4,30 @@ import androidx.room.*
 import com.example.simpleiptv.data.local.entities.*
 import kotlinx.coroutines.flow.Flow
 
+/** Résultat enrichi d'une recherche globale multi-profils. */
+data class ChannelWithProfile(
+    val stream_id: String,
+    val name: String,
+    val stream_icon: String?,
+    val profileId: Int,
+    val type: String,
+    val extraParams: String?,
+    val sortOrder: Int,
+    val profileName: String,
+    val profileUrl: String
+) {
+    /** Convertit en ChannelEntity pour pouvoir lancer la lecture. */
+    fun toChannelEntity() = com.example.simpleiptv.data.local.entities.ChannelEntity(
+        stream_id = stream_id,
+        name = name,
+        stream_icon = stream_icon,
+        profileId = profileId,
+        type = type,
+        extraParams = extraParams,
+        sortOrder = sortOrder
+    )
+}
+
 @Dao
 interface IptvDao {
 
@@ -53,6 +77,9 @@ interface IptvDao {
 
     @Query("SELECT COUNT(*) FROM channels WHERE profileId = :profileId AND type = :type")
     suspend fun getChannelCount(profileId: Int, type: String = "LIVE"): Int
+
+    @Query("SELECT COUNT(*) FROM categories WHERE profileId = :profileId AND type = :type")
+    suspend fun getCategoryCount(profileId: Int, type: String = "LIVE"): Int
 
     @Query(
             "DELETE FROM channels WHERE profileId = :profileId AND type = :type AND stream_id IN (:ids)"
@@ -111,6 +138,9 @@ interface IptvDao {
             "SELECT MAX(sortPosition) FROM channel_favorites WHERE listId = :listId AND profileId = :profileId AND type = :type"
     )
     suspend fun getMaxPositionForList(listId: Int, profileId: Int, type: String = "LIVE"): Int?
+
+    @Query("SELECT profileId || '_' || channelId FROM channel_favorites")
+    fun getAllFavoriteIdsFlow(): Flow<List<String>>
 
     @Query(
             "SELECT * FROM channel_favorites WHERE channelId = :channelId AND listId = :listId AND profileId = :profileId AND type = :type"
@@ -221,7 +251,36 @@ interface IptvDao {
             }
         }
 
-        insertChannels(channels)
-        insertChannelCategoryLinks(links)
-    }
+            insertChannels(channels)
+            insertChannelCategoryLinks(links)
+        }
+
+    // --- Recherche globale multi-profils ---
+    @androidx.room.RawQuery(observedEntities = [
+        com.example.simpleiptv.data.local.entities.ChannelEntity::class,
+        com.example.simpleiptv.data.local.entities.ProfileEntity::class
+    ])
+    fun searchChannelsAllProfilesRaw(
+        query: androidx.sqlite.db.SupportSQLiteQuery
+    ): kotlinx.coroutines.flow.Flow<List<ChannelWithProfile>>
+
+    // --- Historique de recherche (20 dernières requêtes) ---
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSearchHistory(entry: com.example.simpleiptv.data.local.entities.SearchHistoryEntity)
+
+    @Query("SELECT * FROM search_history ORDER BY timestamp DESC LIMIT 20")
+    suspend fun getSearchHistory(): List<com.example.simpleiptv.data.local.entities.SearchHistoryEntity>
+
+    @Query("DELETE FROM search_history")
+    suspend fun clearSearchHistory()
+
+    /** Garde uniquement les 20 entrées les plus récentes. */
+    @Query(
+        "DELETE FROM search_history WHERE query NOT IN " +
+        "(SELECT query FROM search_history ORDER BY timestamp DESC LIMIT 20)"
+    )
+    suspend fun trimSearchHistory()
+
+    @Query("SELECT profileId FROM categories GROUP BY profileId HAVING COUNT(*) > 0")
+    fun getLoadedProfileIdsFlow(): Flow<List<Int>>
 }

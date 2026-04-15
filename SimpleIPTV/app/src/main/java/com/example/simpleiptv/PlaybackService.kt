@@ -109,12 +109,8 @@ class PlaybackService : MediaSessionService() {
                                                                 connectionResult
                                                                         .availablePlayerCommands
                                                                         .buildUpon()
-                                                                        .add(
-                                                                                9
-                                                                        ) // Player.COMMAND_SKIP_TO_NEXT
-                                                                        .add(
-                                                                                8
-                                                                        ) // Player.COMMAND_SKIP_TO_PREVIOUS
+                                                                        .add(Player.COMMAND_SEEK_TO_NEXT)
+                                                                        .add(Player.COMMAND_SEEK_TO_PREVIOUS)
                                                                         .build()
                                                         return MediaSession.ConnectionResult
                                                                 .AcceptedResultBuilder(session)
@@ -161,7 +157,18 @@ class PlaybackService : MediaSessionService() {
 
         override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
                 super.onStartCommand(intent, flags, startId)
-                return START_STICKY
+                // START_NOT_STICKY : le service NE redémarre PAS tout seul après être tué.
+                // Avant c'était START_STICKY ce qui causait la lecture continue même app fermée.
+                return START_NOT_STICKY
+        }
+
+        /** Stoppe la lecture et ferme le service proprement. Appelé depuis MainActivity. */
+        fun stopPlayback() {
+                mediaSession?.player?.let { player ->
+                        player.stop()
+                        player.clearMediaItems()
+                }
+                stopSelf()
         }
 
         override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {

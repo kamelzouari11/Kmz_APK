@@ -25,6 +25,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -34,6 +35,8 @@ import androidx.media3.ui.PlayerView
 import coil.compose.AsyncImage
 import com.example.simpleiptv.data.local.entities.CategoryEntity
 import com.example.simpleiptv.data.local.entities.ChannelEntity
+import com.example.simpleiptv.data.local.entities.ProfileEntity
+import com.example.simpleiptv.ui.components.OverlayListItem
 
 @Composable
 fun VideoPlayerView(
@@ -53,15 +56,13 @@ fun VideoPlayerView(
         playingChannel: ChannelEntity? = null,
         countriesScrollState: LazyListState? = null,
         categoriesScrollState: LazyListState? = null,
-        channelsScrollState: LazyListState? = null
+        channelsScrollState: LazyListState? = null,
+        listLabel: String = "",
+        profiles: List<ProfileEntity> = emptyList()
 ) {
         var isOverlayVisible by remember { mutableStateOf(false) }
         var showFullOverlay by remember(isLandscape) { mutableStateOf(isLandscape) }
-        // boxFocusRequester: gives focus to the main Box so onKeyEvent captures OK.
-        // Without this, the native PlayerView steals focus and OK is never intercepted.
         val boxFocusRequester = remember { FocusRequester() }
-        // Two separate FocusRequesters to avoid IllegalStateException when both
-        // a category item and the playing channel item are visible at the same time.
         val categoryFocusRequester = remember { FocusRequester() }
         val channelFocusRequester = remember { FocusRequester() }
         val vodFocusRequester = remember { FocusRequester() }
@@ -69,134 +70,92 @@ fun VideoPlayerView(
 
         var playerViewRef by remember { mutableStateOf<PlayerView?>(null) }
 
-        // Use passed states or fallback to local ones if null (though MainScreen passes them)
         val countryState = countriesScrollState ?: rememberLazyListState()
         val categoryState = categoriesScrollState ?: rememberLazyListState()
         val channelState = channelsScrollState ?: rememberLazyListState()
 
-        // On first composition, request focus on the Box so key events work immediately.
+        // Focus management
         LaunchedEffect(isVod) {
                 if (!isVod && interactive) {
-                        try {
-                                boxFocusRequester.requestFocus()
-                        } catch (e: Exception) {
-                                /* not yet attached */
-                        }
+                        try { boxFocusRequester.requestFocus() } catch (e: Exception) {}
                 }
         }
 
-        val playingIndex =
-                remember(currentChannels, playingChannel) {
-                        currentChannels.indexOfFirst { it.stream_id == playingChannel?.stream_id }
-                }
+        val playingIndex = remember(currentChannels, playingChannel) {
+                currentChannels.indexOfFirst { it.stream_id == playingChannel?.stream_id }
+        }
 
         LaunchedEffect(isOverlayVisible, isVod) {
                 if (isVod) {
-                        try {
-                                vodFocusRequester.requestFocus()
-                        } catch (e: Exception) {
-                                /* not yet attached */
-                        }
+                        try { vodFocusRequester.requestFocus() } catch (e: Exception) {}
                 } else if (isOverlayVisible && interactive) {
-                        // Priority: focus the playing channel if it exists in the list.
-                        // We scroll to it first to ensure the FocusRequester is attached.
                         if (playingIndex >= 0) {
                                 try {
                                         channelState.scrollToItem(playingIndex)
                                         channelFocusRequester.requestFocus()
                                 } catch (e: Exception) {
-                                        try {
-                                                categoryFocusRequester.requestFocus()
-                                        } catch (e2: Exception) {
-                                                /* ignore */
-                                        }
+                                        try { categoryFocusRequester.requestFocus() } catch (e2: Exception) {}
                                 }
                         } else {
-                                // Default fallback: focus the selected category item.
-                                try {
-                                        categoryFocusRequester.requestFocus()
-                                } catch (e: Exception) {
-                                        /* not yet attached */
-                                }
+                                try { categoryFocusRequester.requestFocus() } catch (e: Exception) {}
                         }
                 } else if (!isOverlayVisible && interactive) {
-                        // Overlay closed: return focus to the Box so OK works again.
-                        try {
-                                boxFocusRequester.requestFocus()
-                        } catch (e: Exception) {
-                                /* ignore */
-                        }
+                        try { boxFocusRequester.requestFocus() } catch (e: Exception) {}
                 }
         }
 
         if (isOverlayVisible && !isVod) {
-                BackHandler { onBack() }
+                BackHandler { isOverlayVisible = false }
         }
 
         Box(
-                modifier =
-                        Modifier.fillMaxSize()
-                                .background(Color.Black)
-                                .then(
-                                        if (!isVod) {
-                                                Modifier.focusRequester(boxFocusRequester)
-                                                        .clickable(enabled = interactive) {
-                                                                if (!isOverlayVisible) {
-                                                                        showFullOverlay =
-                                                                                isLandscape
-                                                                        isOverlayVisible = true
-                                                                } else {
-                                                                        isOverlayVisible = false
-                                                                }
-                                                        }
-                                                        .focusable()
-                                                        .onKeyEvent { event ->
-                                                                if (event.nativeKeyEvent.action ==
-                                                                                KeyEvent.ACTION_DOWN
-                                                                ) {
-                                                                        when (event.nativeKeyEvent
-                                                                                        .keyCode
-                                                                        ) {
-                                                                                KeyEvent.KEYCODE_DPAD_CENTER,
-                                                                                KeyEvent.KEYCODE_ENTER,
-                                                                                KeyEvent.KEYCODE_NUMPAD_ENTER -> {
-                                                                                        if (!interactive
-                                                                                        )
-                                                                                                return@onKeyEvent false
-                                                                                        if (!isOverlayVisible
-                                                                                        ) {
-                                                                                                showFullOverlay =
-                                                                                                        true
-                                                                                                isOverlayVisible =
-                                                                                                        true
-                                                                                        }
-                                                                                        return@onKeyEvent true
+                modifier = Modifier.fillMaxSize()
+                        .background(Color.Black)
+                        .then(
+                                if (!isVod) {
+                                        Modifier.onPreviewKeyEvent { event: androidx.compose.ui.input.key.KeyEvent ->
+                                                        if (event.nativeKeyEvent.action == android.view.KeyEvent.ACTION_DOWN) {
+                                                                when (event.nativeKeyEvent.keyCode) {
+                                                                        android.view.KeyEvent.KEYCODE_BACK -> {
+                                                                                if (!interactive) return@onPreviewKeyEvent false
+                                                                                if (isOverlayVisible) {
+                                                                                        isOverlayVisible = false
+                                                                                        return@onPreviewKeyEvent true
                                                                                 }
-                                                                                KeyEvent.KEYCODE_BACK -> {
-                                                                                        if (!interactive
-                                                                                        )
-                                                                                                return@onKeyEvent false
-                                                                                        if (isOverlayVisible
-                                                                                        ) {
-                                                                                                isOverlayVisible =
-                                                                                                        false
-                                                                                                return@onKeyEvent true
-                                                                                        }
-                                                                                        onBack()
-                                                                                        return@onKeyEvent true
+                                                                                onBack()
+                                                                                return@onPreviewKeyEvent true
+                                                                        }
+                                                                        android.view.KeyEvent.KEYCODE_DPAD_UP, android.view.KeyEvent.KEYCODE_CHANNEL_UP -> {
+                                                                                if (!interactive || isOverlayVisible) return@onPreviewKeyEvent false
+                                                                                if (playingIndex in 0 until currentChannels.size - 1) {
+                                                                                        onChannelSelected(currentChannels[playingIndex + 1])
                                                                                 }
+                                                                                return@onPreviewKeyEvent true
+                                                                        }
+                                                                        android.view.KeyEvent.KEYCODE_DPAD_DOWN, android.view.KeyEvent.KEYCODE_CHANNEL_DOWN -> {
+                                                                                if (!interactive || isOverlayVisible) return@onPreviewKeyEvent false
+                                                                                if (playingIndex > 0) {
+                                                                                        onChannelSelected(currentChannels[playingIndex - 1])
+                                                                                }
+                                                                                return@onPreviewKeyEvent true
                                                                         }
                                                                 }
-                                                                false
                                                         }
-                                        } else {
-                                                // In VOD, we rely entirely on the AndroidView for
-                                                // keys/clicks
-                                                Modifier
-                                        }
-                                )
+                                                        false
+                                                }
+                                                .focusRequester(boxFocusRequester)
+                                                .clickable(enabled = interactive) {
+                                                        if (!isOverlayVisible) {
+                                                                showFullOverlay = isLandscape
+                                                                isOverlayVisible = true
+                                                        } else {
+                                                                isOverlayVisible = false
+                                                        }
+                                                }
+                                } else Modifier
+                        )
         ) {
-                // 1. The Video Surface
+                // 1. Video Surface
                 var isPlayerFocused by remember { mutableStateOf(false) }
 
                 AndroidView(
@@ -205,9 +164,6 @@ fun VideoPlayerView(
                                         player = exoPlayer
                                         useController = isVod
                                         keepScreenOn = true
-                                        // In LIVE mode, the Box handles all key events.
-                                        // Making the PlayerView non-focusable prevents it
-                                        // from stealing focus and swallowing the OK key.
                                         isFocusable = isVod
                                         isFocusableInTouchMode = isVod
                                         playerViewRef = this
@@ -217,291 +173,82 @@ fun VideoPlayerView(
                                 view.useController = isVod
                                 playerViewRef = view
                         },
-                        modifier =
-                                Modifier.fillMaxSize()
-                                        .onFocusChanged { isPlayerFocused = it.isFocused }
-                                        .then(
-                                                if (isVod) {
-                                                        Modifier.focusRequester(vodFocusRequester)
-                                                                .focusable()
-                                                                .clickable {
-                                                                        playerViewRef
-                                                                                ?.showController()
-                                                                }
-                                                                .onKeyEvent { event ->
-                                                                        if (event.nativeKeyEvent
-                                                                                        .action ==
-                                                                                        KeyEvent.ACTION_DOWN
-                                                                        ) {
-                                                                                when (event.nativeKeyEvent
-                                                                                                .keyCode
-                                                                                ) {
-                                                                                        KeyEvent.KEYCODE_BACK -> {
-                                                                                                if (playerViewRef
-                                                                                                                ?.isControllerFullyVisible ==
-                                                                                                                true
-                                                                                                ) {
-                                                                                                        playerViewRef
-                                                                                                                ?.hideController()
-                                                                                                        true
-                                                                                                } else {
-                                                                                                        onBack()
-                                                                                                        true
-                                                                                                }
-                                                                                        }
-                                                                                        KeyEvent.KEYCODE_DPAD_UP,
-                                                                                        KeyEvent.KEYCODE_DPAD_DOWN,
-                                                                                        KeyEvent.KEYCODE_DPAD_CENTER,
-                                                                                        KeyEvent.KEYCODE_ENTER,
-                                                                                        KeyEvent.KEYCODE_DPAD_LEFT,
-                                                                                        KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                                                                                                playerViewRef
-                                                                                                        ?.showController()
-                                                                                                false // Let the view handle the actual seek/play/pause
-                                                                                        }
-                                                                                        else ->
-                                                                                                false
+                        modifier = Modifier.fillMaxSize()
+                                .onFocusChanged { isPlayerFocused = it.isFocused }
+                                .then(
+                                        if (isVod) {
+                                                Modifier.focusRequester(vodFocusRequester)
+                                                        .focusable()
+                                                        .clickable { playerViewRef?.showController() }
+                                                        .onKeyEvent { event ->
+                                                                if (event.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
+                                                                        when (event.nativeKeyEvent.keyCode) {
+                                                                                KeyEvent.KEYCODE_BACK -> {
+                                                                                        if (playerViewRef?.isControllerFullyVisible == true) {
+                                                                                                playerViewRef?.hideController()
+                                                                                                true
+                                                                                        } else { onBack(); true }
                                                                                 }
-                                                                        } else {
-                                                                                false
+                                                                                KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
+                                                                                KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER,
+                                                                                KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                                                                                        playerViewRef?.showController()
+                                                                                        false
+                                                                                }
+                                                                                else -> false
                                                                         }
-                                                                }
-                                                } else {
-                                                        Modifier
-                                                }
-                                        )
+                                                                } else false
+                                                        }
+                                        } else Modifier
+                                )
                 )
 
-                // Visual indicator for focus in VOD
+                // VOD focus indicator
                 if (isVod && isPlayerFocused) {
                         Box(
-                                modifier =
-                                        Modifier.fillMaxSize()
-                                                .padding(2.dp)
-                                                .background(Color.Cyan.copy(alpha = 0.05f))
-                                                .border(
-                                                        2.dp,
-                                                        Color.Cyan.copy(alpha = 0.3f),
-                                                        MaterialTheme.shapes.small
-                                                )
+                                modifier = Modifier.fillMaxSize().padding(2.dp)
+                                        .background(Color.Cyan.copy(alpha = 0.05f))
+                                        .border(2.dp, Color.Cyan.copy(alpha = 0.3f), MaterialTheme.shapes.small)
                         )
                 }
 
-                // 2. The Overlays (Side by Side) - Only for LIVE
+                // 2. Overlay (LIVE only)
                 if (isOverlayVisible && !isVod) {
                         Row(
-                                modifier =
-                                        Modifier.fillMaxSize()
-                                                .background(Color.Black.copy(alpha = 0.6f))
-                                                .padding(24.dp),
-                                horizontalArrangement =
-                                        if (showFullOverlay) Arrangement.Start else Arrangement.End
+                                modifier = Modifier.fillMaxSize()
+                                        .background(Color.Black.copy(alpha = 0.6f))
+                                        .padding(24.dp),
+                                horizontalArrangement = if (showFullOverlay) Arrangement.Start else Arrangement.End
                         ) {
                                 if (showFullOverlay) {
-                                        // Country List (Leftmost)
+                                        // Country List
                                         if (countries.size > 1) {
-                                                Column(
-                                                        modifier =
-                                                                Modifier.fillMaxHeight()
-                                                                        .width(150.dp)
-                                                ) {
-                                                        Text(
-                                                                text = "Pays",
-                                                                color = Color.White,
-                                                                modifier = Modifier.padding(16.dp),
-                                                                style =
-                                                                        MaterialTheme.typography
-                                                                                .titleSmall
-                                                        )
-                                                        LazyColumn(
-                                                                state = countryState,
-                                                                modifier = Modifier.weight(1f)
-                                                        ) {
-                                                                items(countries, key = { it }) {
-                                                                        country ->
-                                                                        val isSelected =
-                                                                                country ==
-                                                                                        selectedCountry
-                                                                        var isFocused by remember {
-                                                                                mutableStateOf(
-                                                                                        false
-                                                                                )
-                                                                        }
-                                                                        Row(
-                                                                                modifier =
-                                                                                        Modifier.fillMaxWidth()
-                                                                                                .padding(
-                                                                                                        4.dp
-                                                                                                )
-                                                                                                .onFocusChanged {
-                                                                                                        isFocused =
-                                                                                                                it.isFocused
-                                                                                                }
-                                                                                                .clickable {
-                                                                                                        onCountrySelected(
-                                                                                                                country
-                                                                                                        )
-                                                                                                }
-                                                                                                .focusable()
-                                                                                                .background(
-                                                                                                        color =
-                                                                                                                when {
-                                                                                                                        isFocused ->
-                                                                                                                                Color.White
-                                                                                                                                        .copy(
-                                                                                                                                                alpha =
-                                                                                                                                                        0.9f
-                                                                                                                                        )
-                                                                                                                        isSelected ->
-                                                                                                                                Color.Green
-                                                                                                                                        .copy(
-                                                                                                                                                alpha =
-                                                                                                                                                        0.2f
-                                                                                                                                        )
-                                                                                                                        else ->
-                                                                                                                                Color.Transparent
-                                                                                                                },
-                                                                                                        shape =
-                                                                                                                MaterialTheme
-                                                                                                                        .shapes
-                                                                                                                        .small
-                                                                                                )
-                                                                                                .padding(
-                                                                                                        8.dp
-                                                                                                )
-                                                                        ) {
-                                                                                Text(
-                                                                                        text =
-                                                                                                country,
-                                                                                        color =
-                                                                                                if (isFocused
-                                                                                                )
-                                                                                                        Color.Black
-                                                                                                else if (isSelected
-                                                                                                )
-                                                                                                        Color.Green
-                                                                                                else
-                                                                                                        Color.White,
-                                                                                        style =
-                                                                                                MaterialTheme
-                                                                                                        .typography
-                                                                                                        .bodyLarge,
-                                                                                        maxLines =
-                                                                                                1,
-                                                                                        overflow =
-                                                                                                TextOverflow
-                                                                                                        .Ellipsis
-                                                                                )
-                                                                        }
+                                                OverlayColumn(title = "Pays", width = 150.dp) {
+                                                        LazyColumn(state = countryState, modifier = Modifier.weight(1f)) {
+                                                                items(countries, key = { it }) { country ->
+                                                                        OverlayListItem(
+                                                                                text = country,
+                                                                                isSelected = country == selectedCountry,
+                                                                                onClick = { onCountrySelected(country) }
+                                                                        )
                                                                 }
                                                         }
                                                 }
                                                 Spacer(Modifier.width(16.dp))
                                         }
 
-                                        // Category List (Middle)
-                                        Column(modifier = Modifier.fillMaxHeight().width(280.dp)) {
-                                                Text(
-                                                        text = "Catégories",
-                                                        color = Color.White,
-                                                        modifier = Modifier.padding(16.dp),
-                                                        style = MaterialTheme.typography.titleSmall
-                                                )
-                                                LazyColumn(
-                                                        state = categoryState,
-                                                        modifier = Modifier.weight(1f)
-                                                ) {
-                                                        itemsIndexed(
-                                                                categories,
-                                                                key = { _, cat -> cat.category_id }
-                                                        ) { index, category ->
-                                                                val isSelected =
-                                                                        category.category_id ==
-                                                                                selectedCategoryId
-                                                                val isInitialFocus =
-                                                                        if (selectedCategoryId !=
-                                                                                        null
-                                                                        )
-                                                                                isSelected
-                                                                        else index == 0
-                                                                var isFocused by remember {
-                                                                        mutableStateOf(false)
-                                                                }
-
-                                                                Row(
-                                                                        modifier =
-                                                                                Modifier.fillMaxWidth()
-                                                                                        .padding(
-                                                                                                4.dp
-                                                                                        )
-                                                                                        .then(
-                                                                                                if (isInitialFocus
-                                                                                                )
-                                                                                                        Modifier.focusRequester(
-                                                                                                                categoryFocusRequester
-                                                                                                        )
-                                                                                                else
-                                                                                                        Modifier
-                                                                                        )
-                                                                                        .onFocusChanged {
-                                                                                                isFocused =
-                                                                                                        it.isFocused
-                                                                                        }
-                                                                                        .clickable {
-                                                                                                onCategorySelected(
-                                                                                                        category
-                                                                                                )
-                                                                                        }
-                                                                                        .focusable()
-                                                                                        .background(
-                                                                                                color =
-                                                                                                        when {
-                                                                                                                isFocused ->
-                                                                                                                        Color.White
-                                                                                                                                .copy(
-                                                                                                                                        alpha =
-                                                                                                                                                0.9f
-                                                                                                                                )
-                                                                                                                isSelected ->
-                                                                                                                        Color.Green
-                                                                                                                                .copy(
-                                                                                                                                        alpha =
-                                                                                                                                                0.2f
-                                                                                                                                )
-                                                                                                                else ->
-                                                                                                                        Color.Transparent
-                                                                                                        },
-                                                                                                shape =
-                                                                                                        MaterialTheme
-                                                                                                                .shapes
-                                                                                                                .small
-                                                                                        )
-                                                                                        .padding(
-                                                                                                8.dp
-                                                                                        )
-                                                                ) {
-                                                                        Text(
-                                                                                text =
-                                                                                        category.category_name,
-                                                                                color =
-                                                                                        if (isFocused
-                                                                                        )
-                                                                                                Color.Black
-                                                                                        else if (isSelected
-                                                                                        )
-                                                                                                Color.Green
-                                                                                        else
-                                                                                                Color.White,
-                                                                                style =
-                                                                                        MaterialTheme
-                                                                                                .typography
-                                                                                                .bodyLarge,
-                                                                                maxLines = 1,
-                                                                                overflow =
-                                                                                        TextOverflow
-                                                                                                .Ellipsis
-                                                                        )
-                                                                }
+                                        // Category List
+                                        OverlayColumn(title = "Catégories", width = 280.dp) {
+                                                LazyColumn(state = categoryState, modifier = Modifier.weight(1f)) {
+                                                        itemsIndexed(categories, key = { _, cat -> cat.category_id }) { index, category ->
+                                                                val isSelected = category.category_id == selectedCategoryId
+                                                                val isInitialFocus = if (selectedCategoryId != null) isSelected else index == 0
+                                                                OverlayListItem(
+                                                                        text = category.category_name,
+                                                                        isSelected = isSelected,
+                                                                        onClick = { onCategorySelected(category) },
+                                                                        focusRequester = if (isInitialFocus) categoryFocusRequester else null
+                                                                )
                                                         }
                                                 }
                                         }
@@ -509,133 +256,60 @@ fun VideoPlayerView(
                                         Spacer(Modifier.width(16.dp))
                                 }
 
-                                // Channel List (Rightmost)
-                                Column(
-                                        modifier =
-                                                Modifier.fillMaxHeight()
-                                                        .width(
-                                                                if (showFullOverlay) 320.dp
-                                                                else 400.dp
-                                                        )
+                                // Channel List
+                                OverlayColumn(
+                                        title = "Chaînes",
+                                        width = if (showFullOverlay) 320.dp else 400.dp
                                 ) {
-                                        Text(
-                                                text = "Chaînes",
-                                                color = Color.White,
-                                                modifier = Modifier.padding(16.dp),
-                                                style = MaterialTheme.typography.titleSmall
-                                        )
-                                        LazyColumn(
-                                                state = channelState,
-                                                modifier = Modifier.weight(1f)
-                                        ) {
-                                                items(currentChannels, key = { it.stream_id }) {
-                                                        channel ->
-                                                        val isPlaying =
-                                                                channel.stream_id ==
-                                                                        playingChannel?.stream_id
-                                                        var isFocused by remember {
-                                                                mutableStateOf(false)
+                                        LazyColumn(state = channelState, modifier = Modifier.weight(1f)) {
+                                                items(currentChannels, key = { it.stream_id }) { channel ->
+                                                        val isPlaying = channel.stream_id == playingChannel?.stream_id
+                                                        val profile = remember(channel.profileId, profiles) {
+                                                                profiles.find { it.id == channel.profileId }
                                                         }
-
-                                                        Row(
-                                                                modifier =
-                                                                        Modifier.fillMaxWidth()
-                                                                                .padding(4.dp)
-                                                                                .onFocusChanged {
-                                                                                        isFocused =
-                                                                                                it.isFocused
-                                                                                }
-                                                                                .then(
-                                                                                        if (isPlaying
-                                                                                        )
-                                                                                                Modifier.focusRequester(
-                                                                                                        channelFocusRequester
-                                                                                                )
-                                                                                        else
-                                                                                                Modifier
-                                                                                )
-                                                                                .clickable {
-                                                                                        isOverlayVisible =
-                                                                                                false
-                                                                                        onChannelSelected(
-                                                                                                channel
-                                                                                        )
-                                                                                }
-                                                                                .focusable()
-                                                                                .background(
-                                                                                        color =
-                                                                                                when {
-                                                                                                        isFocused ->
-                                                                                                                Color.White
-                                                                                                                        .copy(
-                                                                                                                                alpha =
-                                                                                                                                        0.9f
-                                                                                                                        )
-                                                                                                        isPlaying ->
-                                                                                                                Color.Green
-                                                                                                                        .copy(
-                                                                                                                                alpha =
-                                                                                                                                        0.2f
-                                                                                                                        )
-                                                                                                        else ->
-                                                                                                                Color.Transparent
-                                                                                                },
-                                                                                        shape =
-                                                                                                MaterialTheme
-                                                                                                        .shapes
-                                                                                                        .small
-                                                                                )
-                                                                                .padding(8.dp),
-                                                                verticalAlignment =
-                                                                        Alignment.CenterVertically
-                                                        ) {
+                                                        OverlayListItem(
+                                                                text = channel.name,
+                                                                isSelected = isPlaying,
+                                                                onClick = { isOverlayVisible = false; onChannelSelected(channel) },
+                                                                focusRequester = if (isPlaying) channelFocusRequester else null,
+                                                                modifier = Modifier.padding(horizontal = 0.dp)
+                                                        ) { isFocused ->
                                                                 AsyncImage(
                                                                         model = channel.stream_icon,
                                                                         contentDescription = null,
-                                                                        modifier =
-                                                                                Modifier.size(
-                                                                                        24.dp
-                                                                                ),
-                                                                        contentScale =
-                                                                                ContentScale.Fit
+                                                                        modifier = Modifier.size(24.dp),
+                                                                        contentScale = ContentScale.Fit
                                                                 )
-                                                                Spacer(Modifier.width(12.dp))
-                                                                Text(
-                                                                        text = channel.name,
-                                                                        color =
-                                                                                if (isFocused)
-                                                                                        Color.Black
-                                                                                else if (isPlaying)
-                                                                                        Color.Green
-                                                                                else Color.White,
-                                                                        maxLines = 1,
-                                                                        style =
-                                                                                MaterialTheme
-                                                                                        .typography
-                                                                                        .bodyLarge,
-                                                                        overflow =
-                                                                                TextOverflow
-                                                                                        .Ellipsis,
-                                                                        modifier =
-                                                                                Modifier.weight(1f)
-                                                                )
+                                                                Spacer(Modifier.width(10.dp))
+                                                                Column(modifier = Modifier.weight(1f)) {
+                                                                        Text(
+                                                                                text = channel.name,
+                                                                                color = when {
+                                                                                        isFocused -> Color.Black
+                                                                                        isPlaying -> Color.Green
+                                                                                        else -> Color.White
+                                                                                },
+                                                                                maxLines = 1,
+                                                                                style = MaterialTheme.typography.bodyMedium,
+                                                                                overflow = TextOverflow.Ellipsis
+                                                                        )
+                                                                        if (profile != null) {
+                                                                                Text(
+                                                                                        text = "${profile.profileName}  •  ${profile.url}",
+                                                                                        color = if (isFocused) Color.DarkGray else Color.White.copy(alpha = 0.4f),
+                                                                                        maxLines = 1,
+                                                                                        overflow = TextOverflow.Ellipsis,
+                                                                                        style = MaterialTheme.typography.labelSmall,
+                                                                                        fontSize = androidx.compose.ui.unit.TextUnit(10f, androidx.compose.ui.unit.TextUnitType.Sp)
+                                                                                )
+                                                                        }
+                                                                }
                                                                 if (isPlaying) {
                                                                         Icon(
-                                                                                imageVector =
-                                                                                        Icons.Default
-                                                                                                .PlayArrow,
-                                                                                contentDescription =
-                                                                                        null,
-                                                                                tint =
-                                                                                        if (isFocused
-                                                                                        )
-                                                                                                Color.Black
-                                                                                        else
-                                                                                                Color.Green,
-                                                                                modifier =
-                                                                                        Modifier.size(
-                                                                                                16.dp
-                                                                                        )
+                                                                                imageVector = Icons.Default.PlayArrow,
+                                                                                contentDescription = null,
+                                                                                tint = if (isFocused) Color.Black else Color.Green,
+                                                                                modifier = Modifier.size(16.dp)
                                                                         )
                                                                 }
                                                         }
@@ -645,23 +319,57 @@ fun VideoPlayerView(
                         }
                 }
 
-                // 3. Simple Indicator when overlay is hidden (Bottom Left version)
+                // 3. Info bar when overlay hidden
                 if (!isOverlayVisible && interactive) {
+                        val activeProfile = remember(playingChannel, profiles) {
+                                profiles.find { it.id == playingChannel?.profileId }
+                        }
                         Box(
                                 modifier = Modifier.fillMaxSize().padding(16.dp),
                                 contentAlignment = Alignment.BottomStart
                         ) {
-                                Text(
-                                        text = channelName,
-                                        color = Color.White.copy(alpha = 0.6f),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        modifier =
-                                                Modifier.padding(
-                                                        horizontal = 12.dp,
-                                                        vertical = 6.dp
+                                Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
+                                        Text(
+                                                text = channelName,
+                                                color = Color.White.copy(alpha = 0.85f),
+                                                style = MaterialTheme.typography.titleMedium
+                                        )
+                                        if (activeProfile != null) {
+                                                Text(
+                                                        text = "${activeProfile.profileName}  •  ${activeProfile.url}",
+                                                        color = Color.Green.copy(alpha = 0.85f),
+                                                        style = MaterialTheme.typography.labelMedium
                                                 )
-                                )
+                                        }
+                                        if (listLabel.isNotEmpty()) {
+                                                Text(
+                                                        text = listLabel,
+                                                        color = Color.White.copy(alpha = 0.45f),
+                                                        style = MaterialTheme.typography.bodySmall
+                                                )
+                                        }
+                                }
                         }
                 }
+        }
+}
+
+/**
+ * Helper composable for overlay columns (title + content).
+ */
+@Composable
+private fun OverlayColumn(
+        title: String,
+        width: androidx.compose.ui.unit.Dp,
+        content: @Composable ColumnScope.() -> Unit
+) {
+        Column(modifier = Modifier.fillMaxHeight().width(width)) {
+                Text(
+                        text = title,
+                        color = Color.White,
+                        modifier = Modifier.padding(16.dp),
+                        style = MaterialTheme.typography.titleSmall
+                )
+                content()
         }
 }

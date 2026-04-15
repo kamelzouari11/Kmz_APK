@@ -15,13 +15,22 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
 import com.example.simpleiptv.data.local.entities.ChannelEntity
 import com.example.simpleiptv.ui.components.ChannelItem
+import com.example.simpleiptv.ui.components.GlobalChannelItem
 import com.example.simpleiptv.ui.components.SidebarItem
 import com.example.simpleiptv.ui.components.VodItem
 import com.example.simpleiptv.ui.viewmodel.GeneratorType
@@ -36,6 +45,10 @@ fun MainContentLandscape(
         categoryScrollState: LazyListState,
         channelScrollState: LazyListState
 ) {
+    val scope = rememberCoroutineScope()
+    val accueilFocusRequester = remember { FocusRequester() }
+    var isAccueilFocused by remember { mutableStateOf(false) }
+    
     Row(modifier = Modifier.fillMaxSize()) {
         // --- Column 1: Groups (Pays / Accueil) ---
         // Width reduced from 0.18f to 0.10f
@@ -45,7 +58,24 @@ fun MainContentLandscape(
                         Modifier.weight(0.15f)
                                 .fillMaxHeight()
                                 .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.05f))
-                                .padding(4.dp),
+                                .padding(4.dp)
+                                .onPreviewKeyEvent { event ->
+                                    if (event.key == Key.Back && event.type == KeyEventType.KeyUp) {
+                                        if (!isAccueilFocused) {
+                                            scope.launch {
+                                                countryScrollState.scrollToItem(0)
+                                                // We add a tiny delay to ensure recomposition is done
+                                                kotlinx.coroutines.delay(50)
+                                                try {
+                                                    accueilFocusRequester.requestFocus()
+                                                } catch (e: Exception) {}
+                                            }
+                                            true
+                                        } else {
+                                            false
+                                        }
+                                    } else false
+                                },
                 verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             item {
@@ -53,7 +83,10 @@ fun MainContentLandscape(
                         text = "Accueil",
                         icon = Icons.Default.Home,
                         isSelected = viewModel.selectedCountryFilter == "ALL",
-                        onClick = { viewModel.selectedCountryFilter = "ALL" }
+                        onClick = { viewModel.selectedCountryFilter = "ALL" },
+                        modifier = Modifier
+                            .focusRequester(accueilFocusRequester)
+                            .onFocusChanged { state -> isAccueilFocused = state.isFocused }
                 )
             }
             item {
@@ -193,8 +226,42 @@ fun MainContentLandscape(
 
         // --- Column 3: Channels ---
         val isVod = viewModel.currentMediaMode == MediaMode.VOD
+        val isGlobalSearch = viewModel.lastGeneratorType == GeneratorType.GLOBAL_SEARCH
 
-        if (isVod) {
+        if (isGlobalSearch) {
+            // Affichage des résultats de la recherche globale multi-profils
+            LazyColumn(
+                    state = channelScrollState,
+                    modifier = Modifier.weight(0.55f).fillMaxHeight().padding(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                if (viewModel.globalSearchResults.isEmpty()) {
+                    item {
+                        Box(Modifier.fillMaxWidth().padding(top = 32.dp), contentAlignment = Alignment.Center) {
+                            Text(
+                                text = if (viewModel.searchQuery.isBlank()) "Entrez plusieurs mots pour une recherche globale"
+                                       else "Aucune chaîne trouvée pour \u00ab ${viewModel.searchQuery} \u00bb",
+                                color = Color.Gray,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                } else {
+                    items(viewModel.globalSearchResults, key = { "${it.profileId}_${it.stream_id}" }) { item ->
+                        val isPlaying = viewModel.playingChannel?.stream_id == item.stream_id &&
+                                        viewModel.activeProfileId == item.profileId
+                        val isFav = viewModel.allFavoriteIds.contains("${item.profileId}_${item.stream_id}")
+                        GlobalChannelItem(
+                            item = item,
+                            isPlaying = isPlaying,
+                            isFavorite = isFav,
+                            onClick = { onChannelClick(item.toChannelEntity()) },
+                            onFavoriteClick = { viewModel.initFavoriteAction(item.toChannelEntity()) }
+                        )
+                    }
+                }
+            }
+        } else if (isVod) {
             Box(modifier = Modifier.weight(0.55f).fillMaxHeight().padding(4.dp)) {
                 if (viewModel.channels.isNotEmpty()) {
                     LazyVerticalGrid(
@@ -227,11 +294,13 @@ fun MainContentLandscape(
             ) {
                 items(viewModel.channels, key = { it.stream_id }) { channel ->
                     val isPlaying = viewModel.playingChannel?.stream_id == channel.stream_id
+                    val isFav = viewModel.allFavoriteIds.contains("${channel.profileId}_${channel.stream_id}")
                     ChannelItem(
                             channel = channel,
                             isPlaying = isPlaying,
+                            isFavorite = isFav,
                             onClick = { onChannelClick(channel) },
-                            onFavoriteClick = { viewModel.channelToFavorite = channel }
+                            onFavoriteClick = { viewModel.initFavoriteAction(channel) }
                     )
                 }
             }
