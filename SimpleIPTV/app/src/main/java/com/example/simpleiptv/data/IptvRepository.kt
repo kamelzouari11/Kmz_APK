@@ -1,6 +1,7 @@
 package com.example.simpleiptv.data
 
 import com.example.simpleiptv.data.api.XtreamApi
+import com.example.simpleiptv.data.api.XtreamClient
 import com.example.simpleiptv.data.local.IptvDao
 import com.example.simpleiptv.data.local.entities.*
 import com.example.simpleiptv.data.services.BackupService
@@ -8,12 +9,48 @@ import com.example.simpleiptv.data.services.StreamService
 import com.example.simpleiptv.data.services.SyncService
 import kotlinx.coroutines.flow.Flow
 
-class IptvRepository(private val api: XtreamApi, private val dao: IptvDao) {
+class IptvRepository(private val dao: IptvDao) {
 
         // Sub-services
         private val backupService = BackupService(dao)
         private val syncService = SyncService(dao)
         private val streamService = StreamService(dao)
+
+        /**
+         * Crée et retourne l'API Xtream pour un profil donné.
+         * Chaque profil a sa propre URL de serveur.
+         */
+        fun getXtreamApi(profile: ProfileEntity): XtreamApi {
+                return XtreamClient.create(profile.url)
+        }
+
+        /**
+         * Retourne l'API Xtream pour le profil actif.
+         * Utilisé par StreamService pour générer les URLs de stream.
+         */
+        fun getXtreamApiForProfile(profileId: Int, profiles: List<ProfileEntity>): XtreamApi? {
+                val profile = profiles.find { it.id == profileId } ?: return null
+                return XtreamClient.create(profile.url)
+        }
+
+        /**
+         * Crée un profil par défaut si aucun profil n'existe.
+         * Appelé au premier lancement de l'application.
+         */
+        suspend fun createDefaultProfileIfNeeded() {
+                val count = dao.getProfileCount()
+                if (count == 0) {
+                        val defaultProfile = ProfileEntity(
+                                profileName = "Mon Serveur IPTV",
+                                url = "",
+                                username = "",
+                                password = "",
+                                type = "xtream",
+                                isSelected = true
+                        )
+                        dao.insertProfile(defaultProfile)
+                }
+        }
 
         // --- Basic DAO Access ---
         fun getCategories(profileId: Int, type: String = "LIVE"): Flow<List<CategoryEntity>> =
@@ -22,23 +59,47 @@ class IptvRepository(private val api: XtreamApi, private val dao: IptvDao) {
                 profileId: Int,
                 type: String = "LIVE"
         ): Flow<List<FavoriteListEntity>> = dao.getAllFavoriteLists(profileId, type)
-        fun getRecentChannels(profileId: Int, type: String = "LIVE"): Flow<List<ChannelEntity>> =
-                dao.getRecentChannels(profileId, type)
-        fun getChannelsByCategory(
-                categoryId: String,
+        fun getAllFavoriteListsIncludingGlobal(
                 profileId: Int,
                 type: String = "LIVE"
-        ): Flow<List<ChannelEntity>> = dao.getChannelsByCategory(categoryId, profileId, type)
+        ): Flow<List<FavoriteListEntity>> = dao.getAllFavoriteListsIncludingGlobal(profileId, type)
         fun getChannelsByFavoriteList(
                 listId: Int,
                 profileId: Int,
                 type: String = "LIVE"
         ): Flow<List<ChannelEntity>> = dao.getChannelsByFavoriteList(listId, profileId, type)
+        fun getAllProfileChannelsByFavoriteList(
+                listId: Int,
+                type: String = "LIVE"
+        ): Flow<List<ChannelEntity>> = dao.getAllProfileChannelsByFavoriteList(listId, type)
+        fun getRecentChannels(profileId: Int, type: String = "LIVE"): Flow<List<ChannelEntity>> =
+                dao.getRecentChannels(profileId, type)
+fun getAllRecentChannels(type: String = "LIVE"): Flow<List<ChannelEntity>> =
+                dao.getAllRecentChannels(type)
+        fun getChannelsByCategory(
+                categoryId: String,
+                profileId: Int,
+                type: String = "LIVE"
+        ): Flow<List<ChannelEntity>> = dao.getChannelsByCategory(categoryId, profileId, type)
         fun searchChannels(
                 query: String,
                 profileId: Int,
                 type: String = "LIVE"
-        ): Flow<List<ChannelEntity>> = dao.searchChannels(query, profileId, type)
+        ): Flow<List<ChannelEntity>> {
+            // Recherche multi-mots séquentielle : "abc xyz" → LIKE '%abc%xyz%'
+            val tokens = query.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
+            
+            return if (tokens.size <= 1) {
+                // Un seul mot - recherche simple
+                dao.searchChannels(query.trim(), profileId, type)
+            } else {
+                // Plusieurs mots - recherche séquentielle (max 3 mots supportés par la DB)
+                val q1 = tokens.getOrElse(0) { "" }
+                val q2 = tokens.getOrElse(1) { "" }
+                val q3 = tokens.getOrElse(2) { "" }
+                dao.searchChannelsMultiWord(q1, q2, q3, profileId, type)
+            }
+        }
 
         /**
          * Recherche intelligente multi-profils.
@@ -90,7 +151,7 @@ class IptvRepository(private val api: XtreamApi, private val dao: IptvDao) {
         suspend fun clearSearchHistory() = dao.clearSearchHistory()
 
         // --- Favorites Logic ---
-        suspend fun addFavoriteList(name: String, profileId: Int, type: String = "LIVE") =
+        suspend fun addFavoriteList(name: String, profileId: Int?, type: String = "LIVE") =
                 dao.insertFavoriteList(
                         FavoriteListEntity(name = name, profileId = profileId, type = type)
                 )

@@ -31,14 +31,14 @@ class PlaybackService : MediaSessionService() {
                                 .setAllowCrossProtocolRedirects(true)
 
                 // Optimize buffering for IPTV (high bitrate/unstable network)
-                // Optimize for Fast Zapping + Stability
+                // Optimized for Fast Zapping
                 val loadControl =
                         androidx.media3.exoplayer.DefaultLoadControl.Builder()
                                 .setBufferDurationsMs(
-                                        15_000, // minBufferMs: More buffer for stability
-                                        60_000, // maxBufferMs: Allow up to 1 min of cache
-                                        2_000, // bufferForPlaybackMs: Wait for 2s before start
-                                        4_000 // bufferForPlaybackAfterRebufferMs: Be more cautious
+                                        10_000, // minBufferMs: Reduced for faster start
+                                        30_000, // maxBufferMs: Allow up to 30s of cache
+                                        1_000, // bufferForPlaybackMs: Wait for 1s before start
+                                        2_000 // bufferForPlaybackAfterRebufferMs: Less cautious
                                         // when resuming
                                         )
                                 .setPrioritizeTimeOverSizeThresholds(true)

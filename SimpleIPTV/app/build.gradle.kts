@@ -22,10 +22,10 @@ android {
 
     defaultConfig {
         applicationId = "com.example.simpleiptv"
-        minSdk = 23
+        minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1"
         // Token GitHub injecté depuis local.properties commun (jamais dans le code)
         buildConfigField("String", "GITHUB_TOKEN", "\"$githubToken\"")
     }
@@ -102,4 +102,10 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+
+    // Unit Tests
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+    testImplementation("io.mockk:mockk:1.13.8")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 }

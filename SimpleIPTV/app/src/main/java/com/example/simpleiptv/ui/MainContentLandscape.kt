@@ -1,6 +1,9 @@
 package com.example.simpleiptv.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -10,8 +13,10 @@ import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -36,6 +41,7 @@ import com.example.simpleiptv.ui.components.VodItem
 import com.example.simpleiptv.ui.viewmodel.GeneratorType
 import com.example.simpleiptv.ui.viewmodel.MainViewModel
 import com.example.simpleiptv.ui.viewmodel.MediaMode
+import com.example.simpleiptv.ui.viewmodel.SearchScope
 
 @Composable
 fun MainContentLandscape(
@@ -47,35 +53,16 @@ fun MainContentLandscape(
 ) {
     val scope = rememberCoroutineScope()
     val accueilFocusRequester = remember { FocusRequester() }
-    var isAccueilFocused by remember { mutableStateOf(false) }
     
     Row(modifier = Modifier.fillMaxSize()) {
         // --- Column 1: Groups (Pays / Accueil) ---
-        // Width reduced from 0.18f to 0.10f
         LazyColumn(
                 state = countryScrollState,
                 modifier =
                         Modifier.weight(0.15f)
                                 .fillMaxHeight()
                                 .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.05f))
-                                .padding(4.dp)
-                                .onPreviewKeyEvent { event ->
-                                    if (event.key == Key.Back && event.type == KeyEventType.KeyUp) {
-                                        if (!isAccueilFocused) {
-                                            scope.launch {
-                                                countryScrollState.scrollToItem(0)
-                                                // We add a tiny delay to ensure recomposition is done
-                                                kotlinx.coroutines.delay(50)
-                                                try {
-                                                    accueilFocusRequester.requestFocus()
-                                                } catch (e: Exception) {}
-                                            }
-                                            true
-                                        } else {
-                                            false
-                                        }
-                                    } else false
-                                },
+                                .padding(4.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             item {
@@ -86,8 +73,7 @@ fun MainContentLandscape(
                         onClick = { viewModel.selectedCountryFilter = "ALL" },
                         modifier = Modifier
                             .focusRequester(accueilFocusRequester)
-                            .onFocusChanged { state -> isAccueilFocused = state.isFocused }
-                )
+                    )
             }
             item {
                 Text(
@@ -113,7 +99,6 @@ fun MainContentLandscape(
         VerticalDivider(color = Color.Gray.copy(alpha = 0.1f), thickness = 1.dp)
 
         // --- Column 2: Categories ---
-        // Width increased from 0.25f to 0.33f (gained from Column 1)
         LazyColumn(
                 state = categoryScrollState,
                 modifier =
@@ -125,19 +110,39 @@ fun MainContentLandscape(
         ) {
             if (viewModel.selectedCountryFilter == "ALL") {
                 item {
-                    SidebarItem(
-                            text = "Récents",
-                            icon = Icons.Default.History,
-                            isSelected = viewModel.lastGeneratorType == GeneratorType.RECENTS,
-                            onClick = {
-                                viewModel.selectedCategoryId = null
-                                viewModel.selectedFavoriteListId = -1
-                                viewModel.searchQuery = ""
-                                viewModel.lastGeneratorType = GeneratorType.RECENTS
-                                viewModel.refreshChannels()
-                            },
-                            onDelete = { viewModel.clearRecents() }
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        SidebarItem(
+                                text = "Récents",
+                                icon = Icons.Default.History,
+                                isSelected = viewModel.lastGeneratorType == GeneratorType.RECENTS,
+                                onClick = {
+                                    viewModel.selectedCategoryId = null
+                                    viewModel.selectedFavoriteListId = -1
+                                    viewModel.searchQuery = ""
+                                    viewModel.lastGeneratorType = GeneratorType.RECENTS
+                                    viewModel.refreshChannels()
+                                },
+                                onDelete = { viewModel.clearRecents() },
+                                modifier = Modifier.weight(1f)
+                        )
+                        // Bouton scope recents
+                        if (viewModel.lastGeneratorType == GeneratorType.RECENTS) {
+                            IconButton(
+                                onClick = { viewModel.toggleRecentScope() },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (viewModel.recentScope == SearchScope.ALL_PROFILES) Icons.Default.Groups else Icons.Default.Person,
+                                    contentDescription = if (viewModel.recentScope == SearchScope.ALL_PROFILES) "Tous profils" else "Profil actif",
+                                    tint = if (viewModel.recentScope == SearchScope.ALL_PROFILES) Color(0xFF4CAF50) else Color.Gray,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
                 }
                 item {
                     Row(
@@ -152,6 +157,31 @@ fun MainContentLandscape(
                                 color = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.weight(1f)
                         )
+                        // Bouton scope favoris
+                        if (viewModel.lastGeneratorType == GeneratorType.FAVORITES) {
+                            IconButton(
+                                onClick = { viewModel.toggleFavoriteScope() },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (viewModel.favoriteScope == SearchScope.ALL_PROFILES) Icons.Default.Groups else Icons.Default.Person,
+                                    contentDescription = if (viewModel.favoriteScope == SearchScope.ALL_PROFILES) "Tous profils" else "Profil actif",
+                                    tint = if (viewModel.favoriteScope == SearchScope.ALL_PROFILES) Color(0xFF4CAF50) else Color.Gray,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            IconButton(
+                                onClick = { viewModel.toggleFavoriteListScope() },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (viewModel.favoriteListScope == com.example.simpleiptv.ui.viewmodel.FavoriteListScope.ALL_LISTS) Icons.Default.Star else Icons.Default.Person,
+                                    contentDescription = if (viewModel.favoriteListScope == com.example.simpleiptv.ui.viewmodel.FavoriteListScope.ALL_LISTS) "Toutes listes" else "Liste profil",
+                                    tint = if (viewModel.favoriteListScope == com.example.simpleiptv.ui.viewmodel.FavoriteListScope.ALL_LISTS) Color(0xFF4CAF50) else Color.Gray,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
                         var isAddFocused by remember { mutableStateOf(false) }
                         IconButton(
                                 onClick = { viewModel.showAddListDialog = true },
@@ -177,11 +207,11 @@ fun MainContentLandscape(
                         }
                     }
                 }
-                items(viewModel.favoriteLists, key = { it.id }) { list ->
+                items(viewModel.filteredFavoriteLists, key = { it.id }) { list ->
                     val isSelected = viewModel.selectedFavoriteListId == list.id
                     SidebarItem(
                             text = list.name,
-                            icon = Icons.Default.Star,
+                            icon = if (list.profileId == null) Icons.Default.Star else Icons.Default.Star,
                             isSelected = isSelected,
                             onClick = {
                                 viewModel.selectedFavoriteListId = list.id
@@ -295,12 +325,14 @@ fun MainContentLandscape(
                 items(viewModel.channels, key = { it.stream_id }) { channel ->
                     val isPlaying = viewModel.playingChannel?.stream_id == channel.stream_id
                     val isFav = viewModel.allFavoriteIds.contains("${channel.profileId}_${channel.stream_id}")
+                    val channelProfile = viewModel.profiles.find { it.id == channel.profileId }
                     ChannelItem(
                             channel = channel,
                             isPlaying = isPlaying,
                             isFavorite = isFav,
                             onClick = { onChannelClick(channel) },
-                            onFavoriteClick = { viewModel.initFavoriteAction(channel) }
+                            onFavoriteClick = { viewModel.initFavoriteAction(channel) },
+                            profile = channelProfile
                     )
                 }
             }

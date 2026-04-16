@@ -21,7 +21,6 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.example.simpleiptv.data.IptvRepository
-import com.example.simpleiptv.data.api.XtreamClient
 import com.example.simpleiptv.data.local.AppDatabase
 import com.example.simpleiptv.ui.MainScreen
 import com.example.simpleiptv.ui.theme.SimpleIPTVTheme
@@ -46,11 +45,10 @@ class MainActivity : ComponentActivity() {
                         try {
                                 val database = AppDatabase.getDatabase(this@MainActivity)
                                 val dao = database.iptvDao()
-                                iptvRepository =
-                                        IptvRepository(
-                                                XtreamClient.create("http://j.delta2022.xyz:8880/"),
-                                                dao
-                                        )
+                                iptvRepository = IptvRepository(dao)
+
+                                // Créer un profil par défaut si aucun profil n'existe
+                                iptvRepository!!.createDefaultProfileIfNeeded()
 
                                 viewModel =
                                         ViewModelProvider(

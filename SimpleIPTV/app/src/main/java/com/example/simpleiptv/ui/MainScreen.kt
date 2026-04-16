@@ -128,13 +128,17 @@ fun MainScreen(
                         // Retour au menu sans arrêter la lecture
                         viewModel.isFullScreenPlayer = false
                     },
+                    onFavoriteClick = { channel -> viewModel.initFavoriteAction(channel) },
+                    allFavoriteIds = viewModel.allFavoriteIds,
                     isLandscape = true,
                     playingChannel = viewModel.playingChannel,
                     countriesScrollState = mainCountryScrollState,
                     categoriesScrollState = mainCategoryScrollState,
                     channelsScrollState = mainChannelScrollState,
                     listLabel = viewModel.lastListLabel,
-                    profiles = viewModel.profiles
+                    profiles = viewModel.profiles,
+                    activeProfileId = viewModel.activeProfileId,
+                    onProfileSelected = { profileId -> viewModel.selectProfile(profileId) }
             )
         } else {
             Box(modifier = Modifier.fillMaxSize()) {

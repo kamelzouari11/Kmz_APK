@@ -13,11 +13,15 @@ import kotlinx.coroutines.coroutineScope
 class SyncService(private val dao: IptvDao) {
 
     suspend fun refreshDatabase(profile: ProfileEntity) {
+        android.util.Log.d("SyncService", "Starting sync for profile: ${profile.profileName}, type: ${profile.type}")
         if (profile.type == "stalker") {
             refreshStalker(profile)
         } else {
+            android.util.Log.d("SyncService", "Syncing LIVE...")
             refreshLiveXtream(profile)
+            android.util.Log.d("SyncService", "Syncing VOD...")
             refreshVodXtream(profile)
+            android.util.Log.d("SyncService", "Sync completed")
         }
     }
 
@@ -46,6 +50,7 @@ class SyncService(private val dao: IptvDao) {
             val dynamicApi = XtreamClient.create(profile.url)
             val apiCategories = dynamicApi.getVodCategories(profile.username, profile.password)
             val apiStreams = dynamicApi.getVodStreams(profile.username, profile.password)
+            android.util.Log.d("SyncService", "VOD: ${apiCategories.size} categories, ${apiStreams.size} streams")
 
             val categoryEntities = apiCategories.mapIndexed { index, cat ->
                 CategoryEntity(cat.category_id ?: "0", cat.category_name, profile.id, type = "VOD", sortOrder = index)

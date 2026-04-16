@@ -17,9 +17,19 @@ enum class GeneratorType {
     CATEGORY
 }
 
+enum class SearchScope {
+    ACTIVE_PROFILE,  // Recherche dans le profil actif uniquement
+    ALL_PROFILES    // Recherche globale dans tous les profils
+}
+
 enum class MediaMode {
     LIVE,
     VOD
+}
+
+enum class FavoriteListScope {
+    ALL_LISTS,      // Affiche toutes les listes (globales + profil)
+    PROFILE_ONLY    // Affiche seulement les listes du profil actif
 }
 
 class MainViewModel(private val repository: IptvRepository) : ViewModel() {
@@ -43,6 +53,15 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
         private set
     var channels by mutableStateOf<List<ChannelEntity>>(emptyList())
         private set
+
+    /** Liste des favoris filtrée selon le scope d'affichage (toutes ou profil uniquement). */
+    val filteredFavoriteLists by derivedStateOf {
+        if (favoriteListScope == FavoriteListScope.ALL_LISTS) {
+            favoriteLists
+        } else {
+            favoriteLists.filter { it.profileId == activeProfileId || it.profileId == null }
+        }
+    }
     var globalSearchResults by mutableStateOf<List<com.example.simpleiptv.data.local.ChannelWithProfile>>(emptyList())
         private set
 
@@ -62,10 +81,20 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
     /** Label lisible pour la liste courante (affiché dans le player). */
     val lastListLabel: String by derivedStateOf {
         when (lastGeneratorType) {
-            GeneratorType.RECENTS -> "Récents"
-            GeneratorType.SEARCH -> "Recherche : $searchQuery"
-            GeneratorType.GLOBAL_SEARCH -> "Recherche globale : $searchQuery"
-            GeneratorType.FAVORITES -> favoriteLists.find { it.id == selectedFavoriteListId }?.name ?: "Favoris"
+            GeneratorType.RECENTS -> {
+                val scopeLabel = if (recentScope == SearchScope.ALL_PROFILES) "global" else "profil"
+                "Récents $scopeLabel"
+            }
+            GeneratorType.SEARCH, GeneratorType.GLOBAL_SEARCH -> {
+                val scopeLabel = if (searchScope == SearchScope.ALL_PROFILES) "globale" else "profil"
+                "Recherche $scopeLabel : $searchQuery"
+            }
+            GeneratorType.FAVORITES -> {
+                val listName = favoriteLists.find { it.id == selectedFavoriteListId }?.name ?: "Favoris"
+                val scopeLabel = if (favoriteScope == SearchScope.ALL_PROFILES || 
+                    favoriteLists.find { it.id == selectedFavoriteListId }?.profileId == null) "global" else "profil"
+                "$listName ($scopeLabel)"
+            }
             GeneratorType.CATEGORY -> filteredCategories.find { it.category_id == selectedCategoryId }?.category_name ?: "Catégorie"
         }
     }
@@ -74,6 +103,10 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
     var selectedCategoryId by mutableStateOf<String?>(null)
     var selectedFavoriteListId by mutableIntStateOf(-1)
     var searchQuery by mutableStateOf("")
+    var searchScope by mutableStateOf(SearchScope.ALL_PROFILES)  // Mode de recherche: profil actif ou tous les profils
+    var recentScope by mutableStateOf(SearchScope.ALL_PROFILES)  // Mode recents: profil actif ou tous les profils
+    var favoriteScope by mutableStateOf(SearchScope.ALL_PROFILES)  // Mode favoris: profil actif ou tous les profils
+    var favoriteListScope by mutableStateOf(FavoriteListScope.ALL_LISTS)  // Mode affichage listes: toutes ou juste profil
     var selectedCountryFilter by mutableStateOf("ALL")
 
     var countryFilters by mutableStateOf<List<String>>(listOf("ALL"))
@@ -174,22 +207,25 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
         viewModelScope.launch {
             repository.selectProfile(id)
 
-            // Auto-sync if DB is empty for this profile (meaning no categories are loaded)
+            // Auto-sync if DB is empty for this profile AND has valid URL
             val count = repository.getCategoryCount(id)
-            if (count == 0) {
-                val profile = profiles.find { it.id == id }
-                if (profile != null) {
-                    isLoading = true
-                    try {
-                        repository.refreshDatabase(profile)
-                    } catch (e: Exception) {
-                        failedProfileToReload = profile
-                        syncError =
-                                "Erreur d'importation : ${e.localizedMessage ?: "Erreur inconnue"}"
-                    } finally {
-                        isLoading = false
-                    }
+            val profile = profiles.find { it.id == id }
+            val hasValidUrl = profile?.url?.isNotBlank() == true
+            
+            if (count == 0 && hasValidUrl) {
+                isLoading = true
+                try {
+                    repository.refreshDatabase(profile)
+                } catch (e: Exception) {
+                    failedProfileToReload = profile
+                    syncError =
+                            "Erreur d'importation : ${e.localizedMessage ?: "Erreur inconnue"}"
+                } finally {
+                    isLoading = false
                 }
+            } else if (count == 0 && !hasValidUrl) {
+                // Skip sync for profiles without URL (empty default profile)
+                android.util.Log.w("MainViewModel", "Skipping sync for profile without URL: ${profile?.profileName}")
             }
 
             categoriesJob?.cancel()
@@ -223,7 +259,7 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
 
             favoritesJob?.cancel()
             favoritesJob = launch {
-                repository.getFavoriteLists(id, currentMediaMode.name).collect {
+                repository.getAllFavoriteListsIncludingGlobal(id, currentMediaMode.name).collect {
                     favoriteLists = it
                 }
             }
@@ -242,11 +278,15 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
         channelsJob?.cancel()
         searchDebounceJob?.cancel()
 
+        // Toujours utiliser debounce pour la recherche (plus fluide)
+        val isSearch = searchQuery.isNotBlank() && 
+            (lastGeneratorType == GeneratorType.SEARCH || lastGeneratorType == GeneratorType.GLOBAL_SEARCH)
+
         channelsJob =
                 viewModelScope.launch {
-                    if (debounce && lastGeneratorType == GeneratorType.SEARCH) {
+                    if (debounce && isSearch) {
                         searchDebounceJob = launch {
-                            kotlinx.coroutines.delay(300)
+                            kotlinx.coroutines.delay(400) // 400ms debounce pour fluidité
                             executeRefresh()
                         }
                     } else {
@@ -256,38 +296,79 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
     }
 
     private suspend fun executeRefresh() {
-        if (lastGeneratorType == GeneratorType.GLOBAL_SEARCH) {
-            // Recherche globale multi-profils
-            globalSearchResults = emptyList()
-            repository.searchChannelsAllProfiles(searchQuery, currentMediaMode.name)
-                    .collect { globalSearchResults = it }
+        android.util.Log.d("MainViewModel", "execute: type=$lastGeneratorType, query='$searchQuery', scope=$searchScope")
+        
+        // Si pas de query, aller chercher les chaines selon le type (RECENTS, CATEGORY, FAVORITES)
+        if (searchQuery.isBlank()) {
+            executeNormalRefresh()
             return
         }
-        // Reset global results when not in global search
+        
+        // Recherche : globale ou locale selon searchScope
+        if (searchScope == SearchScope.ALL_PROFILES) {
+            // Recherche globale - tous profils
+            android.util.Log.d("MainViewModel", "Global search: query='$searchQuery'")
+            lastGeneratorType = GeneratorType.GLOBAL_SEARCH
+            globalSearchResults = emptyList()
+            repository.searchChannelsAllProfiles(searchQuery, currentMediaMode.name)
+                    .collect { 
+                        android.util.Log.d("MainViewModel", "Global results: ${it.size}")
+                        globalSearchResults = it 
+                    }
+        } else {
+            // Recherche locale - profil actif seulement
+            android.util.Log.d("MainViewModel", "Local search: query='$searchQuery', profile=$activeProfileId")
+            lastGeneratorType = GeneratorType.SEARCH
+            globalSearchResults = emptyList()
+            repository.searchChannels(searchQuery, activeProfileId, currentMediaMode.name)
+                    .collect { 
+                        android.util.Log.d("MainViewModel", "Local results: ${it.size}")
+                        channels = it 
+                    }
+        }
+    }
+
+    private suspend fun executeNormalRefresh() {
+        // Pas de recherche - afficher selon le type de générateur
         globalSearchResults = emptyList()
-        val flow =
+        
+        val recentFlow = if (recentScope == SearchScope.ALL_PROFILES) {
+            repository.getAllRecentChannels(currentMediaMode.name)
+        } else {
+            repository.getRecentChannels(activeProfileId, currentMediaMode.name)
+        }
+        
+val flow =
                 when (lastGeneratorType) {
-                    GeneratorType.SEARCH ->
-                            repository.searchChannels(
-                                    searchQuery,
-                                    activeProfileId,
+                    GeneratorType.RECENTS -> recentFlow
+                    GeneratorType.CATEGORY -> {
+                        repository.getChannelsByCategory(
+                            selectedCategoryId ?: "",
+                            activeProfileId,
+                            currentMediaMode.name
+                        )
+                    }
+                    GeneratorType.FAVORITES -> {
+                        // Vérifier si la liste est multi-profils (profileId null) ou spécifique à un profil
+                        val selectedList = favoriteLists.find { it.id == selectedFavoriteListId }
+                        val isGlobalList = selectedList?.profileId == null
+                        
+                        // Si liste globale ou scope = tous profils, utiliser getAllProfileChannelsByFavoriteList
+                        if (isGlobalList || favoriteScope == SearchScope.ALL_PROFILES) {
+                            repository.getAllProfileChannelsByFavoriteList(
+                                    selectedFavoriteListId,
                                     currentMediaMode.name
                             )
-                    GeneratorType.RECENTS ->
-                            repository.getRecentChannels(activeProfileId, currentMediaMode.name)
-                    GeneratorType.FAVORITES ->
+                        } else {
+                            // Liste spécifique au profil
                             repository.getChannelsByFavoriteList(
                                     selectedFavoriteListId,
                                     activeProfileId,
                                     currentMediaMode.name
                             )
-                    GeneratorType.CATEGORY ->
-                            repository.getChannelsByCategory(
-                                    selectedCategoryId ?: "",
-                                    activeProfileId,
-                                    currentMediaMode.name
-                            )
-                    GeneratorType.GLOBAL_SEARCH -> return // handled above
+                        }
+                    }
+                    else -> repository.getRecentChannels(activeProfileId, currentMediaMode.name)
                 }
         flow.collect { channels = it }
     }
@@ -340,6 +421,54 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
         }
     }
 
+    /** Change le scope de recherche entre profil actif et tous les profils. */
+    fun toggleSearchScope() {
+        searchScope = if (searchScope == SearchScope.ALL_PROFILES) {
+            SearchScope.ACTIVE_PROFILE
+        } else {
+            SearchScope.ALL_PROFILES
+        }
+        // Relancer la recherche avec le nouveau scope
+        if (searchQuery.isNotBlank()) {
+            refreshChannels()
+        }
+    }
+
+    /** Change le scope des recents entre profil actif et tous les profils. */
+    fun toggleRecentScope() {
+        recentScope = if (recentScope == SearchScope.ALL_PROFILES) {
+            SearchScope.ACTIVE_PROFILE
+        } else {
+            SearchScope.ALL_PROFILES
+        }
+        // Relancer l'affichage des recents
+        if (lastGeneratorType == GeneratorType.RECENTS) {
+            refreshChannels()
+        }
+    }
+
+    /** Change le scope des favoris entre profil actif et tous les profils. */
+    fun toggleFavoriteScope() {
+        favoriteScope = if (favoriteScope == SearchScope.ALL_PROFILES) {
+            SearchScope.ACTIVE_PROFILE
+        } else {
+            SearchScope.ALL_PROFILES
+        }
+        // Relancer l'affichage des favoris
+        if (lastGeneratorType == GeneratorType.FAVORITES) {
+            refreshChannels()
+        }
+    }
+
+    /** Change le scope d'affichage des listes de favoris entre toutes les listes et profil actif uniquement. */
+    fun toggleFavoriteListScope() {
+        favoriteListScope = if (favoriteListScope == FavoriteListScope.ALL_LISTS) {
+            FavoriteListScope.PROFILE_ONLY
+        } else {
+            FavoriteListScope.ALL_LISTS
+        }
+    }
+
     fun clearSearchHistory() {
         viewModelScope.launch {
             repository.clearSearchHistory()
@@ -347,9 +476,10 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
         }
     }
 
-    fun addFavoriteList(name: String) {
+    fun addFavoriteList(name: String, isGlobal: Boolean = false) {
         viewModelScope.launch {
-            repository.addFavoriteList(name, activeProfileId, currentMediaMode.name)
+            val targetProfileId = if (isGlobal) null else activeProfileId
+            repository.addFavoriteList(name, targetProfileId, currentMediaMode.name)
         }
     }
 

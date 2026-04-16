@@ -98,6 +98,18 @@ interface IptvDao {
             type: String = "LIVE"
     ): Flow<List<ChannelEntity>>
 
+    /** Recherche multi-mots dans l'ordre (ex: "abc xyz" → *abc*xyz*) */
+    @Query(
+            "SELECT * FROM channels WHERE profileId = :profileId AND type = :type AND name LIKE '%' || :query1 || '%' AND name LIKE '%' || :query2 || '%' AND name LIKE '%' || :query3 || '%' ORDER BY sortOrder ASC"
+    )
+    fun searchChannelsMultiWord(
+            query1: String,
+            query2: String,
+            query3: String,
+            profileId: Int,
+            type: String = "LIVE"
+    ): Flow<List<ChannelEntity>>
+
     // --- IPTV Favorite Lists ---
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertFavoriteList(list: FavoriteListEntity)
@@ -106,6 +118,12 @@ interface IptvDao {
             "SELECT * FROM favorite_lists WHERE profileId = :profileId AND type = :type ORDER BY id ASC"
     )
     fun getAllFavoriteLists(profileId: Int, type: String = "LIVE"): Flow<List<FavoriteListEntity>>
+
+    /** Récupère TOUTES les listes de favoris (incluant les listes multi-profils). */
+    @Query(
+            "SELECT * FROM favorite_lists WHERE (profileId = :profileId OR profileId IS NULL) AND type = :type ORDER BY id ASC"
+    )
+    fun getAllFavoriteListsIncludingGlobal(profileId: Int, type: String = "LIVE"): Flow<List<FavoriteListEntity>>
 
     @Delete suspend fun deleteFavoriteList(list: FavoriteListEntity)
 
@@ -131,6 +149,24 @@ interface IptvDao {
     fun getChannelsByFavoriteList(
             listId: Int,
             profileId: Int,
+            type: String = "LIVE"
+    ): Flow<List<ChannelEntity>>
+
+    /** Récupère les chaînes d'une liste de favoris de TOUS les profils (pour listes multi-profils). */
+    @Query(
+            """
+        SELECT channels.* FROM channels 
+        INNER JOIN channel_favorites ON 
+            channels.stream_id = channel_favorites.channelId AND 
+            channels.profileId = channel_favorites.profileId AND
+            channels.type = channel_favorites.type
+        WHERE channel_favorites.listId = :listId 
+          AND channels.type = :type
+        ORDER BY channel_favorites.sortPosition ASC
+    """
+    )
+    fun getAllProfileChannelsByFavoriteList(
+            listId: Int,
             type: String = "LIVE"
     ): Flow<List<ChannelEntity>>
 
@@ -194,6 +230,21 @@ interface IptvDao {
     )
     fun getRecentChannels(profileId: Int, type: String = "LIVE"): Flow<List<ChannelEntity>>
 
+    /** Récupère les chaînes récentes de TOUS les profils, classées par timestamp. */
+    @Query(
+            """
+        SELECT channels.* FROM channels 
+        INNER JOIN recent_channels ON 
+            channels.stream_id = recent_channels.channelId AND 
+            channels.profileId = recent_channels.profileId AND
+            channels.type = recent_channels.type
+        WHERE channels.type = :type
+        ORDER BY recent_channels.timestamp DESC 
+        LIMIT 40
+    """
+    )
+    fun getAllRecentChannels(type: String = "LIVE"): Flow<List<ChannelEntity>>
+
     @Query(
             """
         DELETE FROM recent_channels WHERE profileId = :profileId AND type = :type AND channelId NOT IN (
@@ -222,6 +273,9 @@ interface IptvDao {
 
     @Query("SELECT * FROM profiles") fun getAllProfiles(): Flow<List<ProfileEntity>>
 
+    @Query("SELECT COUNT(*) FROM profiles")
+    suspend fun getProfileCount(): Int
+
     @Query("SELECT * FROM profiles WHERE isSelected = 1 LIMIT 1")
     suspend fun getSelectedProfile(): ProfileEntity?
 
@@ -241,15 +295,7 @@ interface IptvDao {
         clearCategories(profileId, type)
         insertCategories(categories)
 
-        val currentIds = getChannelIds(profileId, type).toSet()
-        val newIds = channels.map { it.stream_id }.toSet()
-        val idsToDelete = currentIds.minus(newIds).toList()
-
-        if (idsToDelete.isNotEmpty()) {
-            idsToDelete.chunked(900).forEach { chunk ->
-                deleteChannelsByIds(profileId, type, chunk)
-            }
-        }
+        clearChannels(profileId, type)
 
             insertChannels(channels)
             insertChannelCategoryLinks(links)

@@ -71,10 +71,11 @@ fun MainDialogs(viewModel: MainViewModel) {
         GenericFavoriteDialog(
                 title = "Nouveau dossier de favoris",
                 onDismiss = { viewModel.showAddListDialog = false },
-                onConfirm = { name: String ->
-                    viewModel.addFavoriteList(name)
+                onConfirm = { name: String, isGlobal: Boolean ->
+                    viewModel.addFavoriteList(name, isGlobal)
                     viewModel.showAddListDialog = false
-                }
+                },
+                showGlobalToggle = true
         )
     }
 

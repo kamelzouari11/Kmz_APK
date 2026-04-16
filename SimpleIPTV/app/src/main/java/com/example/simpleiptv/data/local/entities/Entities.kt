@@ -6,7 +6,7 @@ import androidx.room.*
 @Entity(
         tableName = "categories",
         primaryKeys = ["category_id", "profileId", "type"],
-        indices = [Index(value = ["profileId"]), Index(value = ["type"])]
+        indices = [Index(value = ["profileId", "type"])]
 )
 data class CategoryEntity(
         val category_id: String,
@@ -19,7 +19,7 @@ data class CategoryEntity(
 @Entity(
         tableName = "channels",
         primaryKeys = ["stream_id", "profileId", "type"],
-        indices = [Index(value = ["profileId"]), Index(value = ["type"]), Index(value = ["name"])]
+        indices = [Index(value = ["profileId", "type"]), Index(value = ["name"])]
 )
 data class ChannelEntity(
         val stream_id: String,
@@ -34,11 +34,7 @@ data class ChannelEntity(
 @Entity(
         tableName = "channel_category_links",
         primaryKeys = ["channelId", "categoryId", "profileId", "type"],
-        indices =
-                [
-                        Index(value = ["categoryId", "profileId", "type"]),
-                        Index(value = ["profileId"]),
-                        Index(value = ["type"])]
+        indices = [Index(value = ["categoryId", "profileId", "type"])]
 )
 data class ChannelCategoryCrossRef(
         val channelId: String,
@@ -51,18 +47,14 @@ data class ChannelCategoryCrossRef(
 data class FavoriteListEntity(
         @PrimaryKey(autoGenerate = true) val id: Int = 0,
         val name: String,
-        val profileId: Int,
+        val profileId: Int?,  // null = liste multi-profils, sinon liée à un profil spécifique
         val type: String = "LIVE" // Which type of media this list is for
 )
 
 @Entity(
         tableName = "channel_favorites",
         primaryKeys = ["channelId", "listId", "profileId", "type"],
-        indices =
-                [
-                        Index(value = ["listId", "profileId", "type"]),
-                        Index(value = ["profileId"]),
-                        Index(value = ["type"])]
+        indices = [Index(value = ["listId", "profileId", "type"])]
 )
 data class ChannelFavoriteCrossRef(
         val channelId: String,
@@ -75,7 +67,7 @@ data class ChannelFavoriteCrossRef(
 @Entity(
         tableName = "recent_channels",
         primaryKeys = ["channelId", "profileId", "type"],
-        indices = [Index(value = ["profileId"]), Index(value = ["type"])]
+        indices = [Index(value = ["profileId", "type"])]
 )
 data class RecentChannelEntity(
         val channelId: String,

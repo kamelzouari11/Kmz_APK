@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Person
@@ -61,6 +62,7 @@ import com.example.simpleiptv.ui.components.TvInput
 import com.example.simpleiptv.ui.viewmodel.GeneratorType
 import com.example.simpleiptv.ui.viewmodel.MainViewModel
 import com.example.simpleiptv.ui.viewmodel.MediaMode
+import com.example.simpleiptv.ui.viewmodel.SearchScope
 import kotlinx.coroutines.launch
 
 @Composable
@@ -146,8 +148,7 @@ fun MainHeader(
                                         },
                                     onClick = {
                                         viewModel.searchQuery = histQuery
-                                        viewModel.commitSearchToHistory() // Met à jour le timestamp → remonte en 1ère position
-                                        viewModel.lastGeneratorType = GeneratorType.GLOBAL_SEARCH
+                                        viewModel.commitSearchToHistory()
                                         viewModel.refreshChannels()
                                         searchFieldFocused = false
                                     },
@@ -181,7 +182,16 @@ fun MainHeader(
                                 ) {
                                         AsyncImage(model = "file:///android_asset/app_logo.jpg", null, modifier = Modifier.size(50.dp), contentScale = ContentScale.Fit)
 
-                                        Spacer(modifier = Modifier.width(24.dp))
+                                        Spacer(modifier = Modifier.width(16.dp))
+
+                                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                            HeaderIconButton(Icons.Default.Person, "Profiles", { viewModel.showProfileManager = true })
+                                            HeaderIconButton(Icons.Default.Refresh, "Sync", { 
+                                                viewModel.profiles.find { it.id == viewModel.activeProfileId }?.let { scope.launch { viewModel.refreshDatabase(it) } }
+                                            })
+                                        }
+
+                                        Spacer(modifier = Modifier.width(16.dp))
 
                                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                             HeaderIconButton(
@@ -194,22 +204,18 @@ fun MainHeader(
                                             HeaderIconButton(Icons.Default.Movie, "Movies", { viewModel.setMediaMode(MediaMode.VOD) }, isSelected = (viewModel.currentMediaMode == MediaMode.VOD))
                                         }
 
-                                        Spacer(modifier = Modifier.width(32.dp))
-
-                                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                            HeaderIconButton(Icons.Default.CloudDownload, "Import", onRestore)
-                                            HeaderIconButton(Icons.Default.CloudUpload, "Export", onSave)
-                                            HeaderIconButton(Icons.Default.Refresh, "Sync", { 
-                                                viewModel.profiles.find { it.id == viewModel.activeProfileId }?.let { scope.launch { viewModel.refreshDatabase(it) } }
-                                            })
-                                            HeaderIconButton(Icons.Default.Person, "Profiles", { viewModel.showProfileManager = true })
-                                        }
-
-                                        Spacer(modifier = Modifier.width(32.dp))
+                                        Spacer(modifier = Modifier.width(16.dp))
 
                                         HeaderIconButton(Icons.Default.PowerSettingsNew, "Exit", { activity?.finish() }, tintNormal = Color.Red)
 
-                                        Spacer(modifier = Modifier.width(48.dp))
+                                        Spacer(modifier = Modifier.width(16.dp))
+
+                                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            HeaderIconButton(Icons.Default.CloudDownload, "Import", onRestore)
+                                            HeaderIconButton(Icons.Default.CloudUpload, "Export", onSave)
+                                        }
+
+                                        Spacer(modifier = Modifier.width(24.dp))
 
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Box(modifier = Modifier.width(220.dp).height(60.dp)) {
@@ -217,7 +223,7 @@ fun MainHeader(
                                                     value = viewModel.searchQuery,
                                                     onValueChange = {
                                                         viewModel.searchQuery = it
-                                                        viewModel.lastGeneratorType = GeneratorType.GLOBAL_SEARCH
+                                                        // Le type de recherche est déterminé automatiquement dans executeRefresh selon searchScope
                                                         viewModel.refreshChannels(debounce = true)
                                                     },
                                                     label = "Rechercher...",
@@ -236,6 +242,14 @@ fun MainHeader(
                                                 
                                             if (viewModel.searchQuery.isNotEmpty()) {
                                                 Spacer(modifier = Modifier.width(8.dp))
+                                                // Bouton scope de recherche (profil actif vs tous profils)
+                                                HeaderIconButton(
+                                                    icon = if (viewModel.searchScope == SearchScope.ALL_PROFILES) Icons.Default.Groups else Icons.Default.Person,
+                                                    desc = if (viewModel.searchScope == SearchScope.ALL_PROFILES) "Tous profils" else "Profil actif",
+                                                    onClick = { viewModel.toggleSearchScope() },
+                                                    tintNormal = if (viewModel.searchScope == SearchScope.ALL_PROFILES) Color(0xFF4CAF50) else Color.Gray
+                                                )
+                                                Spacer(modifier = Modifier.width(4.dp))
                                                 HeaderIconButton(
                                                     icon = Icons.Default.Close,
                                                     desc = "Effacer",
