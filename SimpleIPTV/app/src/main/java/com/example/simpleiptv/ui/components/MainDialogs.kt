@@ -19,88 +19,133 @@ import com.example.simpleiptv.ui.viewmodel.MainViewModel
 
 @Composable
 fun MainDialogs(viewModel: MainViewModel) {
-    val scope = rememberCoroutineScope()
+    val dialogState = viewModel.uiState.dialogState
 
-    if (viewModel.showProfileManager) {
+    if (dialogState.showProfileManager) {
         ProfileManagerDialog(
-                profiles = viewModel.profiles,
-                onDismiss = { viewModel.showProfileManager = false },
+                profiles = viewModel.uiState.profiles,
+                onDismiss = { viewModel.hideProfileManager() },
                 onSelectProfile = { viewModel.selectProfile(it.id) },
-                onAdd = { viewModel.showAddProfileDialog = true },
+                onAdd = { viewModel.showAddProfileDialog() },
                 onDeleteProfile = { viewModel.deleteProfile(it) },
                 onEdit = { profile ->
-                    viewModel.profileToEdit = profile
-                    viewModel.showAddProfileDialog = true
+                    viewModel.showAddProfileDialog(profile)
                 },
                 onPurge = { viewModel.purgeProfiles() },
-                loadedProfileIds = viewModel.loadedProfileIds
+                loadedProfileIds = viewModel.uiState.loadedProfileIds
         )
     }
 
-    if (viewModel.showAddProfileDialog) {
+    if (dialogState.showAddProfileDialog) {
         ProfileFormDialog(
-                profile = viewModel.profileToEdit,
-                onDismiss = {
-                    viewModel.showAddProfileDialog = false
-                    viewModel.profileToEdit = null
-                },
+                profile = dialogState.profileToEdit,
+                onDismiss = { viewModel.hideAddProfileDialog() },
                 onSave = { name, url, user, pass, mac, type ->
                     val newProfile =
                             ProfileEntity(
-                                    id = viewModel.profileToEdit?.id ?: 0,
+                                    id = dialogState.profileToEdit?.id ?: 0,
                                     profileName = name,
                                     url = url,
                                     username = user,
                                     password = pass,
                                     macAddress = mac,
                                     type = type,
-                                    isSelected = viewModel.profileToEdit?.isSelected ?: false
+                                    isSelected = dialogState.profileToEdit?.isSelected ?: false
                             )
-                    if (viewModel.profileToEdit != null) {
+                    if (dialogState.profileToEdit != null) {
                         viewModel.updateProfile(newProfile)
                     } else {
                         viewModel.addProfile(newProfile)
                     }
-                    viewModel.showAddProfileDialog = false
-                    viewModel.profileToEdit = null
+                    viewModel.hideAddProfileDialog()
                 }
         )
     }
 
-    if (viewModel.showAddListDialog) {
+    if (dialogState.showAddListDialog) {
         GenericFavoriteDialog(
                 title = "Nouveau dossier de favoris",
-                onDismiss = { viewModel.showAddListDialog = false },
+                onDismiss = { viewModel.hideAddListDialog() },
                 onConfirm = { name: String, isGlobal: Boolean ->
                     viewModel.addFavoriteList(name, isGlobal)
-                    viewModel.showAddListDialog = false
+                    viewModel.hideAddListDialog()
                 },
                 showGlobalToggle = true
         )
     }
 
-    if (viewModel.channelToFavorite != null) {
-        GenericFavoriteDialog(
-                title = "Ajouter '${viewModel.channelToFavorite?.name}' à :",
-                lists = viewModel.targetFavoriteLists,
-                onDismiss = { viewModel.channelToFavorite = null },
-                onConfirm = { listId: Int ->
-                    viewModel.addChannelToFavoriteList(
-                            viewModel.channelToFavorite!!,
-                            listId
-                    )
-                    viewModel.channelToFavorite = null
+    if (dialogState.showDeleteFavoriteListConfirm) {
+        AlertDialog(
+                onDismissRequest = { viewModel.hideDeleteFavoriteListConfirm() },
+                title = { Text("Supprimer le dossier") },
+                text = {
+                    Text("Voulez-vous vraiment supprimer le dossier de favoris '${dialogState.favoriteListToDelete?.name}' ?")
+                },
+                confirmButton = {
+                    var isFocused by remember { mutableStateOf(false) }
+                    Box(
+                            modifier =
+                                    Modifier.onFocusChanged { isFocused = it.isFocused }
+                                            .clickable { viewModel.confirmRemoveFavoriteList() }
+                                            .focusable()
+                                            .background(
+                                                    if (isFocused) Color.White
+                                                    else Color.Transparent,
+                                                    MaterialTheme.shapes.small
+                                            )
+                                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                                "Supprimer",
+                                color = if (isFocused) Color.Black else Color.Red
+                        )
+                    }
+                },
+                dismissButton = {
+                    var isFocused by remember { mutableStateOf(false) }
+                    Box(
+                            modifier =
+                                    Modifier.onFocusChanged { isFocused = it.isFocused }
+                                            .clickable { viewModel.hideDeleteFavoriteListConfirm() }
+                                            .focusable()
+                                            .background(
+                                                    if (isFocused) Color.White
+                                                    else Color.Transparent,
+                                                    MaterialTheme.shapes.small
+                                            )
+                                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                                "Annuler",
+                                color = if (isFocused) Color.Black else MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
         )
     }
 
-    if (viewModel.failedProfileToReload != null) {
+    if (dialogState.channelToFavorite != null) {
+        GenericFavoriteDialog(
+                title = "Ajouter '${dialogState.channelToFavorite?.name}' à :",
+                lists = dialogState.targetFavoriteLists,
+                onDismiss = { viewModel.clearChannelToFavorite() },
+                onConfirm = { listId: Int ->
+                    viewModel.addChannelToFavoriteList(
+                            dialogState.channelToFavorite!!,
+                            listId
+                    )
+                    viewModel.clearChannelToFavorite()
+                }
+        )
+    }
+
+    if (viewModel.uiState.failedProfileToReload != null) {
         AlertDialog(
-                onDismissRequest = { viewModel.failedProfileToReload = null },
+                onDismissRequest = { viewModel.clearSyncError() },
                 title = { Text("Profil Invalide") },
                 text = {
                     Text(
-                            "Le profil '${viewModel.failedProfileToReload?.profileName}' n'a pas pu être chargé. Il est peut-être invalide ou l'URL est expirée."
+                            "Le profil '${viewModel.uiState.failedProfileToReload?.profileName}' n'a pas pu être chargé. Il est peut-être invalide ou l'URL est expirée."
                     )
                 },
                 confirmButton = {
@@ -108,7 +153,7 @@ fun MainDialogs(viewModel: MainViewModel) {
                     Box(
                             modifier =
                                     Modifier.onFocusChanged { isFocused = it.isFocused }
-                                            .clickable { viewModel.failedProfileToReload = null }
+                                            .clickable { viewModel.clearSyncError() }
                                             .focusable()
                                             .background(
                                                     if (isFocused) Color.White
@@ -131,10 +176,10 @@ fun MainDialogs(viewModel: MainViewModel) {
                             modifier =
                                     Modifier.onFocusChanged { isFocused = it.isFocused }
                                             .clickable {
-                                                viewModel.failedProfileToReload?.let {
+                                                viewModel.uiState.failedProfileToReload?.let {
                                                     viewModel.deleteProfile(it)
                                                 }
-                                                viewModel.failedProfileToReload = null
+                                                viewModel.clearSyncError()
                                             }
                                             .focusable()
                                             .background(

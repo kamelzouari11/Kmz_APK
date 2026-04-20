@@ -96,6 +96,10 @@ fun TvInput(
                                     return@setOnKeyListener true
                                 }
                             }
+                            if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+                                focusManager.clearFocus()
+                                return@setOnKeyListener true
+                            }
                         }
 
                         if (event.action == KeyEvent.ACTION_UP &&

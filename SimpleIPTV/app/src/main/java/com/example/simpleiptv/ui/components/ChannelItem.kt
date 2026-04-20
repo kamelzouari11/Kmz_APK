@@ -14,6 +14,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -36,6 +38,16 @@ fun ChannelItem(
         var isChannelFocused by remember { mutableStateOf(false) }
         var isFavFocused by remember { mutableStateOf(false) }
         val context = LocalContext.current
+        val channelScale by animateFloatAsState(
+                targetValue = if (isChannelFocused) 1.02f else 1f,
+                animationSpec = tween(150),
+                label = "channelScale"
+        )
+        val favScale by animateFloatAsState(
+                targetValue = if (isFavFocused) 1.1f else 1f,
+                animationSpec = tween(150),
+                label = "favScale"
+        )
 
         Row(
                 modifier = Modifier.fillMaxWidth().padding(4.dp),
@@ -48,7 +60,7 @@ fun ChannelItem(
                                         .onFocusChanged { state ->
                                                 isChannelFocused = state.isFocused
                                         }
-                                        .scale(if (isChannelFocused) 1.02f else 1f)
+                                        .scale(channelScale)
                                         .clickable { onClick() }
                                         .focusable(),
                         shape = MaterialTheme.shapes.small,
@@ -72,7 +84,13 @@ fun ChannelItem(
                                 verticalAlignment = Alignment.CenterVertically
                         ) {
                                 AsyncImage(
-                                        model = channel.stream_icon,
+                                        model = coil.request.ImageRequest.Builder(LocalContext.current)
+                                                .data(channel.stream_icon)
+                                                .size(120) // Légèrement plus grand pour la netteté mais limité
+                                                .crossfade(true)
+                                                .diskCachePolicy(coil.request.CachePolicy.ENABLED)
+                                                .memoryCachePolicy(coil.request.CachePolicy.ENABLED)
+                                                .build(),
                                         contentDescription = null,
                                         modifier = Modifier.size(40.dp),
                                         contentScale = ContentScale.Fit
@@ -123,7 +141,7 @@ fun ChannelItem(
                         modifier =
                                 Modifier.size(60.dp)
                                         .onFocusChanged { state -> isFavFocused = state.isFocused }
-                                        .scale(if (isFavFocused) 1.1f else 1f)
+                                        .scale(favScale)
                                         .clickable {
                                                 if (debugInfo.isNotEmpty()) {
                                                         Toast.makeText(

@@ -53,7 +53,13 @@ fun VodItem(
         ) {
                 Column(modifier = Modifier.fillMaxSize()) {
                         AsyncImage(
-                                model = channel.stream_icon,
+                                model = coil.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                                        .data(channel.stream_icon)
+                                        .size(400) // Taille adaptée pour les affiches VOD
+                                        .crossfade(true)
+                                        .diskCachePolicy(coil.request.CachePolicy.ENABLED)
+                                        .memoryCachePolicy(coil.request.CachePolicy.ENABLED)
+                                        .build(),
                                 contentDescription = null,
                                 modifier = Modifier.fillMaxWidth().weight(0.70f), // 70% Height
                                 contentScale = ContentScale.Crop

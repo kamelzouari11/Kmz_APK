@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -81,13 +83,16 @@ fun MainHeader(
 
         // --- Logique commune de l'historique ---
         var searchFieldFocused by remember { mutableStateOf(false) }
-        val showHistory = searchFieldFocused &&
-                viewModel.searchHistory.isNotEmpty() &&
-                viewModel.searchQuery.isBlank()
+        var showHistoryManual by remember { mutableStateOf(false) }
+        val showHistory = (searchFieldFocused || showHistoryManual) &&
+                viewModel.uiState.searchHistory.isNotEmpty() &&
+                viewModel.uiState.searchQuery.isBlank()
         
         val searchFieldFocusRequester = remember { FocusRequester() }
         val firstHistItemFocusRequester = remember { FocusRequester() }
         val liveButtonFocusRequester = remember { FocusRequester() }
+        val playerReturnFocusRequester = remember { FocusRequester() }
+        val profileManagerFocusRequester = remember { FocusRequester() }
 
         LaunchedEffect(Unit) {
             try {
@@ -103,16 +108,18 @@ fun MainHeader(
                 // Ce BackHandler est plus prioritaire que le BackHandler global de MainScreen.
                 // BACK depuis la liste historique → retour au champ de recherche (sans fermer l'app).
                 BackHandler {
-                    searchFieldFocused = false
-                    try { searchFieldFocusRequester.requestFocus() } catch (e: Exception) {}
+                                                     searchFieldFocused = false
+                                                     showHistoryManual = false
+                                                     try { searchFieldFocusRequester.requestFocus() } catch (e: Exception) {}
                 }
                 Popup(
                     alignment = Alignment.TopEnd,
                     offset = IntOffset(0, popupOffsetY),
-                    onDismissRequest = {
-                        searchFieldFocused = false
-                        try { searchFieldFocusRequester.requestFocus() } catch (e: Exception) {}
-                    },
+                                                     onDismissRequest = {
+                                                         searchFieldFocused = false
+                                                         showHistoryManual = false
+                                                         try { searchFieldFocusRequester.requestFocus() } catch (e: Exception) {}
+                                                     },
                     properties = PopupProperties(focusable = true, dismissOnBackPress = true, dismissOnClickOutside = true)
                 ) {
                     Card(
@@ -123,7 +130,7 @@ fun MainHeader(
                         elevation = CardDefaults.cardElevation(defaultElevation = 15.dp)
                     ) {
                         LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                            itemsIndexed(viewModel.searchHistory) { index, histQuery ->
+                            itemsIndexed(viewModel.uiState.searchHistory) { index, histQuery ->
                                 var isItemFocused by remember { mutableStateOf(false) }
                                 Surface(
                                     modifier = Modifier
@@ -147,7 +154,7 @@ fun MainHeader(
                                             }
                                         },
                                     onClick = {
-                                        viewModel.searchQuery = histQuery
+                                        viewModel.setSearchQuery(histQuery)
                                         viewModel.commitSearchToHistory()
                                         viewModel.refreshChannels()
                                         searchFieldFocused = false
@@ -177,7 +184,7 @@ fun MainHeader(
         ) {
                 Column {
                                 Row(
-                                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                 ) {
                                         AsyncImage(model = "file:///android_asset/app_logo.jpg", null, modifier = Modifier.size(50.dp), contentScale = ContentScale.Fit)
@@ -185,10 +192,12 @@ fun MainHeader(
                                         Spacer(modifier = Modifier.width(16.dp))
 
                                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                            HeaderIconButton(Icons.Default.Person, "Profiles", { viewModel.showProfileManager = true })
-                                            HeaderIconButton(Icons.Default.Refresh, "Sync", { 
-                                                viewModel.profiles.find { it.id == viewModel.activeProfileId }?.let { scope.launch { viewModel.refreshDatabase(it) } }
-                                            })
+                                             HeaderIconButton(Icons.Default.Person, "Profiles", { viewModel.showProfileManager() },
+                                                                 modifier = Modifier.focusRequester(profileManagerFocusRequester))
+                                             HeaderIconButton(Icons.Default.Refresh, "Sync", {
+                                                 viewModel.uiState.profiles.find { it.id == viewModel.uiState.activeProfileId }?.let { scope.launch { viewModel.refreshDatabase(it) } }
+                                             })
+
                                         }
 
                                         Spacer(modifier = Modifier.width(16.dp))
@@ -197,11 +206,11 @@ fun MainHeader(
                                             HeaderIconButton(
                                                 icon = Icons.Default.Tv, 
                                                 desc = "Live TV", 
-                                                onClick = { viewModel.setMediaMode(MediaMode.LIVE) }, 
-                                                isSelected = (viewModel.currentMediaMode == MediaMode.LIVE),
+                                                onClick = { viewModel.setMediaMode(MediaMode.LIVE) },
+                                                isSelected = (viewModel.uiState.currentMediaMode == MediaMode.LIVE),
                                                 modifier = Modifier.focusRequester(liveButtonFocusRequester)
                                             )
-                                            HeaderIconButton(Icons.Default.Movie, "Movies", { viewModel.setMediaMode(MediaMode.VOD) }, isSelected = (viewModel.currentMediaMode == MediaMode.VOD))
+                                            HeaderIconButton(Icons.Default.Movie, "Movies", { viewModel.setMediaMode(MediaMode.VOD) }, isSelected = (viewModel.uiState.currentMediaMode == MediaMode.VOD))
                                         }
 
                                         Spacer(modifier = Modifier.width(16.dp))
@@ -220,41 +229,61 @@ fun MainHeader(
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Box(modifier = Modifier.width(220.dp).height(60.dp)) {
                                                 TvInput(
-                                                    value = viewModel.searchQuery,
+                                                    value = viewModel.uiState.searchQuery,
                                                     onValueChange = {
-                                                        viewModel.searchQuery = it
-                                                        // Le type de recherche est déterminé automatiquement dans executeRefresh selon searchScope
-                                                        viewModel.refreshChannels(debounce = true)
+                                                        viewModel.setSearchQuery(it)
                                                     },
                                                     label = "Rechercher...",
                                                     focusManager = focusManager,
                                                     leadingIcon = Icons.Default.Search,
                                                     modifier = Modifier.fillMaxSize().focusRequester(searchFieldFocusRequester),
-                                                    onNativeFocus = { searchFieldFocused = it },
-                                                    onFocusChanged = { searchFieldFocused = it.isFocused },
-                                                    onDownPressed = { if (showHistory) firstHistItemFocusRequester.requestFocus() },
-                                                    onConfirm = { 
-                                                        viewModel.commitSearchToHistory()
-                                                    }
+                                                     onNativeFocus = { 
+                                                         searchFieldFocused = it 
+                                                         if (!it) showHistoryManual = false
+                                                     },
+                                                     onFocusChanged = { 
+                                                         searchFieldFocused = it.isFocused 
+                                                         if (!it.isFocused) showHistoryManual = false
+                                                     },
+                                                      onDownPressed = { 
+                                                          if (showHistoryManual && showHistory) {
+                                                              firstHistItemFocusRequester.requestFocus() 
+                                                          } else {
+                                                              focusManager.clearFocus()
+                                                              try {
+                                                                  profileManagerFocusRequester.requestFocus()
+                                                              } catch (e: Exception) {
+                                                                  liveButtonFocusRequester.requestFocus()
+                                                              }
+                                                          }
+                                                      },
+
+                                                     onConfirm = { 
+                                                         if (viewModel.uiState.searchQuery.isBlank() && viewModel.uiState.searchHistory.isNotEmpty()) {
+                                                             showHistoryManual = true
+                                                         } else {
+                                                             viewModel.commitSearchToHistory()
+                                                         }
+                                                     }
                                                 )
                                                 HistoryPopup()
                                             }
                                                 
-                                            if (viewModel.searchQuery.isNotEmpty()) {
+                                            if (viewModel.uiState.searchQuery.isNotEmpty()) {
                                                 Spacer(modifier = Modifier.width(8.dp))
                                                 // Bouton scope de recherche (profil actif vs tous profils)
                                                 HeaderIconButton(
-                                                    icon = if (viewModel.searchScope == SearchScope.ALL_PROFILES) Icons.Default.Groups else Icons.Default.Person,
-                                                    desc = if (viewModel.searchScope == SearchScope.ALL_PROFILES) "Tous profils" else "Profil actif",
+                                                    icon = if (viewModel.uiState.searchScope == SearchScope.ALL_PROFILES) Icons.Default.Groups else Icons.Default.Person,
+                                                    desc = if (viewModel.uiState.searchScope == SearchScope.ALL_PROFILES) "Tous profils" else "Profil actif",
                                                     onClick = { viewModel.toggleSearchScope() },
-                                                    tintNormal = if (viewModel.searchScope == SearchScope.ALL_PROFILES) Color(0xFF4CAF50) else Color.Gray
+                                                    tintNormal = if (viewModel.uiState.searchScope == SearchScope.ALL_PROFILES) Color(0xFF4CAF50) else Color.Gray
                                                 )
                                                 Spacer(modifier = Modifier.width(4.dp))
                                                 HeaderIconButton(
                                                     icon = Icons.Default.Close,
                                                     desc = "Effacer",
-                                                    onClick = { 
-                                                        viewModel.searchQuery = ""
+                                                    onClick = {
+                                                        viewModel.setSearchQuery("")
                                                         viewModel.refreshChannels()
                                                     },
                                                     tintNormal = Color.Gray
@@ -264,7 +293,7 @@ fun MainHeader(
                                 }
 
                         // --- Profil courant (commun aux deux modes) ---
-                        viewModel.profiles.find { it.id == viewModel.activeProfileId }?.let { currentProfile ->
+                        viewModel.uiState.profiles.find { it.id == viewModel.uiState.activeProfileId }?.let { currentProfile ->
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -291,24 +320,26 @@ fun MainHeader(
                         }
 
                         // Lecture en cours — cliquable pour revenir au player
-                        if (player != null && (player.isPlaying || player.mediaItemCount > 0) && viewModel.playingChannel != null) {
+                        if (player != null && (player.isPlaying || player.mediaItemCount > 0) && viewModel.uiState.playingChannel != null) {
                                 var isNowPlayingFocused by remember { mutableStateOf(false) }
-                                Row(
-                                        modifier = Modifier
-                                                .fillMaxWidth()
-                                                .onFocusChanged { isNowPlayingFocused = it.isFocused }
-                                                .scale(if (isNowPlayingFocused) 1.02f else 1f)
-                                                .background(
-                                                        if (isNowPlayingFocused)
-                                                                Color.White.copy(alpha = 0.95f)
-                                                        else
-                                                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-                                                )
-                                                .clickable { onGoToPlayer() }
-                                                .focusable()
-                                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                ) {
+                                 Row(
+                                         modifier = Modifier
+                                                 .fillMaxWidth()
+                                                 .onFocusChanged { isNowPlayingFocused = it.isFocused }
+                                                 .scale(if (isNowPlayingFocused) 1.02f else 1f)
+                                                 .background(
+                                                         if (isNowPlayingFocused)
+                                                                 Color.White.copy(alpha = 0.95f)
+                                                         else
+                                                                 MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                                                 )
+                                                 .clickable { onGoToPlayer() }
+                                                 .focusable()
+                                                 .focusRequester(playerReturnFocusRequester)
+                                                 .padding(horizontal = 16.dp, vertical = 12.dp),
+                                         verticalAlignment = Alignment.CenterVertically
+                                 ) {
+
                                         Icon(
                                                 Icons.Default.PlayArrow,
                                                 null,
@@ -317,8 +348,8 @@ fun MainHeader(
                                         )
                                         Spacer(Modifier.width(8.dp))
                                         Text(
-                                                text = "▶  ${viewModel.playingChannel!!.name}" +
-                                                        (viewModel.profiles.find { it.id == viewModel.activeProfileId }
+                                                text = "▶  ${viewModel.uiState.playingChannel!!.name}" +
+                                                        (viewModel.uiState.profiles.find { it.id == viewModel.uiState.activeProfileId }
                                                                 ?.profileName?.let { "  •  $it" } ?: ""),
                                                 style = MaterialTheme.typography.titleMedium,
                                                 color = if (isNowPlayingFocused) Color.Black else MaterialTheme.colorScheme.onPrimaryContainer,

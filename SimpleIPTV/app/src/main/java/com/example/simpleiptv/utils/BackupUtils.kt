@@ -12,7 +12,11 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 
 object BackupUtils {
-    private val client = OkHttpClient()
+    private val client = OkHttpClient.Builder()
+            .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .build()
     private const val GITHUB_API_URL =
             "https://api.github.com/repos/${GitHubConfig.OWNER}/${GitHubConfig.REPO}/contents/${GitHubConfig.FILE_PATH}"
 

@@ -1,16 +1,22 @@
 package com.example.simpleiptv.ui
 
+import android.content.res.Configuration
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.Alignment
 import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -28,10 +34,15 @@ fun MainScreen(
         exoPlayer: Player?,
         onSave: () -> Unit,
         onRestore: () -> Unit,
-        getStreamUrl: suspend (String, Int?) -> String
+        getStreamUrl: suspend (com.example.simpleiptv.data.local.entities.ChannelEntity) -> String
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+    // Pull-to-refresh state (simple version using Material3)
+    val isRefreshing = viewModel.uiState.isLoading
 
     // Scroll States for Memory / Sync between Screen A and B
     val mainCountryScrollState = rememberLazyListState()
@@ -39,14 +50,14 @@ fun MainScreen(
     val mainChannelScrollState = rememberLazyListState()
 
     val onChannelClick: (ChannelEntity) -> Unit = { channel ->
-        viewModel.playingChannel = channel
-        viewModel.isFullScreenPlayer = true
+        viewModel.setPlayingChannel(channel)
+        viewModel.setFullScreenPlayer(true)
         exoPlayer?.let { player ->
             scope.launch {
                 try {
                     // Utilise le profileId de la chaîne (important pour la recherche globale
                     // où la chaîne peut appartenir à un profil différent du profil actif)
-                    val streamUrl = getStreamUrl(channel.stream_id, channel.profileId)
+                    val streamUrl = getStreamUrl(channel)
                     if (streamUrl.isNotEmpty()) {
                         val meta =
                                 MediaMetadata.Builder()
@@ -78,8 +89,8 @@ fun MainScreen(
 
     // Auto-go to player if playing
     LaunchedEffect(Unit) {
-        if (viewModel.playingChannel != null) {
-            viewModel.isFullScreenPlayer = true
+        if (viewModel.uiState.playingChannel != null) {
+            viewModel.setFullScreenPlayer(true)
             exoPlayer?.let {
                 if (!it.isPlaying && it.mediaItemCount > 0) {
                     it.prepare()
@@ -93,53 +104,46 @@ fun MainScreen(
     // En mode player, on revient à la liste. Sinon on ne fait rien.
     BackHandler(enabled = true) {
         when {
-            viewModel.isFullScreenPlayer -> {
-                viewModel.isFullScreenPlayer = false
+            viewModel.uiState.isFullScreenPlayer -> {
+                viewModel.setFullScreenPlayer(false)
             }
         }
     }
 
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        if (viewModel.isFullScreenPlayer && viewModel.playingChannel != null && exoPlayer != null) {
+        if (viewModel.uiState.isFullScreenPlayer && viewModel.uiState.playingChannel != null && exoPlayer != null) {
             VideoPlayerView(
                     exoPlayer = exoPlayer,
-                    channelName = viewModel.playingChannel!!.name,
-                    // Toujours passer la DERNIÈRE LISTE chargée (lastList mémorise la liste
-                    // quelle que soit la source : catégorie, récents, ou recherche globale)
-                    currentChannels = viewModel.lastList,
-                    categories = viewModel.filteredCategories,
-                    selectedCategoryId = viewModel.selectedCategoryId,
-                    countries = viewModel.countryFilters,
-                    selectedCountry = viewModel.selectedCountryFilter,
+                    channelName = viewModel.uiState.playingChannel!!.name,
+                    currentChannels = viewModel.uiState.lastList,
+                    categories = viewModel.uiState.filteredCategories,
+                    selectedCategoryId = viewModel.uiState.selectedCategoryId,
+                    countries = viewModel.uiState.countryFilters,
+                    selectedCountry = viewModel.uiState.selectedCountryFilter,
                     onCountrySelected = {
-                        viewModel.selectedCountryFilter = it
-                        viewModel.selectedCategoryId = null
-                        viewModel.refreshChannels()
+                        viewModel.setCountryFilter(it)
+                        viewModel.selectCategory(null)
                     },
                     onChannelSelected = { onChannelClick(it) },
                     onCategorySelected = {
-                        viewModel.selectedCategoryId = it.category_id
-                        viewModel.selectedFavoriteListId = -1
-                        viewModel.searchQuery = ""
-                        viewModel.lastGeneratorType = GeneratorType.CATEGORY
-                        viewModel.refreshChannels()
+                        viewModel.selectCategory(it.category_id)
                     },
                     onBack = {
-                        // Retour au menu sans arrêter la lecture
-                        viewModel.isFullScreenPlayer = false
+                        viewModel.setFullScreenPlayer(false)
                     },
                     onFavoriteClick = { channel -> viewModel.initFavoriteAction(channel) },
-                    allFavoriteIds = viewModel.allFavoriteIds,
-                    isLandscape = true,
-                    playingChannel = viewModel.playingChannel,
+                    allFavoriteIds = viewModel.uiState.allFavoriteIds,
+                    isLandscape = isLandscape,
+                    playingChannel = viewModel.uiState.playingChannel,
                     countriesScrollState = mainCountryScrollState,
                     categoriesScrollState = mainCategoryScrollState,
                     channelsScrollState = mainChannelScrollState,
-                    listLabel = viewModel.lastListLabel,
-                    profiles = viewModel.profiles,
-                    activeProfileId = viewModel.activeProfileId,
-                    onProfileSelected = { profileId -> viewModel.selectProfile(profileId) }
-            )
+                    listLabel = viewModel.uiState.lastListLabel,
+                    profiles = viewModel.uiState.profiles,
+                    activeProfileId = viewModel.uiState.activeProfileId,
+                                 onProfileSelected = { profileId -> viewModel.selectProfile(profileId) },
+                                 viewModel = viewModel
+                            )
         } else {
             Box(modifier = Modifier.fillMaxSize()) {
                 Column(modifier = Modifier.fillMaxSize()) {
@@ -148,23 +152,75 @@ fun MainScreen(
                             onSave = onSave,
                             onRestore = onRestore,
                             player = exoPlayer,
-                            onGoToPlayer = { viewModel.isFullScreenPlayer = true }
+                            onGoToPlayer = { viewModel.setFullScreenPlayer(true) }
                     )
 
-                    if (viewModel.isLoading) {
-                        LinearProgressIndicator(
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
-                        )
+                    // Message d'erreur si présent
+                    viewModel.uiState.syncError?.let { error ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.Error,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Erreur de synchronisation",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        color = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                    Text(
+                                        text = error,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f)
+                                    )
+                                }
+                                TextButton(onClick = { viewModel.clearSyncError() }) {
+                                    Text("Fermer")
+                                }
+                            }
+                        }
                     }
 
-                    Box(modifier = Modifier.weight(1f)) {
-                        MainContentLandscape(
-                                viewModel = viewModel,
-                                onChannelClick = onChannelClick,
-                                countryScrollState = mainCountryScrollState,
-                                categoryScrollState = mainCategoryScrollState,
-                                channelScrollState = mainChannelScrollState
-                        )
+                    Box(
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        if (isLandscape) {
+                            MainContentLandscape(
+                                    viewModel = viewModel,
+                                    onChannelClick = onChannelClick,
+                                    countryScrollState = mainCountryScrollState,
+                                    categoryScrollState = mainCategoryScrollState,
+                                    channelScrollState = mainChannelScrollState
+                            )
+                        } else {
+                            MainContentPortrait(
+                                    viewModel = viewModel,
+                                    onChannelClick = onChannelClick,
+                                    channelScrollState = mainChannelScrollState
+                            )
+                        }
+
+                        // Indicateur de chargement centralisé
+                        if (isRefreshing && viewModel.uiState.channels.isEmpty()) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.align(Alignment.Center)
+                            )
+                        }
                     }
                 }
             }

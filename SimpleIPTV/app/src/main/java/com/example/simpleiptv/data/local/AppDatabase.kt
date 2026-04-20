@@ -11,13 +11,14 @@ import com.example.simpleiptv.data.local.entities.*
                 [
                         CategoryEntity::class,
                         ChannelEntity::class,
+                        ChannelFtsEntity::class,  // FTS4 pour la recherche ultra-rapide
                         ChannelCategoryCrossRef::class,
                         FavoriteListEntity::class,
                         ChannelFavoriteCrossRef::class,
                         RecentChannelEntity::class,
                         ProfileEntity::class,
                         SearchHistoryEntity::class],
-        version = 12,
+        version = 14,
         exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

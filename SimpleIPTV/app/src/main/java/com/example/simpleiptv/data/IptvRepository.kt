@@ -68,51 +68,133 @@ class IptvRepository(private val dao: IptvDao) {
                 profileId: Int,
                 type: String = "LIVE"
         ): Flow<List<ChannelEntity>> = dao.getChannelsByFavoriteList(listId, profileId, type)
+
+        fun getChannelsByFavoriteListPaginated(
+                listId: Int,
+                profileId: Int,
+                type: String = "LIVE",
+                offset: Int = 0,
+                limit: Int = 50
+        ): Flow<List<ChannelEntity>> = dao.getChannelsByFavoriteListPaginated(listId, profileId, type, offset, limit)
+
+        suspend fun getChannelsByFavoriteListCount(
+                listId: Int,
+                profileId: Int,
+                type: String = "LIVE"
+        ): Int = dao.getChannelsByFavoriteListCount(listId, profileId, type)
+
         fun getAllProfileChannelsByFavoriteList(
                 listId: Int,
                 type: String = "LIVE"
         ): Flow<List<ChannelEntity>> = dao.getAllProfileChannelsByFavoriteList(listId, type)
+
+        fun getAllProfileChannelsByFavoriteListPaginated(
+                listId: Int,
+                type: String = "LIVE",
+                offset: Int = 0,
+                limit: Int = 50
+        ): Flow<List<ChannelEntity>> = dao.getAllProfileChannelsByFavoriteListPaginated(listId, type, offset, limit)
+
+        suspend fun getAllProfileChannelsByFavoriteListCount(
+                listId: Int,
+                type: String = "LIVE"
+        ): Int = dao.getAllProfileChannelsByFavoriteListCount(listId, type)
+
         fun getRecentChannels(profileId: Int, type: String = "LIVE"): Flow<List<ChannelEntity>> =
                 dao.getRecentChannels(profileId, type)
-fun getAllRecentChannels(type: String = "LIVE"): Flow<List<ChannelEntity>> =
+
+        fun getRecentChannelsPaginated(
+                profileId: Int,
+                type: String = "LIVE",
+                offset: Int = 0,
+                limit: Int = 50
+        ): Flow<List<ChannelEntity>> = dao.getRecentChannelsPaginated(profileId, type, offset, limit)
+
+        suspend fun getRecentChannelsCount(profileId: Int, type: String = "LIVE"): Int =
+                dao.getRecentChannelsCount(profileId, type)
+
+        fun getAllRecentChannels(type: String = "LIVE"): Flow<List<ChannelEntity>> =
                 dao.getAllRecentChannels(type)
+
+        fun getAllRecentChannelsPaginated(
+                type: String = "LIVE",
+                offset: Int = 0,
+                limit: Int = 50
+        ): Flow<List<ChannelEntity>> = dao.getAllRecentChannelsPaginated(type, offset, limit)
+
+        suspend fun getAllRecentChannelsCount(type: String = "LIVE"): Int =
+                dao.getAllRecentChannelsCount(type)
         fun getChannelsByCategory(
                 categoryId: String,
                 profileId: Int,
                 type: String = "LIVE"
         ): Flow<List<ChannelEntity>> = dao.getChannelsByCategory(categoryId, profileId, type)
+
+        fun getChannelsByCategoryPaginated(
+                categoryId: String,
+                profileId: Int,
+                type: String = "LIVE",
+                offset: Int = 0,
+                limit: Int = 50
+        ): Flow<List<ChannelEntity>> = dao.getChannelsByCategoryPaginated(categoryId, profileId, type, offset, limit)
+
+        suspend fun getChannelsByCategoryCount(
+                categoryId: String,
+                profileId: Int,
+                type: String = "LIVE"
+        ): Int = dao.getChannelsByCategoryCount(categoryId, profileId, type)
         fun searchChannels(
                 query: String,
                 profileId: Int,
                 type: String = "LIVE"
         ): Flow<List<ChannelEntity>> {
-            // Recherche multi-mots séquentielle : "abc xyz" → LIKE '%abc%xyz%'
-            val tokens = query.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
-            
-            return if (tokens.size <= 1) {
-                // Un seul mot - recherche simple
-                dao.searchChannels(query.trim(), profileId, type)
+            // FTS4 : chaque mot reçoit le suffixe '*' pour le prefix-match
+            val ftsQuery = buildFtsQuery(query)
+            return if (ftsQuery.isNotEmpty()) {
+                dao.searchChannelsFts(ftsQuery, profileId, type)
             } else {
-                // Plusieurs mots - recherche séquentielle (max 3 mots supportés par la DB)
-                val q1 = tokens.getOrElse(0) { "" }
-                val q2 = tokens.getOrElse(1) { "" }
-                val q3 = tokens.getOrElse(2) { "" }
-                dao.searchChannelsMultiWord(q1, q2, q3, profileId, type)
+                kotlinx.coroutines.flow.flowOf(emptyList())
+            }
+        }
+
+        fun searchChannelsPaginated(
+                query: String,
+                profileId: Int,
+                type: String = "LIVE",
+                offset: Int = 0,
+                limit: Int = 50
+        ): Flow<List<ChannelEntity>> {
+            val ftsQuery = buildFtsQuery(query)
+            return if (ftsQuery.isNotEmpty()) {
+                dao.searchChannelsFtsPaginated(ftsQuery, profileId, type, offset, limit)
+            } else {
+                kotlinx.coroutines.flow.flowOf(emptyList())
+            }
+        }
+
+        suspend fun searchChannelsCount(
+                query: String,
+                profileId: Int,
+                type: String = "LIVE"
+        ): Int {
+            val ftsQuery = buildFtsQuery(query)
+            return if (ftsQuery.isNotEmpty()) {
+                dao.searchChannelsFtsCount(ftsQuery, profileId, type)
+            } else {
+                0
             }
         }
 
         /**
-         * Recherche intelligente multi-profils.
-         * Les mots de [query] sont mis en séquence : "abc xyz" → LIKE '%abc%xyz%'
+         * Recherche intelligente multi-profils via FTS4.
          * Chaque résultat contient le nom de la chaîne + le nom du profil + l'URL du serveur.
          */
         fun searchChannelsAllProfiles(
                 query: String,
                 type: String = "LIVE"
         ): Flow<List<com.example.simpleiptv.data.local.ChannelWithProfile>> {
-                val tokens = query.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
-                // Construit le pattern séquentiel : %tok1%tok2%teg%
-                val pattern = "%" + tokens.joinToString("%") + "%"
+                val ftsQuery = buildFtsQuery(query)
+                if (ftsQuery.isEmpty()) return kotlinx.coroutines.flow.flowOf(emptyList())
                 val sql = androidx.sqlite.db.SimpleSQLiteQuery(
                         """
                         SELECT
@@ -120,13 +202,14 @@ fun getAllRecentChannels(type: String = "LIVE"): Flow<List<ChannelEntity>> =
                             c.profileId, c.type, c.extraParams, c.sortOrder,
                             p.profileName, p.url AS profileUrl
                         FROM channels c
+                        INNER JOIN channels_fts fts ON c.rowid = fts.rowid
                         INNER JOIN profiles p ON c.profileId = p.id
                         WHERE c.type = ?
-                          AND c.name LIKE ? ESCAPE '\'
+                          AND channels_fts MATCH ?
                         ORDER BY p.profileName ASC, c.sortOrder ASC
                         LIMIT 200
                         """.trimIndent(),
-                        arrayOf(type, pattern)
+                        arrayOf(type, ftsQuery)
                 )
                 return dao.searchChannelsAllProfilesRaw(sql)
         }
@@ -134,6 +217,19 @@ fun getAllRecentChannels(type: String = "LIVE"): Flow<List<ChannelEntity>> =
                 dao.getChannelCount(profileId, type)
         suspend fun getCategoryCount(profileId: Int, type: String = "LIVE"): Int =
                 dao.getCategoryCount(profileId, type)
+
+        /**
+         * Construit une requête FTS4 à partir de l'entrée utilisateur.
+         * "abc xyz" → "abc* xyz*"  (prefix-match sur chaque mot, tous doivent être présents).
+         * Les caractères spéciaux FTS (guillemets, parenthèses…) sont supprimés.
+         */
+        private fun buildFtsQuery(raw: String): String {
+            return raw.trim()
+                .replace(Regex("[\"(){}\\[\\]*^]"), "")   // nettoyage des opérateurs FTS
+                .split(Regex("\\s+"))
+                .filter { it.isNotEmpty() }
+                .joinToString(" ") { "$it*" }
+        }
 
         // --- Historique de recherche ---
         suspend fun getSearchHistory(): List<String> =
@@ -230,8 +326,9 @@ fun getAllRecentChannels(type: String = "LIVE"): Flow<List<ChannelEntity>> =
         suspend fun refreshDatabase(profile: ProfileEntity) = syncService.refreshDatabase(profile)
 
         // --- Delegated to StreamService ---
-        suspend fun getStreamUrl(profile: ProfileEntity, channelId: String): String =
-                streamService.getStreamUrl(profile, channelId)
+        suspend fun getStreamUrl(profile: ProfileEntity, channel: ChannelEntity): String {
+        return streamService.getStreamUrl(profile, channel)
+        }
 
         // --- Delegated to BackupService ---
         suspend fun exportFavoritesToJson(profileId: Int): String =

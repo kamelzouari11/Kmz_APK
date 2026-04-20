@@ -71,7 +71,7 @@ fun ProfileManagerDialog(
                 },
                 text = {
                         LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
-                                items(profiles) { profile ->
+                                items(profiles, key = { it.id }) { profile ->
                                         ProfileRow(
                                                 profile = profile,
                                                 isLoaded = loadedProfileIds.contains(profile.id),

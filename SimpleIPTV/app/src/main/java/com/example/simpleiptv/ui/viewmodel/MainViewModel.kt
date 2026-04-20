@@ -4,159 +4,33 @@ import androidx.compose.runtime.*
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.simpleiptv.data.IptvRepository
-import com.example.simpleiptv.data.local.entities.*
+import com.example.simpleiptv.data.local.entities.ChannelEntity
+import com.example.simpleiptv.data.local.entities.FavoriteListEntity
+import com.example.simpleiptv.data.local.entities.ProfileEntity
+import com.example.simpleiptv.data.usecase.ChannelListUseCase
+import com.example.simpleiptv.data.usecase.FavoriteUseCase
+import com.example.simpleiptv.data.usecase.ProfileUseCase
+import com.example.simpleiptv.data.usecase.SearchUseCase
+import com.example.simpleiptv.util.CountryFilterProcessor
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-enum class GeneratorType {
-    SEARCH,
-    GLOBAL_SEARCH,
-    RECENTS,
-    FAVORITES,
-    CATEGORY
-}
-
-enum class SearchScope {
-    ACTIVE_PROFILE,  // Recherche dans le profil actif uniquement
-    ALL_PROFILES    // Recherche globale dans tous les profils
-}
-
-enum class MediaMode {
-    LIVE,
-    VOD
-}
-
-enum class FavoriteListScope {
-    ALL_LISTS,      // Affiche toutes les listes (globales + profil)
-    PROFILE_ONLY    // Affiche seulement les listes du profil actif
-}
-
 class MainViewModel(private val repository: IptvRepository) : ViewModel() {
-    // UI State
-    var currentMediaMode by mutableStateOf(MediaMode.LIVE)
 
-    fun setMediaMode(mode: MediaMode) {
-        if (currentMediaMode == mode) return
-        currentMediaMode = mode
-        selectedCategoryId = null
-        selectedFavoriteListId = -1
-        lastGeneratorType = GeneratorType.RECENTS
-        searchQuery = ""
-        selectProfile(activeProfileId) // Re-trigger observers for the new mode
+    // UseCases
+    private val profileUseCase = ProfileUseCase(repository)
+    private val channelListUseCase = ChannelListUseCase(repository)
+    private val searchUseCase = SearchUseCase(repository)
+    private val favoriteUseCase = FavoriteUseCase(repository)
+
+    // State centralisé — accessible publiquement pour l'UI
+    val uiState: MainUiState = MainUiState()
+
+    private inline fun updateUiState(block: MainUiState.() -> Unit) {
+        uiState.block()
     }
-    var profiles by mutableStateOf<List<ProfileEntity>>(emptyList())
-        private set
-    var categories by mutableStateOf<List<CategoryEntity>>(emptyList())
-        private set
-    var favoriteLists by mutableStateOf<List<FavoriteListEntity>>(emptyList())
-        private set
-    var channels by mutableStateOf<List<ChannelEntity>>(emptyList())
-        private set
-
-    /** Liste des favoris filtrée selon le scope d'affichage (toutes ou profil uniquement). */
-    val filteredFavoriteLists by derivedStateOf {
-        if (favoriteListScope == FavoriteListScope.ALL_LISTS) {
-            favoriteLists
-        } else {
-            favoriteLists.filter { it.profileId == activeProfileId || it.profileId == null }
-        }
-    }
-    var globalSearchResults by mutableStateOf<List<com.example.simpleiptv.data.local.ChannelWithProfile>>(emptyList())
-        private set
-
-    /**
-     * Retourne toujours la dernière liste de chaînes chargée, quelle que soit la source.
-     * En mode GLOBAL_SEARCH, convertit les résultats en ChannelEntity.
-     * Le player utilise cette liste pour le zapping.
-     */
-    val lastList: List<ChannelEntity> by derivedStateOf {
-        if (lastGeneratorType == GeneratorType.GLOBAL_SEARCH) {
-            globalSearchResults.map { it.toChannelEntity() }
-        } else {
-            channels
-        }
-    }
-
-    /** Label lisible pour la liste courante (affiché dans le player). */
-    val lastListLabel: String by derivedStateOf {
-        when (lastGeneratorType) {
-            GeneratorType.RECENTS -> {
-                val scopeLabel = if (recentScope == SearchScope.ALL_PROFILES) "global" else "profil"
-                "Récents $scopeLabel"
-            }
-            GeneratorType.SEARCH, GeneratorType.GLOBAL_SEARCH -> {
-                val scopeLabel = if (searchScope == SearchScope.ALL_PROFILES) "globale" else "profil"
-                "Recherche $scopeLabel : $searchQuery"
-            }
-            GeneratorType.FAVORITES -> {
-                val listName = favoriteLists.find { it.id == selectedFavoriteListId }?.name ?: "Favoris"
-                val scopeLabel = if (favoriteScope == SearchScope.ALL_PROFILES || 
-                    favoriteLists.find { it.id == selectedFavoriteListId }?.profileId == null) "global" else "profil"
-                "$listName ($scopeLabel)"
-            }
-            GeneratorType.CATEGORY -> filteredCategories.find { it.category_id == selectedCategoryId }?.category_name ?: "Catégorie"
-        }
-    }
-
-    var activeProfileId by mutableIntStateOf(-1)
-    var selectedCategoryId by mutableStateOf<String?>(null)
-    var selectedFavoriteListId by mutableIntStateOf(-1)
-    var searchQuery by mutableStateOf("")
-    var searchScope by mutableStateOf(SearchScope.ALL_PROFILES)  // Mode de recherche: profil actif ou tous les profils
-    var recentScope by mutableStateOf(SearchScope.ALL_PROFILES)  // Mode recents: profil actif ou tous les profils
-    var favoriteScope by mutableStateOf(SearchScope.ALL_PROFILES)  // Mode favoris: profil actif ou tous les profils
-    var favoriteListScope by mutableStateOf(FavoriteListScope.ALL_LISTS)  // Mode affichage listes: toutes ou juste profil
-    var selectedCountryFilter by mutableStateOf("ALL")
-
-    var countryFilters by mutableStateOf<List<String>>(listOf("ALL"))
-        private set
-
-    val filteredCategories by derivedStateOf {
-        val nonSeparatorCategories = categories.filter { !it.category_name.startsWith("-") }
-        if (selectedCountryFilter == "ALL") nonSeparatorCategories
-        else
-                nonSeparatorCategories.filter {
-                    it.category_name.startsWith(selectedCountryFilter, ignoreCase = true)
-                }
-    }
-
-    var playingChannel by mutableStateOf<ChannelEntity?>(null)
-    var isFullScreenPlayer by mutableStateOf(false)
-    var isLoading by mutableStateOf(false)
-    // (portrait state removed — landscape-only app)
-    var lastGeneratorType by mutableStateOf(GeneratorType.RECENTS)
-
-    // Dialog States
-    var showProfileManager by mutableStateOf(false)
-    var showAddProfileDialog by mutableStateOf(false)
-    var profileToEdit by mutableStateOf<ProfileEntity?>(null)
-    var showAddListDialog by mutableStateOf(false)
-    var channelToFavorite by mutableStateOf<ChannelEntity?>(null)
-    var targetFavoriteLists by mutableStateOf<List<FavoriteListEntity>>(emptyList())
-        private set
-
-    fun initFavoriteAction(channel: ChannelEntity) {
-        channelToFavorite = channel
-        viewModelScope.launch {
-            targetFavoriteLists = repository.getFavoriteLists(channel.profileId, currentMediaMode.name).first()
-        }
-    }
-    
-    var showRestoreConfirmDialog by mutableStateOf(false)
-    var backupJsonToRestore by mutableStateOf("")
-    var syncError by mutableStateOf<String?>(null)
-    var failedProfileToReload by mutableStateOf<ProfileEntity?>(null)
-
-    // Historique des 20 dernières recherches
-    var searchHistory by mutableStateOf<List<String>>(emptyList())
-        private set
-
-    var loadedProfileIds by mutableStateOf<Set<Int>>(emptySet())
-        private set
-
-    var allFavoriteIds by mutableStateOf<Set<String>>(emptySet())
-        private set
 
     // Coroutine Jobs to avoid multiple collectors
     private var channelsJob: kotlinx.coroutines.Job? = null
@@ -165,15 +39,21 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
 
     init {
         observeProfiles()
-        observeLoadedProfiles()
         observeFavorites()
-        viewModelScope.launch { searchHistory = repository.getSearchHistory() }
+        observeLoadedProfiles()
+        viewModelScope.launch { loadSearchHistory() }
     }
+
+
+
+    // --- Observers ---
 
     private fun observeFavorites() {
         viewModelScope.launch {
-            repository.allFavoriteIdsFlow.collect {
+            repository.allFavoriteIdsFlow.distinctUntilChanged().collect {
+                updateUiState {
                 allFavoriteIds = it.toSet()
+            }
             }
         }
     }
@@ -181,10 +61,12 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
     private fun observeProfiles() {
         viewModelScope.launch {
             try {
-                repository.allProfiles.collect {
-                    profiles = it
-                    if (activeProfileId == -1 && it.isNotEmpty()) {
-                        val selected = it.find { p -> p.isSelected } ?: it.first()
+                repository.allProfiles.distinctUntilChanged().collect { profiles ->
+                    updateUiState {
+                this.profiles = profiles
+            }
+                    if (uiState.activeProfileId == -1 && profiles.isNotEmpty()) {
+                        val selected = profiles.find { it.isSelected } ?: profiles.first()
                         selectProfile(selected.id)
                     }
                 }
@@ -196,185 +78,80 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
 
     private fun observeLoadedProfiles() {
         viewModelScope.launch {
-            repository.loadedProfileIds.collect {
+            repository.loadedProfileIds.distinctUntilChanged().collect {
+                updateUiState {
                 loadedProfileIds = it.toSet()
+            }
             }
         }
     }
 
+    private suspend fun loadSearchHistory() {
+        updateUiState {
+                searchHistory = repository.getSearchHistory()
+            }
+    }
+
+    // --- Actions: Media Mode ---
+
+    fun setMediaMode(mode: MediaMode) {
+        if (uiState.currentMediaMode == mode) return
+        updateUiState {
+                currentMediaMode = mode
+                selectedCategoryId = null
+                selectedFavoriteListId = -1
+                lastGeneratorType = GeneratorType.RECENTS
+                searchQuery = ""
+            }
+        selectProfile(uiState.activeProfileId)
+    }
+
+    // --- Actions: Profile ---
+
     fun selectProfile(id: Int) {
-        activeProfileId = id
+        updateUiState {
+                activeProfileId = id
+            }
         viewModelScope.launch {
-            repository.selectProfile(id)
-
-            // Auto-sync if DB is empty for this profile AND has valid URL
-            val count = repository.getCategoryCount(id)
-            val profile = profiles.find { it.id == id }
-            val hasValidUrl = profile?.url?.isNotBlank() == true
-            
-            if (count == 0 && hasValidUrl) {
-                isLoading = true
-                try {
-                    repository.refreshDatabase(profile)
-                } catch (e: Exception) {
-                    failedProfileToReload = profile
-                    syncError =
-                            "Erreur d'importation : ${e.localizedMessage ?: "Erreur inconnue"}"
-                } finally {
-                    isLoading = false
-                }
-            } else if (count == 0 && !hasValidUrl) {
-                // Skip sync for profiles without URL (empty default profile)
-                android.util.Log.w("MainViewModel", "Skipping sync for profile without URL: ${profile?.profileName}")
+            val result = profileUseCase.selectProfile(id, uiState.profiles, uiState.currentMediaMode.name)
+            updateUiState {
+                isLoading = result.isLoading
+                syncError = result.error
+                failedProfileToReload = result.failedProfile
             }
-
-            categoriesJob?.cancel()
-            categoriesJob = launch {
-                repository.getCategories(id, currentMediaMode.name).collect { cats ->
-                    categories = cats
-                    // Process filters off the main thread for better fluidity
-                    viewModelScope.launch(kotlinx.coroutines.Dispatchers.Default) {
-                        val groups =
-                                cats
-                                        .mapNotNull {
-                                            val name = it.category_name.trim()
-                                            if (name.startsWith("-") || name.isEmpty())
-                                                    return@mapNotNull null
-
-                                            val spaceIndex = name.indexOf(' ')
-                                            val length =
-                                                    if (spaceIndex in 1..4) spaceIndex
-                                                    else minOf(4, name.length)
-                                            if (length > 0) name.substring(0, length).uppercase()
-                                            else null
-                                        }
-                                        .distinct()
-                                        .filter {
-                                            it != "ALL"
-                                        } // avoid duplicate with the prepended "ALL"
-                        countryFilters = listOf("ALL") + groups
-                    }
-                }
-            }
-
-            favoritesJob?.cancel()
-            favoritesJob = launch {
-                repository.getAllFavoriteListsIncludingGlobal(id, currentMediaMode.name).collect {
-                    favoriteLists = it
-                }
-            }
-
-            lastGeneratorType = GeneratorType.RECENTS
-            selectedCountryFilter = "ALL"
+            launchCategoriesCollector(id)
+            launchFavoritesCollector(id)
             refreshChannels()
         }
     }
 
-    private var searchDebounceJob: kotlinx.coroutines.Job? = null
-
-    fun refreshChannels(debounce: Boolean = false) {
-        if (activeProfileId == -1) return
-
-        channelsJob?.cancel()
-        searchDebounceJob?.cancel()
-
-        // Toujours utiliser debounce pour la recherche (plus fluide)
-        val isSearch = searchQuery.isNotBlank() && 
-            (lastGeneratorType == GeneratorType.SEARCH || lastGeneratorType == GeneratorType.GLOBAL_SEARCH)
-
-        channelsJob =
-                viewModelScope.launch {
-                    if (debounce && isSearch) {
-                        searchDebounceJob = launch {
-                            kotlinx.coroutines.delay(400) // 400ms debounce pour fluidité
-                            executeRefresh()
-                        }
-                    } else {
-                        executeRefresh()
-                    }
-                }
-    }
-
-    private suspend fun executeRefresh() {
-        android.util.Log.d("MainViewModel", "execute: type=$lastGeneratorType, query='$searchQuery', scope=$searchScope")
-        
-        // Si pas de query, aller chercher les chaines selon le type (RECENTS, CATEGORY, FAVORITES)
-        if (searchQuery.isBlank()) {
-            executeNormalRefresh()
-            return
-        }
-        
-        // Recherche : globale ou locale selon searchScope
-        if (searchScope == SearchScope.ALL_PROFILES) {
-            // Recherche globale - tous profils
-            android.util.Log.d("MainViewModel", "Global search: query='$searchQuery'")
-            lastGeneratorType = GeneratorType.GLOBAL_SEARCH
-            globalSearchResults = emptyList()
-            repository.searchChannelsAllProfiles(searchQuery, currentMediaMode.name)
-                    .collect { 
-                        android.util.Log.d("MainViewModel", "Global results: ${it.size}")
-                        globalSearchResults = it 
-                    }
-        } else {
-            // Recherche locale - profil actif seulement
-            android.util.Log.d("MainViewModel", "Local search: query='$searchQuery', profile=$activeProfileId")
-            lastGeneratorType = GeneratorType.SEARCH
-            globalSearchResults = emptyList()
-            repository.searchChannels(searchQuery, activeProfileId, currentMediaMode.name)
-                    .collect { 
-                        android.util.Log.d("MainViewModel", "Local results: ${it.size}")
-                        channels = it 
-                    }
+    private fun launchCategoriesCollector(profileId: Int) {
+        categoriesJob?.cancel()
+        categoriesJob = viewModelScope.launch {
+            repository.getCategories(profileId, uiState.currentMediaMode.name).distinctUntilChanged().collect { cats ->
+                val filters = CountryFilterProcessor.computeCountryFilters(cats)
+                updateUiState {
+                this.categories = cats
+                this.countryFilters = filters
+                selectedCountryFilter = if (uiState.selectedCountryFilter in filters) uiState.selectedCountryFilter else "ALL"
+            }
+            }
         }
     }
 
-    private suspend fun executeNormalRefresh() {
-        // Pas de recherche - afficher selon le type de générateur
-        globalSearchResults = emptyList()
-        
-        val recentFlow = if (recentScope == SearchScope.ALL_PROFILES) {
-            repository.getAllRecentChannels(currentMediaMode.name)
-        } else {
-            repository.getRecentChannels(activeProfileId, currentMediaMode.name)
+    private fun launchFavoritesCollector(profileId: Int) {
+        favoritesJob?.cancel()
+        favoritesJob = viewModelScope.launch {
+            repository.getAllFavoriteListsIncludingGlobal(profileId, uiState.currentMediaMode.name).distinctUntilChanged().collect { lists ->
+                updateUiState {
+                favoriteLists = lists
+            }
+            }
         }
-        
-val flow =
-                when (lastGeneratorType) {
-                    GeneratorType.RECENTS -> recentFlow
-                    GeneratorType.CATEGORY -> {
-                        repository.getChannelsByCategory(
-                            selectedCategoryId ?: "",
-                            activeProfileId,
-                            currentMediaMode.name
-                        )
-                    }
-                    GeneratorType.FAVORITES -> {
-                        // Vérifier si la liste est multi-profils (profileId null) ou spécifique à un profil
-                        val selectedList = favoriteLists.find { it.id == selectedFavoriteListId }
-                        val isGlobalList = selectedList?.profileId == null
-                        
-                        // Si liste globale ou scope = tous profils, utiliser getAllProfileChannelsByFavoriteList
-                        if (isGlobalList || favoriteScope == SearchScope.ALL_PROFILES) {
-                            repository.getAllProfileChannelsByFavoriteList(
-                                    selectedFavoriteListId,
-                                    currentMediaMode.name
-                            )
-                        } else {
-                            // Liste spécifique au profil
-                            repository.getChannelsByFavoriteList(
-                                    selectedFavoriteListId,
-                                    activeProfileId,
-                                    currentMediaMode.name
-                            )
-                        }
-                    }
-                    else -> repository.getRecentChannels(activeProfileId, currentMediaMode.name)
-                }
-        flow.collect { channels = it }
     }
 
     fun deleteProfile(profile: ProfileEntity) {
-        viewModelScope.launch { repository.deleteProfile(profile) }
+        viewModelScope.launch { profileUseCase.deleteProfile(profile) }
     }
 
     fun addProfile(profile: ProfileEntity) {
@@ -385,101 +162,304 @@ val flow =
         viewModelScope.launch { repository.updateProfile(profile) }
     }
 
-    fun toggleFavorite(streamId: String, listId: Int) {
-        viewModelScope.launch {
-            repository.toggleChannelFavorite(
-                    streamId,
-                    listId,
-                    activeProfileId,
-                    currentMediaMode.name
-            )
-        }
+    fun purgeProfiles() {
+        viewModelScope.launch { profileUseCase.purgeProfiles(uiState.profiles) }
     }
 
-    fun addToRecents(streamId: String) {
-        viewModelScope.launch {
-            repository.addToRecents(streamId, activeProfileId, currentMediaMode.name)
-        }
+    // --- Actions: Channel List Navigation ---
+
+    fun selectCategory(categoryId: String?) {
+        updateUiState {
+                selectedCategoryId = categoryId
+                lastGeneratorType = GeneratorType.CATEGORY
+                selectedFavoriteListId = -1
+                searchQuery = ""
+            }
+        resetPaginationAndRefresh()
     }
 
-    fun clearRecents() {
-        viewModelScope.launch {
-            repository.clearRecents(activeProfileId, currentMediaMode.name)
-            if (lastGeneratorType == GeneratorType.RECENTS) {
-                refreshChannels()
+    fun selectFavoriteList(listId: Int) {
+        updateUiState {
+                selectedFavoriteListId = listId
+                lastGeneratorType = GeneratorType.FAVORITES
+                selectedCategoryId = null
+                searchQuery = ""
+            }
+        resetPaginationAndRefresh()
+    }
+
+    fun showRecents() {
+        updateUiState {
+                lastGeneratorType = GeneratorType.RECENTS
+                selectedCategoryId = null
+                selectedFavoriteListId = -1
+                searchQuery = ""
+            }
+        resetPaginationAndRefresh()
+    }
+
+    // --- Actions: Filters ---
+
+    fun setCountryFilter(filter: String) {
+        updateUiState {
+                selectedCountryFilter = filter
+            }
+    }
+
+    fun toggleSearchScope() {
+        val newScope = if (uiState.searchScope == SearchScope.ALL_PROFILES) {
+            SearchScope.ACTIVE_PROFILE
+        } else {
+            SearchScope.ALL_PROFILES
+        }
+        updateUiState {
+                searchScope = newScope
+            }
+        if (uiState.searchQuery.isNotBlank()) refreshChannels()
+    }
+
+    fun toggleRecentScope() {
+        val newScope = if (uiState.recentScope == SearchScope.ALL_PROFILES) {
+            SearchScope.ACTIVE_PROFILE
+        } else {
+            SearchScope.ALL_PROFILES
+        }
+        updateUiState {
+                recentScope = newScope
+            }
+        if (uiState.lastGeneratorType == GeneratorType.RECENTS) refreshChannels()
+    }
+
+    fun toggleFavoriteScope() {
+        val newScope = if (uiState.favoriteScope == SearchScope.ALL_PROFILES) {
+            SearchScope.ACTIVE_PROFILE
+        } else {
+            SearchScope.ALL_PROFILES
+        }
+        updateUiState {
+                favoriteScope = newScope
+            }
+        if (uiState.lastGeneratorType == GeneratorType.FAVORITES) refreshChannels()
+    }
+
+    fun toggleFavoriteListScope() {
+        val newScope = if (uiState.favoriteListScope == FavoriteListScope.ALL_LISTS) {
+            FavoriteListScope.PROFILE_ONLY
+        } else {
+            FavoriteListScope.ALL_LISTS
+        }
+        updateUiState {
+                favoriteListScope = newScope
+            }
+        if (uiState.lastGeneratorType == GeneratorType.FAVORITES) refreshChannels()
+    }
+
+    /** Réinitialise la pagination et rafraîchit la liste. */
+    private fun resetPaginationAndRefresh() {
+        updateUiState {
+            pageOffset = 0
+            hasMore = true
+            isLoadingMore = false
+        }
+        refreshChannels()
+    }
+
+    // --- Actions: Search ---
+
+    private var searchDebounceJob: kotlinx.coroutines.Job? = null
+
+    fun setSearchQuery(query: String) {
+        updateUiState {
+                searchQuery = query
+            }
+        refreshChannels(debounce = true)
+    }
+
+    fun refreshChannels(debounce: Boolean = false) {
+        if (uiState.activeProfileId == -1) return
+
+        channelsJob?.cancel()
+        searchDebounceJob?.cancel()
+
+        val isSearch = uiState.searchQuery.isNotBlank() &&
+            (uiState.lastGeneratorType == GeneratorType.SEARCH || uiState.lastGeneratorType == GeneratorType.GLOBAL_SEARCH)
+
+        channelsJob = viewModelScope.launch {
+            if (debounce && isSearch) {
+                searchDebounceJob = launch {
+                    kotlinx.coroutines.delay(400)
+                    executeRefresh()
+                }
+            } else {
+                executeRefresh()
             }
         }
     }
 
-    /** Sauvegarde la requête courante dans l'historique (appelé lors de la validation). */
+    private suspend fun executeRefresh() {
+        android.util.Log.d("MainViewModel", "execute: type=${uiState.lastGeneratorType}, query='${uiState.searchQuery}', scope=${uiState.searchScope}")
+
+        if (uiState.searchQuery.isBlank()) {
+            executeNormalRefresh()
+            return
+        }
+
+        if (uiState.searchScope == SearchScope.ALL_PROFILES) {
+            android.util.Log.d("MainViewModel", "Global search: query='${uiState.searchQuery}'")
+            updateUiState {
+                lastGeneratorType = GeneratorType.GLOBAL_SEARCH
+                globalSearchResults = emptyList()
+            }
+            searchUseCase.searchGlobal(uiState.searchQuery, uiState.currentMediaMode.name)
+                .collect {
+                    android.util.Log.d("MainViewModel", "Global results: ${it.size}")
+                    updateUiState {
+                globalSearchResults = it
+            }
+                }
+        } else {
+            android.util.Log.d("MainViewModel", "Local search: query='${uiState.searchQuery}', profile=${uiState.activeProfileId}")
+            updateUiState {
+                lastGeneratorType = GeneratorType.SEARCH
+                globalSearchResults = emptyList()
+            }
+            searchUseCase.searchLocal(uiState.searchQuery, uiState.activeProfileId, uiState.currentMediaMode.name)
+                .collect {
+                    android.util.Log.d("MainViewModel", "Local results: ${it.size}")
+                    updateUiState {
+                channels = it
+            }
+                }
+        }
+    }
+
+    private suspend fun executeNormalRefresh() {
+        updateUiState {
+                globalSearchResults = emptyList()
+            }
+
+        val flow = channelListUseCase.getChannelsForType(
+            type = uiState.lastGeneratorType,
+            categoryId = uiState.selectedCategoryId,
+            favoriteListId = uiState.selectedFavoriteListId,
+            profileId = uiState.activeProfileId,
+            mediaMode = uiState.currentMediaMode.name,
+            recentScope = uiState.recentScope,
+            favoriteScope = uiState.favoriteScope,
+            favoriteLists = uiState.favoriteLists
+        )
+
+        flow.distinctUntilChanged().collect { channels ->
+            // En mode pagination, on ajoute les nouveaux items aux existants
+            if (uiState.pageOffset > 0 && uiState.isLoadingMore) {
+                updateUiState {
+                    this.channels = this.channels + channels
+                    isLoadingMore = false
+                    hasMore = channels.size >= uiState.pageSize
+                }
+            } else {
+                updateUiState {
+                    this.channels = channels
+                }
+            }
+        }
+    }
+
+    /** Charge plus de chaînes pour le chargement infini. */
+    fun loadMoreChannels() {
+        if (!uiState.hasMore || uiState.isLoadingMore || uiState.activeProfileId == -1) return
+
+        updateUiState {
+            isLoadingMore = true
+            pageOffset = pageOffset + uiState.pageSize
+        }
+
+        viewModelScope.launch {
+            android.util.Log.d("MainViewModel", "loadMore: offset=${uiState.pageOffset}")
+            val flow = channelListUseCase.getChannelsForTypePaginated(
+                type = uiState.lastGeneratorType,
+                categoryId = uiState.selectedCategoryId,
+                favoriteListId = uiState.selectedFavoriteListId,
+                profileId = uiState.activeProfileId,
+                mediaMode = uiState.currentMediaMode.name,
+                recentScope = uiState.recentScope,
+                favoriteScope = uiState.favoriteScope,
+                favoriteLists = uiState.favoriteLists,
+                offset = uiState.pageOffset,
+                limit = uiState.pageSize
+            )
+            flow.distinctUntilChanged().collect { channels ->
+                updateUiState {
+                    this.channels = this.channels + channels
+                    isLoadingMore = false
+                    hasMore = channels.size >= uiState.pageSize
+                }
+            }
+        }
+    }
+
     fun commitSearchToHistory() {
-        val q = searchQuery.trim()
+        val q = uiState.searchQuery.trim()
         if (q.length < 2) return
         viewModelScope.launch {
             repository.addToSearchHistory(q)
-            searchHistory = repository.getSearchHistory()
-        }
-    }
-
-    /** Change le scope de recherche entre profil actif et tous les profils. */
-    fun toggleSearchScope() {
-        searchScope = if (searchScope == SearchScope.ALL_PROFILES) {
-            SearchScope.ACTIVE_PROFILE
-        } else {
-            SearchScope.ALL_PROFILES
-        }
-        // Relancer la recherche avec le nouveau scope
-        if (searchQuery.isNotBlank()) {
-            refreshChannels()
-        }
-    }
-
-    /** Change le scope des recents entre profil actif et tous les profils. */
-    fun toggleRecentScope() {
-        recentScope = if (recentScope == SearchScope.ALL_PROFILES) {
-            SearchScope.ACTIVE_PROFILE
-        } else {
-            SearchScope.ALL_PROFILES
-        }
-        // Relancer l'affichage des recents
-        if (lastGeneratorType == GeneratorType.RECENTS) {
-            refreshChannels()
-        }
-    }
-
-    /** Change le scope des favoris entre profil actif et tous les profils. */
-    fun toggleFavoriteScope() {
-        favoriteScope = if (favoriteScope == SearchScope.ALL_PROFILES) {
-            SearchScope.ACTIVE_PROFILE
-        } else {
-            SearchScope.ALL_PROFILES
-        }
-        // Relancer l'affichage des favoris
-        if (lastGeneratorType == GeneratorType.FAVORITES) {
-            refreshChannels()
-        }
-    }
-
-    /** Change le scope d'affichage des listes de favoris entre toutes les listes et profil actif uniquement. */
-    fun toggleFavoriteListScope() {
-        favoriteListScope = if (favoriteListScope == FavoriteListScope.ALL_LISTS) {
-            FavoriteListScope.PROFILE_ONLY
-        } else {
-            FavoriteListScope.ALL_LISTS
+            loadSearchHistory()
         }
     }
 
     fun clearSearchHistory() {
         viewModelScope.launch {
             repository.clearSearchHistory()
-            searchHistory = emptyList()
+            updateUiState {
+                searchHistory = emptyList()
+            }
         }
     }
 
-    fun addFavoriteList(name: String, isGlobal: Boolean = false) {
+    // --- Actions: Favorites ---
+
+    fun initFavoriteAction(channel: ChannelEntity) {
         viewModelScope.launch {
-            val targetProfileId = if (isGlobal) null else activeProfileId
-            repository.addFavoriteList(name, targetProfileId, currentMediaMode.name)
+            val targetLists = repository.getFavoriteLists(channel.profileId, uiState.currentMediaMode.name).first()
+            updateUiState {
+                dialogState = dialogState.copy(
+                    channelToFavorite = channel,
+                    targetFavoriteLists = targetLists
+                )
+            }
+        }
+    }
+
+    fun addFavoriteList(name: String, isGlobal: Boolean) {
+        viewModelScope.launch {
+            val targetProfileId = if (isGlobal) null else uiState.activeProfileId
+            repository.addFavoriteList(name, targetProfileId, uiState.currentMediaMode.name)
+        }
+    }
+
+    fun requestRemoveFavoriteList(list: FavoriteListEntity) {
+        updateUiState {
+            dialogState = dialogState.copy(
+                favoriteListToDelete = list,
+                showDeleteFavoriteListConfirm = true
+            )
+        }
+    }
+
+    fun confirmRemoveFavoriteList() {
+        val list = uiState.dialogState.favoriteListToDelete
+        if (list != null) {
+            removeFavoriteList(list)
+        }
+        hideDeleteFavoriteListConfirm()
+    }
+
+    fun hideDeleteFavoriteListConfirm() {
+        updateUiState {
+            dialogState = dialogState.copy(
+                showDeleteFavoriteListConfirm = false,
+                favoriteListToDelete = null
+            )
         }
     }
 
@@ -487,56 +467,131 @@ val flow =
         viewModelScope.launch { repository.removeFavoriteList(list) }
     }
 
+    fun toggleFavorite(streamId: String, listId: Int) {
+        viewModelScope.launch {
+            favoriteUseCase.toggleFavorite(streamId, listId, uiState.activeProfileId, uiState.currentMediaMode.name)
+        }
+    }
+
     fun addChannelToFavoriteList(channel: ChannelEntity, listId: Int) {
         viewModelScope.launch {
-            repository.addChannelToFavoriteList(channel.stream_id, listId, channel.profileId, currentMediaMode.name)
+            favoriteUseCase.addChannelToFavoriteList(channel, listId, channel.profileId, uiState.currentMediaMode.name)
         }
     }
 
-    fun purgeProfiles() {
+    fun addToRecents(streamId: String) {
         viewModelScope.launch {
-            val toDelete = mutableListOf<ProfileEntity>()
-            val seenXtream = mutableSetOf<String>()
-            val seenStalker = mutableSetOf<String>()
-
-            profiles.forEach { profile ->
-                val key =
-                        if (profile.type == "xtream") {
-                            "${profile.url}|${profile.username}|${profile.password}"
-                        } else {
-                            "${profile.url}|${profile.macAddress}"
-                        }
-
-                val seenSet = if (profile.type == "xtream") seenXtream else seenStalker
-
-                if (seenSet.contains(key)) {
-                    toDelete.add(profile)
-                } else {
-                    seenSet.add(key)
-                }
-            }
-
-            toDelete.forEach { repository.deleteProfile(it) }
+            repository.addToRecents(streamId, uiState.activeProfileId, uiState.currentMediaMode.name)
         }
     }
+
+    fun clearRecents() {
+        viewModelScope.launch {
+            repository.clearRecents(uiState.activeProfileId, uiState.currentMediaMode.name)
+            if (uiState.lastGeneratorType == GeneratorType.RECENTS) refreshChannels()
+        }
+    }
+
+    // --- Actions: Player ---
+
+    fun setPlayingChannel(channel: ChannelEntity?) {
+        updateUiState {
+                playingChannel = channel
+            }
+    }
+
+    fun setFullScreenPlayer(fullScreen: Boolean) {
+        updateUiState {
+                isFullScreenPlayer = fullScreen
+            }
+    }
+
+    // --- Actions: Dialogs ---
+
+    fun showProfileManager() {
+        updateUiState {
+                dialogState = dialogState.copy(showProfileManager = true)
+            }
+    }
+
+    fun hideProfileManager() {
+        updateUiState {
+                dialogState = dialogState.copy(showProfileManager = false)
+            }
+    }
+
+    fun showAddProfileDialog(profile: ProfileEntity? = null) {
+        updateUiState {
+                dialogState = dialogState.copy(showAddProfileDialog = true, profileToEdit = profile)
+            }
+    }
+
+    fun hideAddProfileDialog() {
+        updateUiState {
+                dialogState = dialogState.copy(showAddProfileDialog = false, profileToEdit = null)
+            }
+    }
+
+    fun showAddListDialog() {
+        updateUiState {
+                dialogState = dialogState.copy(showAddListDialog = true)
+            }
+    }
+
+    fun hideAddListDialog() {
+        updateUiState {
+                dialogState = dialogState.copy(showAddListDialog = false)
+            }
+    }
+
+    fun showRestoreConfirmDialog(json: String) {
+        updateUiState {
+                dialogState = dialogState.copy(showRestoreConfirmDialog = true, backupJsonToRestore = json)
+            }
+    }
+
+    fun hideRestoreConfirmDialog() {
+        updateUiState {
+                dialogState = dialogState.copy(showRestoreConfirmDialog = false, backupJsonToRestore = "")
+            }
+    }
+
+    fun clearChannelToFavorite() {
+        updateUiState {
+                dialogState = dialogState.copy(channelToFavorite = null, targetFavoriteLists = emptyList())
+            }
+    }
+
+    fun clearSyncError() {
+        updateUiState {
+                syncError = null
+                failedProfileToReload = null
+            }
+    }
+
+    // --- Actions: Backup ---
 
     suspend fun refreshDatabase(profile: ProfileEntity) {
-        isLoading = true
+        updateUiState {
+                isLoading = true
+            }
         try {
-            repository.refreshDatabase(profile)
+            profileUseCase.refreshDatabase(profile)
         } catch (e: Exception) {
-            failedProfileToReload = profile
+            updateUiState {
+                failedProfileToReload = profile
+            }
         } finally {
-            isLoading = false
+            updateUiState {
+                isLoading = false
+            }
         }
     }
 
-    suspend fun exportDatabaseToJson(): String {
-        return repository.exportDatabaseToJson()
-    }
+    suspend fun exportDatabaseToJson(): String = repository.exportDatabaseToJson()
 
     suspend fun importDatabaseFromJson(json: String) {
         repository.importDatabaseFromJson(json)
-        searchHistory = repository.getSearchHistory()
+        loadSearchHistory()
     }
 }

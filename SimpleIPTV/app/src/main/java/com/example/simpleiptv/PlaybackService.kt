@@ -20,6 +20,12 @@ class PlaybackService : MediaSessionService() {
         private var wifiLock: WifiManager.WifiLock? = null
         private var wakeLock: PowerManager.WakeLock? = null
 
+        // Retry logic
+        private var retryCount = 0
+        private val maxRetries = 3
+        private val retryHandler = android.os.Handler(android.os.Looper.getMainLooper())
+        private var retryRunnable: Runnable? = null
+
         @OptIn(UnstableApi::class)
         override fun onCreate() {
                 super.onCreate()
@@ -127,8 +133,12 @@ class PlaybackService : MediaSessionService() {
                         object : Player.Listener {
                                 override fun onIsPlayingChanged(isPlaying: Boolean) {
                                         if (isPlaying) {
+                                                retryCount = 0
                                                 if (wifiLock?.isHeld == false) wifiLock?.acquire()
-                                                if (wakeLock?.isHeld == false) wakeLock?.acquire()
+                                                if (wakeLock?.isHeld == false) wakeLock?.acquire(30 * 60 * 1000L)
+                                        } else {
+                                                if (wifiLock?.isHeld == true) wifiLock?.release()
+                                                if (wakeLock?.isHeld == true) wakeLock?.release()
                                         }
                                 }
 
@@ -136,20 +146,32 @@ class PlaybackService : MediaSessionService() {
                                         mediaItem: MediaItem?,
                                         reason: Int
                                 ) {
+                                        retryCount = 0
+                                        retryRunnable?.let { retryHandler.removeCallbacks(it) }
                                         if (wifiLock?.isHeld == false) wifiLock?.acquire()
-                                        if (wakeLock?.isHeld == false) wakeLock?.acquire()
+                                        if (wakeLock?.isHeld == false) wakeLock?.acquire(30 * 60 * 1000L)
                                 }
 
                                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                                        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                                        if (retryCount >= maxRetries) {
+                                                retryCount = 0
+                                                return
+                                        }
+                                        val currentItem = player.currentMediaItem
+                                        val delay = 4000L * (retryCount + 1)
+                                        retryRunnable?.let { retryHandler.removeCallbacks(it) }
+                                        retryRunnable = Runnable {
                                                 try {
-                                                        if (player.playbackState != Player.STATE_READY) {
+                                                        if (player.currentMediaItem == currentItem &&
+                                                            player.playbackState != Player.STATE_READY) {
                                                                 player.seekToDefaultPosition()
                                                                 player.prepare()
                                                                 player.play()
+                                                                retryCount++
                                                         }
                                                 } catch(e: Exception) {}
-                                        }, 4000)
+                                        }
+                                        retryHandler.postDelayed(retryRunnable!!, delay)
                                 }
                         }
                 )
@@ -176,6 +198,8 @@ class PlaybackService : MediaSessionService() {
         }
 
         override fun onDestroy() {
+                retryRunnable?.let { retryHandler.removeCallbacks(it) }
+                retryRunnable = null
                 mediaSession?.run {
                         if (player.isPlaying) player.pause()
                         player.release()

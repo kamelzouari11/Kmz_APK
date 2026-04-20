@@ -38,7 +38,7 @@ class SyncService(private val dao: IptvDao) {
 
         apiChannels.forEachIndexed { index, ch ->
             val id = ch.stream_id.toString()
-            channelEntitiesMap[id] = ChannelEntity(id, ch.name, ch.stream_icon, profile.id, type = "LIVE", sortOrder = index)
+            channelEntitiesMap[id] = ChannelEntity(stream_id = id, name = ch.name, stream_icon = ch.stream_icon, profileId = profile.id, type = "LIVE", sortOrder = index)
             linkEntities.add(ChannelCategoryCrossRef(id, ch.category_id ?: "0", profile.id, type = "LIVE"))
         }
 
@@ -60,7 +60,7 @@ class SyncService(private val dao: IptvDao) {
 
             apiStreams.forEachIndexed { index, ch ->
                 val id = ch.stream_id.toString()
-                channelEntitiesMap[id] = ChannelEntity(id, ch.name, ch.stream_icon, profile.id, type = "VOD", extraParams = ch.container_extension, sortOrder = index)
+                channelEntitiesMap[id] = ChannelEntity(stream_id = id, name = ch.name, stream_icon = ch.stream_icon, profileId = profile.id, type = "VOD", extraParams = ch.container_extension, sortOrder = index)
                 linkEntities.add(ChannelCategoryCrossRef(id, ch.category_id ?: "0", profile.id, type = "VOD"))
             }
 
@@ -149,7 +149,7 @@ class SyncService(private val dao: IptvDao) {
             } else null
 
             if (!channelEntitiesMap.containsKey(id)) {
-                channelEntitiesMap[id] = ChannelEntity(id, name, icon, profile.id, type = "LIVE", extraParams = cmd, sortOrder = index)
+                channelEntitiesMap[id] = ChannelEntity(stream_id = id, name = name, stream_icon = icon, profileId = profile.id, type = "LIVE", extraParams = cmd, sortOrder = index)
             }
             if (genreId != null) {
                 linkEntities.add(ChannelCategoryCrossRef(id, genreId, profile.id, type = "LIVE"))

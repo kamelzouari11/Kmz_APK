@@ -5,11 +5,10 @@ import com.example.simpleiptv.data.local.entities.ChannelFavoriteCrossRef
 import com.example.simpleiptv.data.local.entities.FavoriteListEntity
 import com.example.simpleiptv.data.model.*
 import com.squareup.moshi.Moshi
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.flow.first
 
 class BackupService(private val dao: IptvDao) {
-    private val moshi = Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
+    private val moshi = Moshi.Builder().build()
 
     suspend fun exportFavoritesToJson(profileId: Int): String {
         val lists =

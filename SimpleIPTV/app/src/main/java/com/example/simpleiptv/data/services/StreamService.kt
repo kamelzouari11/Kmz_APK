@@ -7,13 +7,9 @@ import com.example.simpleiptv.data.local.entities.ProfileEntity
 
 class StreamService(private val dao: IptvDao) {
 
-    suspend fun getStreamUrl(profile: ProfileEntity, channelId: String): String {
+    suspend fun getStreamUrl(profile: ProfileEntity, channel: com.example.simpleiptv.data.local.entities.ChannelEntity): String {
         // Fetch the channel to know its type (LIVE or VOD)
-        // We might not know the type directly from channelId alone if we don't have it.
-        // But we can try to guess or better, find it in DB.
-        val channel =
-                dao.getChannelById(channelId, profile.id, "LIVE")
-                        ?: dao.getChannelById(channelId, profile.id, "VOD")
+        val channelId = channel.stream_id
 
         if (profile.type == "stalker") {
             val mac = profile.macAddress ?: return ""

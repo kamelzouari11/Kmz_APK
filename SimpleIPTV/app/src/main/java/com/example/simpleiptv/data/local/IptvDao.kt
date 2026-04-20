@@ -52,13 +52,13 @@ interface IptvDao {
 
     @Query(
             """
-        SELECT channels.* FROM channels 
-        INNER JOIN channel_category_links ON 
-            channels.stream_id = channel_category_links.channelId AND 
+        SELECT channels.* FROM channels
+        INNER JOIN channel_category_links ON
+            channels.stream_id = channel_category_links.channelId AND
             channels.profileId = channel_category_links.profileId AND
             channels.type = channel_category_links.type
-        WHERE channel_category_links.categoryId = :categoryId 
-          AND channels.profileId = :profileId 
+        WHERE channel_category_links.categoryId = :categoryId
+          AND channels.profileId = :profileId
           AND channels.type = :type
         ORDER BY channels.sortOrder ASC
     """
@@ -68,6 +68,35 @@ interface IptvDao {
             profileId: Int,
             type: String = "LIVE"
     ): Flow<List<ChannelEntity>>
+
+    @Query(
+            """
+        SELECT channels.* FROM channels
+        INNER JOIN channel_category_links ON
+            channels.stream_id = channel_category_links.channelId AND
+            channels.profileId = channel_category_links.profileId AND
+            channels.type = channel_category_links.type
+        WHERE channel_category_links.categoryId = :categoryId
+          AND channels.profileId = :profileId
+          AND channels.type = :type
+        ORDER BY channels.sortOrder ASC
+        LIMIT :limit OFFSET :offset
+    """
+    )
+    fun getChannelsByCategoryPaginated(
+            categoryId: String,
+            profileId: Int,
+            type: String = "LIVE",
+            offset: Int = 0,
+            limit: Int = 50
+    ): Flow<List<ChannelEntity>>
+
+    @Query("SELECT COUNT(*) FROM channels INNER JOIN channel_category_links ON channels.stream_id = channel_category_links.channelId AND channels.profileId = channel_category_links.profileId AND channels.type = channel_category_links.type WHERE channel_category_links.categoryId = :categoryId AND channels.profileId = :profileId AND channels.type = :type")
+    suspend fun getChannelsByCategoryCount(
+            categoryId: String,
+            profileId: Int,
+            type: String = "LIVE"
+    ): Int
 
     @Query("DELETE FROM channels WHERE profileId = :profileId AND type = :type")
     suspend fun clearChannels(profileId: Int, type: String = "LIVE")
@@ -89,26 +118,52 @@ interface IptvDao {
     @Query("DELETE FROM channel_category_links WHERE profileId = :profileId AND type = :type")
     suspend fun clearChannelCategoryLinks(profileId: Int, type: String = "LIVE")
 
+    // --- IPTV Channels (Recherche FTS) ---
+    @Transaction
     @Query(
-            "SELECT * FROM channels WHERE profileId = :profileId AND type = :type AND name LIKE '%' || :query || '%' ORDER BY sortOrder ASC"
+        """
+        SELECT channels.* FROM channels
+        JOIN channels_fts ON channels.rowid = channels_fts.rowid
+        WHERE channels.profileId = :profileId
+          AND channels.type = :type
+          AND channels_fts MATCH :query
+        ORDER BY channels.sortOrder ASC
+        """
     )
-    fun searchChannels(
-            query: String,
-            profileId: Int,
-            type: String = "LIVE"
+    fun searchChannelsFts(
+        query: String,
+        profileId: Int,
+        type: String = "LIVE"
     ): Flow<List<ChannelEntity>>
 
-    /** Recherche multi-mots dans l'ordre (ex: "abc xyz" → *abc*xyz*) */
+    @Transaction
     @Query(
-            "SELECT * FROM channels WHERE profileId = :profileId AND type = :type AND name LIKE '%' || :query1 || '%' AND name LIKE '%' || :query2 || '%' AND name LIKE '%' || :query3 || '%' ORDER BY sortOrder ASC"
+        """
+        SELECT channels.* FROM channels
+        JOIN channels_fts ON channels.rowid = channels_fts.rowid
+        WHERE channels.profileId = :profileId
+          AND channels.type = :type
+          AND channels_fts MATCH :query
+        ORDER BY channels.sortOrder ASC
+        LIMIT :limit OFFSET :offset
+        """
     )
-    fun searchChannelsMultiWord(
-            query1: String,
-            query2: String,
-            query3: String,
-            profileId: Int,
-            type: String = "LIVE"
+    fun searchChannelsFtsPaginated(
+        query: String,
+        profileId: Int,
+        type: String = "LIVE",
+        offset: Int = 0,
+        limit: Int = 50
     ): Flow<List<ChannelEntity>>
+
+    @Query("SELECT COUNT(*) FROM channels JOIN channels_fts ON channels.rowid = channels_fts.rowid WHERE channels.profileId = :profileId AND channels.type = :type AND channels_fts MATCH :query")
+    suspend fun searchChannelsFtsCount(
+        query: String,
+        profileId: Int,
+        type: String = "LIVE"
+    ): Int
+
+
 
     // --- IPTV Favorite Lists ---
     @Insert(onConflict = OnConflictStrategy.IGNORE)
@@ -135,13 +190,13 @@ interface IptvDao {
 
     @Query(
             """
-        SELECT channels.* FROM channels 
-        INNER JOIN channel_favorites ON 
-            channels.stream_id = channel_favorites.channelId AND 
+        SELECT channels.* FROM channels
+        INNER JOIN channel_favorites ON
+            channels.stream_id = channel_favorites.channelId AND
             channels.profileId = channel_favorites.profileId AND
             channels.type = channel_favorites.type
-        WHERE channel_favorites.listId = :listId 
-          AND channels.profileId = :profileId 
+        WHERE channel_favorites.listId = :listId
+          AND channels.profileId = :profileId
           AND channels.type = :type
         ORDER BY channels.sortOrder ASC
     """
@@ -152,15 +207,44 @@ interface IptvDao {
             type: String = "LIVE"
     ): Flow<List<ChannelEntity>>
 
+    @Query(
+            """
+        SELECT channels.* FROM channels
+        INNER JOIN channel_favorites ON
+            channels.stream_id = channel_favorites.channelId AND
+            channels.profileId = channel_favorites.profileId AND
+            channels.type = channel_favorites.type
+        WHERE channel_favorites.listId = :listId
+          AND channels.profileId = :profileId
+          AND channels.type = :type
+        ORDER BY channels.sortOrder ASC
+        LIMIT :limit OFFSET :offset
+    """
+    )
+    fun getChannelsByFavoriteListPaginated(
+            listId: Int,
+            profileId: Int,
+            type: String = "LIVE",
+            offset: Int = 0,
+            limit: Int = 50
+    ): Flow<List<ChannelEntity>>
+
+    @Query("SELECT COUNT(*) FROM channels INNER JOIN channel_favorites ON channels.stream_id = channel_favorites.channelId AND channels.profileId = channel_favorites.profileId AND channels.type = channel_favorites.type WHERE channel_favorites.listId = :listId AND channels.profileId = :profileId AND channels.type = :type")
+    suspend fun getChannelsByFavoriteListCount(
+            listId: Int,
+            profileId: Int,
+            type: String = "LIVE"
+    ): Int
+
     /** Récupère les chaînes d'une liste de favoris de TOUS les profils (pour listes multi-profils). */
     @Query(
             """
-        SELECT channels.* FROM channels 
-        INNER JOIN channel_favorites ON 
-            channels.stream_id = channel_favorites.channelId AND 
+        SELECT channels.* FROM channels
+        INNER JOIN channel_favorites ON
+            channels.stream_id = channel_favorites.channelId AND
             channels.profileId = channel_favorites.profileId AND
             channels.type = channel_favorites.type
-        WHERE channel_favorites.listId = :listId 
+        WHERE channel_favorites.listId = :listId
           AND channels.type = :type
         ORDER BY channel_favorites.sortPosition ASC
     """
@@ -169,6 +253,33 @@ interface IptvDao {
             listId: Int,
             type: String = "LIVE"
     ): Flow<List<ChannelEntity>>
+
+    /** Récupère les chaînes d'une liste de favoris de TOUS les profils, paginées. */
+    @Query(
+            """
+        SELECT channels.* FROM channels
+        INNER JOIN channel_favorites ON
+            channels.stream_id = channel_favorites.channelId AND
+            channels.profileId = channel_favorites.profileId AND
+            channels.type = channel_favorites.type
+        WHERE channel_favorites.listId = :listId
+          AND channels.type = :type
+        ORDER BY channel_favorites.sortPosition ASC
+        LIMIT :limit OFFSET :offset
+    """
+    )
+    fun getAllProfileChannelsByFavoriteListPaginated(
+            listId: Int,
+            type: String = "LIVE",
+            offset: Int = 0,
+            limit: Int = 50
+    ): Flow<List<ChannelEntity>>
+
+    @Query("SELECT COUNT(*) FROM channels INNER JOIN channel_favorites ON channels.stream_id = channel_favorites.channelId AND channels.profileId = channel_favorites.profileId AND channels.type = channel_favorites.type WHERE channel_favorites.listId = :listId AND channels.type = :type")
+    suspend fun getAllProfileChannelsByFavoriteListCount(
+            listId: Int,
+            type: String = "LIVE"
+    ): Int
 
     @Query(
             "SELECT MAX(sortPosition) FROM channel_favorites WHERE listId = :listId AND profileId = :profileId AND type = :type"
@@ -218,32 +329,76 @@ interface IptvDao {
 
     @Query(
             """
-        SELECT channels.* FROM channels 
-        INNER JOIN recent_channels ON 
-            channels.stream_id = recent_channels.channelId AND 
+        SELECT channels.* FROM channels
+        INNER JOIN recent_channels ON
+            channels.stream_id = recent_channels.channelId AND
             channels.profileId = recent_channels.profileId AND
             channels.type = recent_channels.type
         WHERE channels.profileId = :profileId AND channels.type = :type
-        ORDER BY recent_channels.timestamp DESC 
+        ORDER BY recent_channels.timestamp DESC
         LIMIT 20
     """
     )
     fun getRecentChannels(profileId: Int, type: String = "LIVE"): Flow<List<ChannelEntity>>
 
+    @Query(
+            """
+        SELECT channels.* FROM channels
+        INNER JOIN recent_channels ON
+            channels.stream_id = recent_channels.channelId AND
+            channels.profileId = recent_channels.profileId AND
+            channels.type = recent_channels.type
+        WHERE channels.profileId = :profileId AND channels.type = :type
+        ORDER BY recent_channels.timestamp DESC
+        LIMIT :limit OFFSET :offset
+    """
+    )
+    fun getRecentChannelsPaginated(
+            profileId: Int,
+            type: String = "LIVE",
+            offset: Int = 0,
+            limit: Int = 50
+    ): Flow<List<ChannelEntity>>
+
+    @Query("SELECT COUNT(*) FROM channels INNER JOIN recent_channels ON channels.stream_id = recent_channels.channelId AND channels.profileId = recent_channels.profileId AND channels.type = recent_channels.type WHERE channels.profileId = :profileId AND channels.type = :type")
+    suspend fun getRecentChannelsCount(profileId: Int, type: String = "LIVE"): Int
+
     /** Récupère les chaînes récentes de TOUS les profils, classées par timestamp. */
     @Query(
             """
-        SELECT channels.* FROM channels 
-        INNER JOIN recent_channels ON 
-            channels.stream_id = recent_channels.channelId AND 
+        SELECT channels.* FROM channels
+        INNER JOIN recent_channels ON
+            channels.stream_id = recent_channels.channelId AND
             channels.profileId = recent_channels.profileId AND
             channels.type = recent_channels.type
         WHERE channels.type = :type
-        ORDER BY recent_channels.timestamp DESC 
+        ORDER BY recent_channels.timestamp DESC
         LIMIT 40
     """
     )
     fun getAllRecentChannels(type: String = "LIVE"): Flow<List<ChannelEntity>>
+
+    /** Récupère les chaînes récentes de TOUS les profils, paginées. */
+    @Query(
+            """
+        SELECT channels.* FROM channels
+        INNER JOIN recent_channels ON
+            channels.stream_id = recent_channels.channelId AND
+            channels.profileId = recent_channels.profileId AND
+            channels.type = recent_channels.type
+        WHERE channels.type = :type
+        ORDER BY recent_channels.timestamp DESC
+        LIMIT :limit OFFSET :offset
+    """
+    )
+    fun getAllRecentChannelsPaginated(
+            type: String = "LIVE",
+            offset: Int = 0,
+            limit: Int = 50
+    ): Flow<List<ChannelEntity>>
+
+    @Query("SELECT COUNT(*) FROM channels INNER JOIN recent_channels ON channels.stream_id = recent_channels.channelId AND channels.profileId = recent_channels.profileId AND channels.type = recent_channels.type WHERE channels.type = :type")
+    suspend fun getAllRecentChannelsCount(type: String = "LIVE"): Int
 
     @Query(
             """
@@ -297,13 +452,14 @@ interface IptvDao {
 
         clearChannels(profileId, type)
 
-            insertChannels(channels)
-            insertChannelCategoryLinks(links)
-        }
+        channels.chunked(500).forEach { insertChannels(it) }
+        links.chunked(500).forEach { insertChannelCategoryLinks(it) }
+    }
 
     // --- Recherche globale multi-profils ---
     @androidx.room.RawQuery(observedEntities = [
         com.example.simpleiptv.data.local.entities.ChannelEntity::class,
+        com.example.simpleiptv.data.local.entities.ChannelFtsEntity::class,
         com.example.simpleiptv.data.local.entities.ProfileEntity::class
     ])
     fun searchChannelsAllProfilesRaw(

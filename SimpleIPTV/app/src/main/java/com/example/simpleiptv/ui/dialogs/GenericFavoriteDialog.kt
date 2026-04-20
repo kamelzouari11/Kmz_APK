@@ -74,7 +74,7 @@ fun GenericFavoriteDialog(
                     Text("Aucun dossier de favoris créé.")
                 } else {
                     LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
-                        items(lists) { list ->
+                        items(lists, key = { it.id }) { list ->
                             Text(
                                     text = list.name,
                                     modifier =

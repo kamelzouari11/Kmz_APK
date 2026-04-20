@@ -38,7 +38,8 @@ class MainActivity : ComponentActivity() {
 
         override fun onCreate(savedInstanceState: Bundle?) {
                 super.onCreate(savedInstanceState)
-                requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                // Suppression de l'orientation forcée paysage pour supporter S22 en portrait
+                // requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
                 window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
                 lifecycleScope.launch {
@@ -139,20 +140,18 @@ class MainActivity : ComponentActivity() {
                                                                 }
                                                         }
                                                 },
-                                                getStreamUrl = { streamId, profileId ->
+                                                getStreamUrl = { channel ->
                                                         // Si un profileId explicite est fourni (recherche globale),
                                                         // utiliser ce profil même s'il n'est pas le profil actif.
+                                                        val profiles = viewModel!!.uiState.profiles
+                                                        val activeId = viewModel!!.uiState.activeProfileId
                                                         val profile =
-                                                                if (profileId != null) {
-                                                                        viewModel!!.profiles.find { it.id == profileId }
-                                                                                ?: viewModel!!.profiles.find { it.id == viewModel!!.activeProfileId }
-                                                                } else {
-                                                                        viewModel!!.profiles.find { it.id == viewModel!!.activeProfileId }
-                                                                }
+                                                                profiles.find { it.id == channel.profileId }
+                                                                        ?: profiles.find { it.id == activeId }
                                                         if (profile != null)
                                                                 iptvRepository!!.getStreamUrl(
                                                                         profile,
-                                                                        streamId
+                                                                        channel
                                                                 )
                                                         else ""
                                                 }

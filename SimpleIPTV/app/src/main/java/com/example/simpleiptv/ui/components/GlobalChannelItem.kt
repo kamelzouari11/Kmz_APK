@@ -67,7 +67,13 @@ fun GlobalChannelItem(
                 ) {
                         // Logo de la chaîne
                         AsyncImage(
-                                model = item.stream_icon,
+                                model = coil.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+                                        .data(item.stream_icon)
+                                        .size(80)
+                                        .crossfade(true)
+                                        .memoryCachePolicy(coil.request.CachePolicy.ENABLED)
+                                        .diskCachePolicy(coil.request.CachePolicy.ENABLED)
+                                        .build(),
                                 contentDescription = null,
                                 modifier = Modifier.size(40.dp),
                                 contentScale = ContentScale.Fit

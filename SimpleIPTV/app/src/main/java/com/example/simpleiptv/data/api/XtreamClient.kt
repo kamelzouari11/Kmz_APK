@@ -1,7 +1,6 @@
 package com.example.simpleiptv.data.api
 
 import com.squareup.moshi.Moshi
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
@@ -9,7 +8,6 @@ import retrofit2.converter.moshi.MoshiConverterFactory
 object XtreamClient {
 
     private val moshi = Moshi.Builder()
-        .add(KotlinJsonAdapterFactory())
         .build()
 
     private val okHttpClient = OkHttpClient.Builder()
@@ -19,15 +17,22 @@ object XtreamClient {
                 .build()
             chain.proceed(request)
         }
+        .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+        .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+        .writeTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
         .build()
+
+    private val cache = mutableMapOf<String, XtreamApi>()
 
     fun create(baseUrl: String): XtreamApi {
         val sanitizedUrl = if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/"
-        return Retrofit.Builder()
-            .baseUrl(sanitizedUrl)
-            .client(okHttpClient)
-            .addConverterFactory(MoshiConverterFactory.create(moshi))
-            .build()
-            .create(XtreamApi::class.java)
+        return cache.getOrPut(sanitizedUrl) {
+            Retrofit.Builder()
+                .baseUrl(sanitizedUrl)
+                .client(okHttpClient)
+                .addConverterFactory(MoshiConverterFactory.create(moshi))
+                .build()
+                .create(XtreamApi::class.java)
+        }
     }
 }
