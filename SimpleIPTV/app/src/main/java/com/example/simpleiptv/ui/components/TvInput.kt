@@ -45,15 +45,16 @@ fun TvInput(
                                 onFocusChanged?.invoke(it)
                             }
                             .scale(if (isFocused) 1.02f else 1f)
-                            .background(
-                                    color =
-                                            if (isFocused) Color.White.copy(alpha = 0.95f)
-                                            else
-                                                    MaterialTheme.colorScheme.surfaceVariant.copy(
-                                                            alpha = 0.3f
-                                                    ),
-                                    shape = MaterialTheme.shapes.medium
-                            ),
+                                 .background(
+                                         color =
+                                                 if (isFocused) Color.White.copy(alpha = 0.1f)
+                                                 else
+                                                     MaterialTheme.colorScheme.surfaceVariant.copy(
+                                                             alpha = 0.2f
+                                                     ),
+                                         shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp)
+                                 ),
+
             factory = { ctx ->
                 EditText(ctx).apply {
                     setHint(label)

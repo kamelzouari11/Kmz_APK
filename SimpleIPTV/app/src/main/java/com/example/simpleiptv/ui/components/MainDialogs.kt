@@ -142,12 +142,21 @@ fun MainDialogs(viewModel: MainViewModel) {
     if (viewModel.uiState.failedProfileToReload != null) {
         AlertDialog(
                 onDismissRequest = { viewModel.clearSyncError() },
-                title = { Text("Profil Invalide") },
+                title = { 
+                    Text(
+                        "Profil Invalide", 
+                        style = MaterialTheme.typography.titleLarge,
+                        color = Color.White
+                    ) 
+                },
                 text = {
                     Text(
-                            "Le profil '${viewModel.uiState.failedProfileToReload?.profileName}' n'a pas pu être chargé. Il est peut-être invalide ou l'URL est expirée."
+                            "Le profil '${viewModel.uiState.failedProfileToReload?.profileName}' n'a pas pu être chargé. Il est peut-être invalide ou l'URL est expirée.",
+                            color = Color.White.copy(alpha = 0.7f),
+                            style = MaterialTheme.typography.bodyMedium
                     )
                 },
+                containerColor = Color(0xFF1E1E1E),
                 confirmButton = {
                     var isFocused by remember { mutableStateOf(false) }
                     Box(
@@ -156,17 +165,15 @@ fun MainDialogs(viewModel: MainViewModel) {
                                             .clickable { viewModel.clearSyncError() }
                                             .focusable()
                                             .background(
-                                                    if (isFocused) Color.White
+                                                    if (isFocused) Color.White.copy(alpha = 0.2f)
                                                     else Color.Transparent,
-                                                    MaterialTheme.shapes.small
+                                                    androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
                                             )
                                             .padding(horizontal = 16.dp, vertical = 8.dp)
                     ) {
                         Text(
                                 "Garder",
-                                color =
-                                        if (isFocused) Color.Black
-                                        else MaterialTheme.colorScheme.primary
+                                color = if (isFocused) Color.White else Color(0xFFBB86FC)
                         )
                     }
                 },
@@ -183,12 +190,12 @@ fun MainDialogs(viewModel: MainViewModel) {
                                             }
                                             .focusable()
                                             .background(
-                                                    if (isFocused) Color.White
+                                                    if (isFocused) Color.White.copy(alpha = 0.2f)
                                                     else Color.Transparent,
-                                                    MaterialTheme.shapes.small
+                                                    androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
                                             )
                                             .padding(horizontal = 16.dp, vertical = 8.dp)
-                    ) { Text("Supprimer", color = if (isFocused) Color.Black else Color.Red) }
+                    ) { Text("Supprimer", color = if (isFocused) Color.White else Color(0xFFEF5350)) }
                 }
         )
     }

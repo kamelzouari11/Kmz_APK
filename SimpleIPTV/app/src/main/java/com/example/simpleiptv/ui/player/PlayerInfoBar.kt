@@ -39,7 +39,7 @@ fun PlayerInfoBar(
                         if (activeProfile != null) {
                                 Text(
                                         text = "${activeProfile.profileName}  •  ${activeProfile.url}",
-                                        color = Color.Green.copy(alpha = 0.85f),
+                                        color = Color(0xFFBB86FC).copy(alpha = 0.85f),
                                         style = MaterialTheme.typography.labelMedium
                                 )
                         }

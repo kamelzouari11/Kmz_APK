@@ -62,11 +62,12 @@ fun PlayerOverlay(
         channelFocusRequester: FocusRequester,
         viewModel: MainViewModel
 ) {
-        Column(
-                modifier = Modifier.fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.5f))
-                        .padding(24.dp)
-        ) {
+    Column(
+            modifier = Modifier.fillMaxSize()
+                    .background(Color(0xFF121212).copy(alpha = 0.7f))
+                    .padding(32.dp)
+    ) {
+
                 // Profile selector row
                                  if (profiles.isNotEmpty()) {
                                          ProfileSelectorRow(
@@ -84,53 +85,54 @@ fun PlayerOverlay(
                         if (showFullOverlay) {
                                 // Country list
                                 if (countries.size > 1) {
-                                        OverlayColumn(title = "Pays", width = 150.dp) {
-                                                LazyColumn(state = countryState, modifier = Modifier.weight(1f)) {
-                                                        items(countries, key = { it }) { country ->
-                                                                OverlayListItem(
-                                                                        text = country,
-                                                                        isSelected = country == selectedCountry,
-                                                                        onClick = { onCountrySelected(country) }
-                                                                )
-                                                        }
-                                                }
-                                        }
-                                        Spacer(Modifier.width(16.dp))
+                                 OverlayColumn(title = "Pays", width = 180.dp) {
+                                         LazyColumn(state = countryState, modifier = Modifier.weight(1f)) {
+                                                 items(countries, key = { it }) { country ->
+                                                     OverlayListItem(
+                                                         text = country,
+                                                         isSelected = country == selectedCountry,
+                                                         onClick = { onCountrySelected(country) }
+                                                     )
+                                                 }
+                                         }
+                                     }
+                                     Spacer(Modifier.width(20.dp))
+
                                 }
 
                                 // Category list
-                                 OverlayColumn(title = "Catégories", width = 280.dp) {
+                                 OverlayColumn(title = "Catégories", width = 300.dp) {
                                          LazyColumn(state = categoryState, modifier = Modifier.weight(1f)) {
                                                  item {
-                                                      OverlayListItem(
-                                                          text = "Récents",
-                                                          isSelected = viewModel.uiState.lastGeneratorType == com.example.simpleiptv.ui.viewmodel.GeneratorType.RECENTS,
-                                                          onClick = { 
-                                                               viewModel.showRecents()
-                                                          },
-                                                          content = { isFocused ->
+                                                     OverlayListItem(
+                                                         text = "Récents",
+                                                         isSelected = viewModel.uiState.lastGeneratorType == com.example.simpleiptv.ui.viewmodel.GeneratorType.RECENTS,
+                                                         onClick = { 
+                                                             viewModel.showRecents()
+                                                         },
+                                                         content = { isFocused ->
                                                               Row(verticalAlignment = Alignment.CenterVertically) {
                                                                   Icon(Icons.Default.History, contentDescription = null, modifier = Modifier.size(18.dp), tint = if (isFocused) Color.Black else Color.White)
                                                                   Spacer(Modifier.width(8.dp))
                                                                   Text("Récents", color = if (isFocused) Color.Black else Color.White)
                                                               }
                                                               }
-                                                      )
+                                                     )
                                                  }
                                                  itemsIndexed(categories, key = { _, cat -> cat.category_id }) { index, category ->
-                                                         val isSelected = category.category_id == selectedCategoryId
-                                                         val isInitialFocus = if (selectedCategoryId != null) isSelected else index == 1
-                                                         OverlayListItem(
-                                                                 text = category.category_name,
-                                                                 isSelected = isSelected,
-                                                                 onClick = { onCategorySelected(category) },
-                                                                 focusRequester = if (isInitialFocus) categoryFocusRequester else null
-                                                         )
+                                                     val isSelected = category.category_id == selectedCategoryId
+                                                     val isInitialFocus = if (selectedCategoryId != null) isSelected else index == 1
+                                                     OverlayListItem(
+                                                         text = category.category_name,
+                                                         isSelected = isSelected,
+                                                         onClick = { onCategorySelected(category) },
+                                                         focusRequester = if (isInitialFocus) categoryFocusRequester else null
+                                                     )
                                                  }
                                          }
-                                 }
+                                     }
+                                     Spacer(Modifier.width(20.dp))
 
-                                Spacer(Modifier.width(16.dp))
                         }
 
                         // Channel list
@@ -181,7 +183,7 @@ private fun ProfileSelectorRow(
                                          .background(
                                                  color = when {
                                                          isFocused -> Color.White.copy(alpha = 0.9f)
-                                                         isSelected -> Color.Green.copy(alpha = 0.2f)
+                                                         isSelected -> Color(0xFFBB86FC).copy(alpha = 0.2f)
                                                           isLoaded -> Color(0xFFADD8E6).copy(alpha = 0.4f)
                                                          else -> Color.Transparent
                                                  },
@@ -191,7 +193,7 @@ private fun ProfileSelectorRow(
                                                  width = 1.dp,
                                                  color = when {
                                                          isFocused -> Color.White
-                                                         isSelected -> Color.Green
+                                                         isSelected -> Color(0xFFBB86FC)
                                                           isLoaded -> Color(0xFFADD8E6)
                                                          else -> Color.White.copy(alpha = 0.3f)
                                                  },
@@ -204,7 +206,7 @@ private fun ProfileSelectorRow(
                                         text = profile.profileName.ifEmpty { "Profil ${profile.id}" },
                                         color = when {
                                                 isFocused -> Color.Black
-                                                isSelected -> Color.Green
+                                                isSelected -> Color(0xFFBB86FC)
                                                 else -> Color.White
                                         },
                                         style = MaterialTheme.typography.bodyMedium
@@ -261,7 +263,7 @@ private fun ColumnScope.OverlayChannelList(
                                                 .background(
                                                         color = when {
                                                                 isRowFocused -> Color.White
-                                                                isPlaying -> Color.Green.copy(alpha = 0.2f)
+                                                                isPlaying -> Color(0xFFBB86FC).copy(alpha = 0.2f)
                                                                 else -> Color.Transparent
                                                         },
                                                         shape = MaterialTheme.shapes.small
@@ -287,7 +289,7 @@ private fun ColumnScope.OverlayChannelList(
                                                         text = channel.name,
                                                         color = when {
                                                                 isRowFocused -> Color.Black
-                                                                isPlaying -> Color.Green
+                                                                isPlaying -> Color(0xFFBB86FC)
                                                                 else -> Color.White
                                                         },
                                                         maxLines = 1,
@@ -309,7 +311,7 @@ private fun ColumnScope.OverlayChannelList(
                                                 Icon(
                                                         imageVector = Icons.Default.PlayArrow,
                                                         contentDescription = null,
-                                                        tint = if (isRowFocused) Color.Black else Color.Green,
+                                                        tint = if (isRowFocused) Color.Black else Color(0xFFBB86FC),
                                                         modifier = Modifier.size(16.dp)
                                                 )
                                         }

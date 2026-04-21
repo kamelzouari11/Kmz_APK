@@ -178,16 +178,58 @@ fun MainHeader(
 
         Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)),
-                shape = RectangleShape,
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1B).copy(alpha = 0.9f)),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
                 Column {
-                                Row(
-                                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                        AsyncImage(model = "file:///android_asset/app_logo.jpg", null, modifier = Modifier.size(50.dp), contentScale = ContentScale.Fit)
+                                 Row(
+                                         modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp),
+                                         verticalAlignment = Alignment.CenterVertically
+                                 ) {
+                                         // --- Nouveau Logo Design ---
+                                         Row(
+                                             verticalAlignment = Alignment.CenterVertically,
+                                             modifier = Modifier.padding(end = 16.dp)
+                                         ) {
+                                             Box(
+                                                 modifier = Modifier
+                                                     .size(40.dp)
+                                                     .background(
+                                                         brush = androidx.compose.ui.graphics.Brush.linearGradient(
+                                                             colors = listOf(Color(0xFF7B2CBF), Color(0xFFBB86FC))
+                                                         ),
+                                                         shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp)
+                                                     ),
+                                                 contentAlignment = Alignment.Center
+                                             ) {
+                                                 Icon(
+                                                     Icons.Default.Tv,
+                                                     contentDescription = null,
+                                                     modifier = Modifier.size(24.dp),
+                                                     tint = Color.White
+                                                 )
+                                             }
+                                             Spacer(Modifier.width(8.dp))
+                                             Column {
+                                                 Text(
+                                                     "Simple",
+                                                     style = MaterialTheme.typography.titleMedium,
+                                                     fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                                     color = Color.White,
+                                                     lineHeight = 14.sp
+                                                 )
+                                                 Text(
+                                                     "IPTV",
+                                                     style = MaterialTheme.typography.labelSmall,
+                                                     fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold,
+                                                     color = Color(0xFFBB86FC),
+                                                     lineHeight = 12.sp
+                                                 )
+                                             }
+                                         }
+                                         // ----------------------------
+
 
                                         Spacer(modifier = Modifier.width(16.dp))
 
@@ -276,7 +318,7 @@ fun MainHeader(
                                                     icon = if (viewModel.uiState.searchScope == SearchScope.ALL_PROFILES) Icons.Default.Groups else Icons.Default.Person,
                                                     desc = if (viewModel.uiState.searchScope == SearchScope.ALL_PROFILES) "Tous profils" else "Profil actif",
                                                     onClick = { viewModel.toggleSearchScope() },
-                                                    tintNormal = if (viewModel.uiState.searchScope == SearchScope.ALL_PROFILES) Color(0xFF4CAF50) else Color.Gray
+                                                    tintNormal = if (viewModel.uiState.searchScope == SearchScope.ALL_PROFILES) Color(0xFFBB86FC) else Color.Gray
                                                 )
                                                 Spacer(modifier = Modifier.width(4.dp))
                                                 HeaderIconButton(
@@ -305,7 +347,7 @@ fun MainHeader(
                                     Icons.Default.Person,
                                     contentDescription = null,
                                     modifier = Modifier.size(14.dp),
-                                    tint = Color(0xFF4CAF50)
+                                    tint = Color(0xFFBB86FC)
                                 )
                                 Spacer(Modifier.width(6.dp))
                                 Text(

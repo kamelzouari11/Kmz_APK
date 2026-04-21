@@ -92,7 +92,7 @@ class MainActivity : ComponentActivity() {
                                 Box(
                                         modifier = Modifier.fillMaxSize().background(Color.Black),
                                         contentAlignment = Alignment.Center
-                                ) { CircularProgressIndicator(color = Color.Green) }
+                                ) { CircularProgressIndicator(color = Color(0xFFBB86FC)) }
                         } else {
                                 var exoPlayerState by remember { mutableStateOf<Player?>(null) }
                                 LaunchedEffect(controllerFuture) {

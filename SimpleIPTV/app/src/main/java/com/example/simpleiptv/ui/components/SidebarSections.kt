@@ -53,7 +53,7 @@ fun RecentsSection(
                                 Icon(
                                         imageVector = if (recentScope == SearchScope.ALL_PROFILES) Icons.Default.Groups else Icons.Default.Person,
                                         contentDescription = if (recentScope == SearchScope.ALL_PROFILES) "Tous profils" else "Profil actif",
-                                        tint = if (recentScope == SearchScope.ALL_PROFILES) Color(0xFF4CAF50) else Color.Gray,
+                                        tint = if (recentScope == SearchScope.ALL_PROFILES) Color(0xFFBB86FC) else Color.Gray,
                                         modifier = Modifier.size(20.dp)
                                 )
                         }
@@ -92,7 +92,7 @@ fun FavoritesHeader(
                                 Icon(
                                         imageVector = if (favoriteScope == SearchScope.ALL_PROFILES) Icons.Default.Groups else Icons.Default.Person,
                                         contentDescription = if (favoriteScope == SearchScope.ALL_PROFILES) "Tous profils" else "Profil actif",
-                                        tint = if (favoriteScope == SearchScope.ALL_PROFILES) Color(0xFF4CAF50) else Color.Gray,
+                                        tint = if (favoriteScope == SearchScope.ALL_PROFILES) Color(0xFFBB86FC) else Color.Gray,
                                         modifier = Modifier.size(18.dp)
                                 )
                         }
@@ -103,7 +103,7 @@ fun FavoritesHeader(
                                 Icon(
                                         imageVector = if (favoriteListScope == FavoriteListScope.ALL_LISTS) Icons.Default.Star else Icons.Default.Person,
                                         contentDescription = if (favoriteListScope == FavoriteListScope.ALL_LISTS) "Toutes listes" else "Liste profil",
-                                        tint = if (favoriteListScope == FavoriteListScope.ALL_LISTS) Color(0xFF4CAF50) else Color.Gray,
+                                        tint = if (favoriteListScope == FavoriteListScope.ALL_LISTS) Color(0xFFBB86FC) else Color.Gray,
                                         modifier = Modifier.size(18.dp)
                                 )
                         }

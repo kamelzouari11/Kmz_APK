@@ -29,20 +29,22 @@ fun HeaderIconButton(
                         modifier.size(50.dp)
                                 .onFocusChanged { state -> isFocused = state.isFocused }
                                 .scale(if (isFocused) 1.05f else 1f)
-                                .background(
-                                        when {
-                                                isFocused -> Color.White
-                                                isSelected -> Color.Cyan.copy(alpha = 0.2f)
-                                                else -> Color.Transparent
-                                        },
-                                        MaterialTheme.shapes.small
-                                )
+                                 .background(
+                                         when {
+                                                 isFocused -> Color.White.copy(alpha = 0.15f)
+                                                 isSelected -> Color(0xFFBB86FC).copy(alpha = 0.3f)
+                                                 else -> Color.Transparent
+                                         },
+                                         androidx.compose.foundation.shape.CircleShape
+                                 )
+
         ) {
-                Icon(
-                        icon,
-                        desc,
-                        tint = if (isFocused) Color.Black else tintNormal,
-                        modifier = Modifier.size(32.dp)
-                )
+                                 Icon(
+                                         icon,
+                                         desc,
+                                         tint = if (isFocused) Color.White else tintNormal,
+                                         modifier = Modifier.size(24.dp)
+                                 )
+
         }
 }

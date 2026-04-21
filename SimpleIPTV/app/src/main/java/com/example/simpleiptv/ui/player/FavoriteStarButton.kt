@@ -49,7 +49,7 @@ fun FavoriteStarButton(
                 Icon(
                         imageVector = Icons.Default.Star,
                         contentDescription = if (isFavorite) "Retirer des favoris" else "Ajouter aux favoris",
-                        tint = if (isStarFocused) Color.Black else if (isFavorite) Color.Green else Color.Gray,
+                        tint = if (isStarFocused) Color.Black else if (isFavorite) Color(0xFFBB86FC) else Color.Gray,
                         modifier = Modifier.size(24.dp)
                 )
         }

@@ -53,58 +53,62 @@ fun ChannelItem(
                 modifier = Modifier.fillMaxWidth().padding(4.dp),
                 verticalAlignment = Alignment.CenterVertically
         ) {
-                Surface(
-                        modifier =
-                                modifier.weight(1f)
-                                        .height(60.dp)
-                                        .onFocusChanged { state ->
-                                                isChannelFocused = state.isFocused
-                                        }
-                                        .scale(channelScale)
-                                        .clickable { onClick() }
-                                        .focusable(),
-                        shape = MaterialTheme.shapes.small,
-                        color =
-                                when {
-                                        isChannelFocused -> Color.White.copy(alpha = 0.95f)
-                                        isPlaying ->
-                                                MaterialTheme.colorScheme.primaryContainer.copy(
-                                                        alpha = 0.6f
-                                                )
-                                        else -> MaterialTheme.colorScheme.surface
-                                },
-                        border =
-                                when {
-                                        isPlaying -> BorderStroke(2.dp, Color.Green)
-                                        else -> BorderStroke(1.dp, Color.Gray.copy(alpha = 0.3f))
-                                }
-                ) {
+                                 Surface(
+                                         modifier =
+                                             modifier.weight(1f)
+                                                 .height(60.dp)
+                                                 .onFocusChanged { state ->
+                                                     isChannelFocused = state.isFocused
+                                                 }
+                                                 .scale(channelScale)
+                                                 .clickable { onClick() }
+                                                 .focusable(),
+                                         shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                                         color =
+                                          when {
+                                              isChannelFocused -> Color.White.copy(alpha = 0.2f)
+                                              isPlaying ->
+                                                      Color(0xFFBB86FC).copy(
+                                                          alpha = 0.3f
+                                                      )
+                                              else -> Color.Transparent
+                                          },
+                                         border =
+                                         when {
+                                             isPlaying -> BorderStroke(2.dp, Color(0xFFBB86FC))
+                                             isChannelFocused -> BorderStroke(1.dp, Color.White.copy(alpha = 0.5f))
+                                             else -> BorderStroke(1.dp, Color.Gray.copy(alpha = 0.2f))
+                                         }
+                                 ) {
+
                         Row(
                                 modifier = Modifier.padding(horizontal = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                         ) {
-                                AsyncImage(
-                                        model = coil.request.ImageRequest.Builder(LocalContext.current)
-                                                .data(channel.stream_icon)
-                                                .size(120) // Légèrement plus grand pour la netteté mais limité
-                                                .crossfade(true)
-                                                .diskCachePolicy(coil.request.CachePolicy.ENABLED)
-                                                .memoryCachePolicy(coil.request.CachePolicy.ENABLED)
-                                                .build(),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(40.dp),
-                                        contentScale = ContentScale.Fit
-                                )
+                                 AsyncImage(
+                                         model = coil.request.ImageRequest.Builder(context)
+                                                 .data(channel.stream_icon)
+                                                 .size(120) // Légèrement plus grand pour la netteté mais limité
+                                                 .crossfade(true)
+                                                 .diskCachePolicy(coil.request.CachePolicy.ENABLED)
+                                                 .memoryCachePolicy(coil.request.CachePolicy.ENABLED)
+                                                 .build(),
+                                         contentDescription = null,
+                                         modifier = Modifier.size(40.dp),
+                                         contentScale = ContentScale.Fit
+                                 )
+
                                 Spacer(Modifier.width(12.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                         Text(
                                                 text = channel.name,
-                                                color =
-                                                        when {
-                                                                isChannelFocused -> Color.Black
-                                                                isPlaying -> Color.Green
-                                                                else -> MaterialTheme.colorScheme.onSurface
-                                                        },
+                                         color =
+                                             when {
+                                                 isChannelFocused -> Color.White
+                                                 isPlaying -> Color(0xFFBB86FC)
+                                                 else -> Color.White.copy(alpha = 0.8f)
+                                             },
+
                                                 maxLines = 1,
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
@@ -112,10 +116,11 @@ fun ChannelItem(
                                         if (profile != null) {
                                                 Text(
                                                         text = "${profile.profileName}  •  ${profile.url}",
-                                                        color = if (isChannelFocused)
-                                                                Color.DarkGray
-                                                        else
-                                                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                 color = if (isChannelFocused)
+                                                                 Color.White
+                                                                 else
+                                                                 Color.White.copy(alpha = 0.5f),
+
                                                         maxLines = 1,
                                                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                                                         style = MaterialTheme.typography.labelSmall,
@@ -128,7 +133,7 @@ fun ChannelItem(
                                         Icon(
                                                 imageVector = Icons.Default.PlayArrow,
                                                 contentDescription = null,
-                                                tint = Color.Green,
+                                                tint = Color(0xFFBB86FC),
                                                 modifier = Modifier.size(20.dp)
                                         )
                                 }
@@ -155,15 +160,17 @@ fun ChannelItem(
                                         }
                                         .focusable(),
                         shape = CircleShape,
-                        color = if (isFavFocused) Color.White else Color.Transparent
+                                 color = if (isFavFocused) Color.White.copy(alpha = 0.2f) else Color.Transparent
+
                 ) {
                         Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                        imageVector = Icons.Default.Star,
-                                        contentDescription = null,
-                                        tint = if (isFavorite) Color.Green else if (isFavFocused) Color.Black else Color.Gray,
-                                        modifier = Modifier.size(32.dp)
-                                )
+                                 Icon(
+                                         imageVector = Icons.Default.Star,
+                                         contentDescription = null,
+                                         tint = if (isFavFocused) Color.White else if (isFavorite) Color(0xFFBB86FC) else Color.Gray.copy(alpha = 0.6f),
+                                         modifier = Modifier.size(32.dp)
+                                     )
+
                         }
                 }
         }

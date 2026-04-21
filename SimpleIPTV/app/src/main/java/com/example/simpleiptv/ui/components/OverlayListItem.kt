@@ -38,31 +38,33 @@ fun OverlayListItem(
                         .onFocusChanged { isFocused = it.isFocused }
                         .clickable { onClick() }
                         .focusable()
-                        .background(
-                                color = when {
-                                        isFocused -> Color.White.copy(alpha = 0.9f)
-                                        isSelected -> Color.Green.copy(alpha = 0.2f)
-                                        else -> Color.Transparent
-                                },
-                                shape = MaterialTheme.shapes.small
-                        )
-                        .padding(8.dp),
+                                 .background(
+                                         color = when {
+                                             isFocused -> Color.White.copy(alpha = 0.2f)
+                                             isSelected -> Color(0xFFBB86FC).copy(alpha = 0.3f)
+                                             else -> Color.Transparent
+                                         },
+                                         shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                                 )
+                                 .padding(horizontal = 12.dp, vertical = 8.dp),
+
                 verticalAlignment = Alignment.CenterVertically
         ) {
                 if (content != null) {
                         content(isFocused)
                 } else {
-                        Text(
-                                text = text,
-                                color = when {
-                                        isFocused -> Color.Black
-                                        isSelected -> Color.Green
-                                        else -> Color.White
-                                },
-                                style = MaterialTheme.typography.bodyLarge,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                        )
+                                 Text(
+                                         text = text,
+                                         color = when {
+                                             isFocused -> Color.White
+                                             isSelected -> Color(0xFFBB86FC)
+                                             else -> Color.White.copy(alpha = 0.7f)
+                                         },
+                                         style = MaterialTheme.typography.bodyLarge,
+                                         maxLines = 1,
+                                         overflow = TextOverflow.Ellipsis
+                                     )
+
                 }
         }
 }

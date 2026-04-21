@@ -56,7 +56,7 @@ fun GlobalChannelItem(
                         },
                 border =
                         when {
-                                isPlaying -> BorderStroke(2.dp, Color.Green)
+                                isPlaying -> BorderStroke(2.dp, Color(0xFFBB86FC))
                                 isFocused -> BorderStroke(1.dp, Color.White.copy(alpha = 0.6f))
                                 else -> BorderStroke(1.dp, Color.Gray.copy(alpha = 0.2f))
                         }
@@ -88,7 +88,7 @@ fun GlobalChannelItem(
                                         color =
                                                 when {
                                                         isFocused -> Color.Black
-                                                        isPlaying -> Color.Green
+                                                        isPlaying -> Color(0xFFBB86FC)
                                                         else -> MaterialTheme.colorScheme.onSurface
                                                 },
                                         maxLines = 1,
@@ -114,7 +114,7 @@ fun GlobalChannelItem(
                                 Icon(
                                         imageVector = Icons.Default.PlayArrow,
                                         contentDescription = null,
-                                        tint = Color.Green,
+                                        tint = Color(0xFFBB86FC),
                                         modifier = Modifier.size(20.dp)
                                 )
                         }
@@ -135,7 +135,7 @@ fun GlobalChannelItem(
                                         Icon(
                                                 imageVector = Icons.Default.Star,
                                                 contentDescription = null,
-                                                tint = if (isFavorite) Color.Green else if (isFavFocused) Color.Black else Color.Gray,
+                                                tint = if (isFavorite) Color(0xFFBB86FC) else if (isFavFocused) Color.Black else Color.Gray,
                                                 modifier = Modifier.size(28.dp)
                                         )
                                 }

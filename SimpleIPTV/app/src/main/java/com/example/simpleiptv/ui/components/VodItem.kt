@@ -46,7 +46,7 @@ fun VodItem(
                         ),
                 border =
                         if (isFocused) BorderStroke(3.dp, Color.White)
-                        else if (isPlaying) BorderStroke(2.dp, Color.Green)
+                        else if (isPlaying) BorderStroke(2.dp, Color(0xFFBB86FC))
                         else BorderStroke(1.dp, Color.Gray.copy(alpha = 0.1f)),
                 elevation =
                         CardDefaults.cardElevation(defaultElevation = if (isFocused) 4.dp else 0.dp)
