@@ -62,7 +62,8 @@ class ChannelListUseCase(private val repository: IptvRepository) {
         favoriteScope: SearchScope,
         favoriteLists: List<FavoriteListEntity>,
         offset: Int = 0,
-        limit: Int = 50
+        limit: Int = 50,
+        searchQuery: String = ""
     ): Flow<List<ChannelEntity>> {
         return when (type) {
             GeneratorType.RECENTS -> {
@@ -93,7 +94,7 @@ class ChannelListUseCase(private val repository: IptvRepository) {
             }
             GeneratorType.SEARCH -> {
                 repository.searchChannelsPaginated(
-                    repository::class.java.declaredFields.firstOrNull()?.name ?: "",
+                    searchQuery,
                     profileId,
                     mediaMode,
                     offset,
@@ -107,46 +108,5 @@ class ChannelListUseCase(private val repository: IptvRepository) {
         }
     }
 
-    /** Compte total pour déterminer s'il y a plus de pages. */
-    suspend fun getTotalCount(
-        type: GeneratorType,
-        categoryId: String?,
-        favoriteListId: Int,
-        profileId: Int,
-        mediaMode: String,
-        recentScope: SearchScope,
-        favoriteScope: SearchScope,
-        favoriteLists: List<FavoriteListEntity>,
-        searchQuery: String = ""
-    ): Int {
-        return when (type) {
-            GeneratorType.RECENTS -> {
-                if (recentScope == SearchScope.ALL_PROFILES) {
-                    repository.getAllRecentChannelsCount(mediaMode)
-                } else {
-                    repository.getRecentChannelsCount(profileId, mediaMode)
-                }
-            }
-            GeneratorType.CATEGORY -> {
-                repository.getChannelsByCategoryCount(categoryId ?: "", profileId, mediaMode)
-            }
-            GeneratorType.FAVORITES -> {
-                val selectedList = favoriteLists.find { it.id == favoriteListId }
-                val isGlobalList = selectedList?.profileId == null
-
-                if (isGlobalList || favoriteScope == SearchScope.ALL_PROFILES) {
-                    repository.getAllProfileChannelsByFavoriteListCount(favoriteListId, mediaMode)
-                } else {
-                    repository.getChannelsByFavoriteListCount(favoriteListId, profileId, mediaMode)
-                }
-            }
-            GeneratorType.SEARCH -> {
-                repository.searchChannelsCount(searchQuery, profileId, mediaMode)
-            }
-            GeneratorType.GLOBAL_SEARCH -> {
-                // Pour la recherche globale, on retourne une estimation
-                Int.MAX_VALUE
-            }
-        }
-    }
 }
+

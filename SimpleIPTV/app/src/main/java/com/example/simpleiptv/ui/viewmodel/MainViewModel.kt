@@ -297,38 +297,28 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
     }
 
     private suspend fun executeRefresh() {
-        android.util.Log.d("MainViewModel", "execute: type=${uiState.lastGeneratorType}, query='${uiState.searchQuery}', scope=${uiState.searchScope}")
-
         if (uiState.searchQuery.isBlank()) {
             executeNormalRefresh()
             return
         }
 
         if (uiState.searchScope == SearchScope.ALL_PROFILES) {
-            android.util.Log.d("MainViewModel", "Global search: query='${uiState.searchQuery}'")
             updateUiState {
                 lastGeneratorType = GeneratorType.GLOBAL_SEARCH
                 globalSearchResults = emptyList()
             }
             searchUseCase.searchGlobal(uiState.searchQuery, uiState.currentMediaMode.name)
                 .collect {
-                    android.util.Log.d("MainViewModel", "Global results: ${it.size}")
-                    updateUiState {
-                globalSearchResults = it
-            }
+                    updateUiState { globalSearchResults = it }
                 }
         } else {
-            android.util.Log.d("MainViewModel", "Local search: query='${uiState.searchQuery}', profile=${uiState.activeProfileId}")
             updateUiState {
                 lastGeneratorType = GeneratorType.SEARCH
                 globalSearchResults = emptyList()
             }
             searchUseCase.searchLocal(uiState.searchQuery, uiState.activeProfileId, uiState.currentMediaMode.name)
                 .collect {
-                    android.util.Log.d("MainViewModel", "Local results: ${it.size}")
-                    updateUiState {
-                channels = it
-            }
+                    updateUiState { channels = it }
                 }
         }
     }
@@ -375,7 +365,6 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
         }
 
         viewModelScope.launch {
-            android.util.Log.d("MainViewModel", "loadMore: offset=${uiState.pageOffset}")
             val flow = channelListUseCase.getChannelsForTypePaginated(
                 type = uiState.lastGeneratorType,
                 categoryId = uiState.selectedCategoryId,
@@ -386,7 +375,8 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
                 favoriteScope = uiState.favoriteScope,
                 favoriteLists = uiState.favoriteLists,
                 offset = uiState.pageOffset,
-                limit = uiState.pageSize
+                limit = uiState.pageSize,
+                searchQuery = uiState.searchQuery
             )
             flow.distinctUntilChanged().collect { channels ->
                 updateUiState {

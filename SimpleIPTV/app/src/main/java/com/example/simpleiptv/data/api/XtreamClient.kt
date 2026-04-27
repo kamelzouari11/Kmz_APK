@@ -4,11 +4,12 @@ import com.squareup.moshi.Moshi
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.TimeUnit
 
 object XtreamClient {
 
-    private val moshi = Moshi.Builder()
-        .build()
+    private val moshi = Moshi.Builder().build()
 
     private val okHttpClient = OkHttpClient.Builder()
         .addInterceptor { chain ->
@@ -17,12 +18,13 @@ object XtreamClient {
                 .build()
             chain.proceed(request)
         }
-        .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
-        .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-        .writeTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+        .connectTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .writeTimeout(15, TimeUnit.SECONDS)
         .build()
 
-    private val cache = mutableMapOf<String, XtreamApi>()
+    // Thread-safe cache: un client Retrofit par URL de serveur
+    private val cache = ConcurrentHashMap<String, XtreamApi>()
 
     fun create(baseUrl: String): XtreamApi {
         val sanitizedUrl = if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/"

@@ -11,8 +11,10 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -40,6 +42,7 @@ fun MainScreen(
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val playerReturnFocusRequester = remember { FocusRequester() }
 
     // Pull-to-refresh state (simple version using Material3)
     val isRefreshing = viewModel.uiState.isLoading
@@ -152,7 +155,8 @@ fun MainScreen(
                             onSave = onSave,
                             onRestore = onRestore,
                             player = exoPlayer,
-                            onGoToPlayer = { viewModel.setFullScreenPlayer(true) }
+                            onGoToPlayer = { viewModel.setFullScreenPlayer(true) },
+                            playerReturnFocusRequesterOut = playerReturnFocusRequester
                     )
 
                     // Message d'erreur si présent
@@ -205,13 +209,15 @@ fun MainScreen(
                                     onChannelClick = onChannelClick,
                                     countryScrollState = mainCountryScrollState,
                                     categoryScrollState = mainCategoryScrollState,
-                                    channelScrollState = mainChannelScrollState
+                                    channelScrollState = mainChannelScrollState,
+                                    playerReturnFocusRequester = playerReturnFocusRequester
                             )
                         } else {
                             MainContentPortrait(
                                     viewModel = viewModel,
                                     onChannelClick = onChannelClick,
-                                    channelScrollState = mainChannelScrollState
+                                    channelScrollState = mainChannelScrollState,
+                                    playerReturnFocusRequester = playerReturnFocusRequester
                             )
                         }
 

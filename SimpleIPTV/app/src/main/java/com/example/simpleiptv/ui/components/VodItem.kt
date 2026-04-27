@@ -40,7 +40,7 @@ fun VodItem(
                 colors =
                         CardDefaults.cardColors(
                                 containerColor =
-                                        if (isFocused) Color.White.copy(alpha = 0.1f)
+                                        if (isFocused) Color.White
                                         else Color.Transparent,
                                 contentColor = MaterialTheme.colorScheme.onSurface
                         ),
@@ -73,6 +73,7 @@ fun VodItem(
                                         text = channel.name,
                                         modifier = Modifier.fillMaxWidth(),
                                         style = MaterialTheme.typography.titleSmall,
+                                        color = if (isFocused) Color.Black else MaterialTheme.colorScheme.onSurface,
                                         textAlign = TextAlign.Center,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
@@ -80,7 +81,7 @@ fun VodItem(
                                 if (profile != null) {
                                         Text(
                                                 text = "${profile.profileName}  •  ${profile.url}",
-                                                color = if (isFocused) Color.DarkGray else MaterialTheme.colorScheme.onSurface.copy(alpha=0.5f),
+                                                color = if (isFocused) Color.Black else MaterialTheme.colorScheme.onSurface.copy(alpha=0.5f),
                                                 style = MaterialTheme.typography.labelSmall,
                                                 fontSize = androidx.compose.ui.unit.TextUnit(11f, androidx.compose.ui.unit.TextUnitType.Sp),
                                                 maxLines = 1,

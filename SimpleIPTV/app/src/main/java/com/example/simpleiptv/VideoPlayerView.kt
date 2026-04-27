@@ -2,9 +2,6 @@ package com.example.simpleiptv
 
 import android.view.KeyEvent
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
@@ -27,11 +24,8 @@ import androidx.media3.ui.PlayerView
 import com.example.simpleiptv.data.local.entities.CategoryEntity
 import com.example.simpleiptv.data.local.entities.ChannelEntity
 import com.example.simpleiptv.data.local.entities.ProfileEntity
-import com.example.simpleiptv.ui.player.BufferingOverlay
 import com.example.simpleiptv.ui.player.PlaybackErrorOverlay
 import com.example.simpleiptv.ui.player.PlayerOverlay
-import com.example.simpleiptv.ui.player.ChannelDetailsBottomBar
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
@@ -61,17 +55,15 @@ fun VideoPlayerView(
         onProfileSelected: (Int) -> Unit = {},
         viewModel: com.example.simpleiptv.ui.viewmodel.MainViewModel
 ) {
+        val isVod = playingChannel?.type == "VOD"
         var isOverlayVisible by remember { mutableStateOf(false) }
-        var showDetailsBar by remember { mutableStateOf(false) }
+        var showExoController by remember(isVod) { mutableStateOf<Boolean>(isVod) }
         var showFullOverlay by remember(isLandscape) { mutableStateOf(isLandscape) }
         val scope = rememberCoroutineScope()
         val boxFocusRequester = remember { FocusRequester() }
         val categoryFocusRequester = remember { FocusRequester() }
         val channelFocusRequester = remember { FocusRequester() }
         val vodFocusRequester = remember { FocusRequester() }
-        val isVod = playingChannel?.type == "VOD"
-
-        var playerViewRef by remember { mutableStateOf<PlayerView?>(null) }
 
         LaunchedEffect(Unit) {
                 try { boxFocusRequester.requestFocus() } catch (e: Exception) {}
@@ -105,7 +97,7 @@ fun VideoPlayerView(
         val categoryState = categoriesScrollState ?: rememberLazyListState()
         val channelState = channelsScrollState ?: rememberLazyListState()
 
-        LaunchedEffect(isVod) {
+        LaunchedEffect(isVod, interactive) {
                 if (!isVod && interactive) {
                         try { boxFocusRequester.requestFocus() } catch (e: Exception) {}
                 }
@@ -115,10 +107,10 @@ fun VideoPlayerView(
                 currentChannels.indexOfFirst { it.stream_id == playingChannel?.stream_id }
         }
 
-        LaunchedEffect(isOverlayVisible, isVod) {
-                if (isVod) {
+        LaunchedEffect(isOverlayVisible, isVod, interactive) {
+                if (isVod && interactive) {
                         try { vodFocusRequester.requestFocus() } catch (e: Exception) {}
-                } else if (isOverlayVisible && interactive) {
+                } else if (isOverlayVisible && !isVod && interactive) {
                         if (playingIndex >= 0) {
                                 try {
                                         channelState.scrollToItem(playingIndex)
@@ -129,13 +121,17 @@ fun VideoPlayerView(
                         } else {
                                 try { categoryFocusRequester.requestFocus() } catch (e: Exception) {}
                         }
-                } else if (!isOverlayVisible && interactive) {
+                } else if (!isOverlayVisible && !isVod && interactive) {
                         try { boxFocusRequester.requestFocus() } catch (e: Exception) {}
                 }
         }
 
         if (isOverlayVisible && !isVod) {
                 BackHandler { isOverlayVisible = false }
+        }
+
+        if (isVod && interactive) {
+                BackHandler { onBack() }
         }
 
         Box(
@@ -184,12 +180,19 @@ fun VideoPlayerView(
                                                                    KeyEvent.KEYCODE_DPAD_CENTER,
                                                                    KeyEvent.KEYCODE_ENTER -> {
                                                                         if (!interactive) return@onPreviewKeyEvent false
-                                                                        showDetailsBar = !showDetailsBar
-                                                                        if (showDetailsBar) {
+                                                                        showFullOverlay = isLandscape
+                                                                        isOverlayVisible = true
+                                                                        if (playingIndex >= 0) {
                                                                             scope.launch {
-                                                                                delay(5000)
-                                                                                showDetailsBar = false
+                                                                                try {
+                                                                                    channelState.scrollToItem(playingIndex)
+                                                                                    channelFocusRequester.requestFocus()
+                                                                                } catch (e: Exception) {
+                                                                                    try { categoryFocusRequester.requestFocus() } catch (e2: Exception) {}
+                                                                                }
                                                                             }
+                                                                        } else {
+                                                                            try { categoryFocusRequester.requestFocus() } catch (e: Exception) {}
                                                                         }
                                                                         return@onPreviewKeyEvent true
                                                                     }
@@ -221,25 +224,24 @@ fun VideoPlayerView(
                 AndroidView(
                         factory = { context ->
                                 PlayerView(context).apply {
-                                        useController = false
+                                        useController = showExoController
                                         setShowNextButton(false)
                                         setShowPreviousButton(false)
                                         keepScreenOn = true
-                                        isFocusable = false
-                                        isFocusableInTouchMode = false
+                                        isFocusable = isVod || showExoController
+                                        isFocusableInTouchMode = isVod || showExoController
                                         }
                         },
                         update = { view ->
                                 view.player = exoPlayer
-                                view.useController = false
-                                playerViewRef = view
+                                view.useController = showExoController
                         },
                         modifier = Modifier.fillMaxSize()
+                                .focusRequester(vodFocusRequester)
+                                .onFocusChanged { isPlayerFocused = it.isFocused }
+                                .focusable()
                 )
 
-                if (false && isBuffering) {
-                        BufferingOverlay()
-                }
 
                 if (playbackError != null && !isBuffering) {
                         PlaybackErrorOverlay(errorMessage = playbackError)
@@ -278,31 +280,6 @@ fun VideoPlayerView(
                                 channelFocusRequester = channelFocusRequester,
                                 viewModel = viewModel
                         )
-                }
-
-                AnimatedVisibility(
-                        visible = showDetailsBar,
-                        enter = slideInVertically(initialOffsetY = { it }),
-                        exit = slideOutVertically(targetOffsetY = { it })
-                ) {
-                    Box(modifier = Modifier.align(Alignment.BottomCenter)) {
-                        ChannelDetailsBottomBar(
-                            channel = playingChannel ?: return@AnimatedVisibility,
-                            profile = profiles.find { it.id == activeProfileId },
-                            country = selectedCountry,
-                            category = selectedCategoryId ?: "N/C",
-                            onNext = {
-                                if (playingIndex < currentChannels.size - 1) {
-                                    onChannelSelected(currentChannels[playingIndex + 1])
-                                }
-                            },
-                            onPrevious = {
-                                if (playingIndex > 0) {
-                                    onChannelSelected(currentChannels[playingIndex - 1])
-                                }
-                            }
-                        )
-                    }
                 }
         }
 }

@@ -49,7 +49,7 @@ fun GlobalChannelItem(
                 shape = MaterialTheme.shapes.small,
                 color =
                         when {
-                                isFocused -> Color.White.copy(alpha = 0.95f)
+                                isFocused -> Color.White
                                 isPlaying ->
                                         MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
                                 else -> MaterialTheme.colorScheme.surface

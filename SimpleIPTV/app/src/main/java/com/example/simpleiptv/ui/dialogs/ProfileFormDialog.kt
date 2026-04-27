@@ -137,13 +137,17 @@ fun ProfileFormDialog(
 
                     Button(
                             onClick = { onSave(name, url, user, pass, mac, type) },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isSaveFocused) Color.White else MaterialTheme.colorScheme.primary,
+                                contentColor = if (isSaveFocused) Color.Black else Color.White
+                            ),
                             modifier =
                                     Modifier.fillMaxWidth()
                                             .onFocusChanged { isSaveFocused = it.isFocused }
                                             .scale(if (isSaveFocused) 1.05f else 1f)
                                             .background(
                                                     if (isSaveFocused)
-                                                            Color.White.copy(alpha = 0.1f)
+                                                            Color.White
                                                     else Color.Transparent,
                                                     MaterialTheme.shapes.medium
                                             ),

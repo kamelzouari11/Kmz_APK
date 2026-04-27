@@ -19,6 +19,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
@@ -42,7 +43,7 @@ enum class PortraitNavigationState {
 fun MainContentPortrait(
     viewModel: MainViewModel,
     onChannelClick: (ChannelEntity) -> Unit,
-    channelScrollState: LazyListState
+    channelScrollState: LazyListState, playerReturnFocusRequester: FocusRequester
 ) {
     val pagerState = rememberPagerState(pageCount = { 3 })
     val scope = rememberCoroutineScope()
@@ -79,9 +80,9 @@ fun MainContentPortrait(
             modifier = Modifier.weight(1f)
         ) { page ->
             when (page) {
-                0 -> LiveTvTab(viewModel, onChannelClick, channelScrollState)
+                0 -> LiveTvTab(viewModel, onChannelClick, channelScrollState, playerReturnFocusRequester)
                 1 -> VodTab(viewModel, onChannelClick)
-                2 -> FavoritesTab(viewModel, onChannelClick, channelScrollState)
+                2 -> FavoritesTab(viewModel, onChannelClick, channelScrollState, playerReturnFocusRequester)
             }
         }
     }
@@ -91,7 +92,8 @@ fun MainContentPortrait(
 private fun LiveTvTab(
     viewModel: MainViewModel,
     onChannelClick: (ChannelEntity) -> Unit,
-    scrollState: LazyListState
+    scrollState: LazyListState,
+    playerReturnFocusRequester: FocusRequester
 ) {
     var navState by remember { mutableStateOf(PortraitNavigationState.COUNTRIES) }
 
@@ -113,9 +115,9 @@ private fun LiveTvTab(
                     CountryListVertical(
                         countries = viewModel.uiState.countryFilters,
                         selectedCountry = viewModel.uiState.selectedCountryFilter,
-                        onCountrySelected = { 
+                        onCountrySelected = {
                             viewModel.setCountryFilter(it)
-                            navState = PortraitNavigationState.CATEGORIES 
+                            navState = PortraitNavigationState.CATEGORIES
                         }
                     )
                 }
@@ -123,14 +125,14 @@ private fun LiveTvTab(
                     CategoryListVertical(
                         categories = viewModel.uiState.filteredCategories,
                         selectedCategory = viewModel.uiState.selectedCategoryId,
-                        onCategorySelected = { 
+                        onCategorySelected = {
                             viewModel.selectCategory(it)
-                            navState = PortraitNavigationState.CHANNELS 
+                            navState = PortraitNavigationState.CHANNELS
                         }
                     )
                 }
                 PortraitNavigationState.CHANNELS -> {
-                    LiveChannelListPortrait(viewModel, onChannelClick, scrollState)
+                    LiveChannelListPortrait(viewModel, onChannelClick, scrollState, playerReturnFocusRequester)
                 }
                 PortraitNavigationState.SEARCH_RESULTS -> {
                     SearchResultListPortrait(viewModel, onChannelClick, scrollState)
@@ -240,7 +242,8 @@ private fun SearchResultListPortrait(
 private fun LiveChannelListPortrait(
     viewModel: MainViewModel,
     onChannelClick: (ChannelEntity) -> Unit,
-    scrollState: LazyListState
+    scrollState: LazyListState,
+    playerReturnFocusRequester: FocusRequester
 ) {
     val profileMap = remember(viewModel.uiState.profiles) {
         viewModel.uiState.profiles.associateBy { it.id }
@@ -259,7 +262,7 @@ private fun LiveChannelListPortrait(
                     recentScope = viewModel.uiState.recentScope,
                     onShowRecents = { viewModel.showRecents() },
                     onClearRecents = { viewModel.clearRecents() },
-                    onToggleRecentScope = { viewModel.toggleRecentScope() }
+                    onToggleRecentScope = { viewModel.toggleRecentScope() }, upFocusRequester = playerReturnFocusRequester, leftFocusRequester = androidx.compose.ui.focus.FocusRequester()
                 )
             }
         }
@@ -347,7 +350,8 @@ private fun VodTab(
 private fun FavoritesTab(
     viewModel: MainViewModel,
     onChannelClick: (ChannelEntity) -> Unit,
-    scrollState: LazyListState
+    scrollState: LazyListState,
+    playerReturnFocusRequester: FocusRequester
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         LazyRow(
@@ -365,7 +369,7 @@ private fun FavoritesTab(
         }
 
         Box(modifier = Modifier.weight(1f)) {
-            LiveChannelListPortrait(viewModel, onChannelClick, scrollState)
+            LiveChannelListPortrait(viewModel, onChannelClick, scrollState, playerReturnFocusRequester)
         }
     }
 }

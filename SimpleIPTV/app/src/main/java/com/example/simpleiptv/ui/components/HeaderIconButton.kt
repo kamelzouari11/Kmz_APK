@@ -31,7 +31,7 @@ fun HeaderIconButton(
                                 .scale(if (isFocused) 1.05f else 1f)
                                  .background(
                                          when {
-                                                 isFocused -> Color.White.copy(alpha = 0.15f)
+                                                 isFocused -> Color.White
                                                  isSelected -> Color(0xFFBB86FC).copy(alpha = 0.3f)
                                                  else -> Color.Transparent
                                          },
@@ -42,7 +42,7 @@ fun HeaderIconButton(
                                  Icon(
                                          icon,
                                          desc,
-                                         tint = if (isFocused) Color.White else tintNormal,
+                                         tint = if (isFocused) Color.Black else tintNormal,
                                          modifier = Modifier.size(24.dp)
                                  )
 

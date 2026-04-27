@@ -73,7 +73,8 @@ fun MainHeader(
         onSave: () -> Unit = {},
         onRestore: () -> Unit = {},
         player: Player? = null,
-        onGoToPlayer: () -> Unit = {}
+        onGoToPlayer: () -> Unit = {},
+        playerReturnFocusRequesterOut: FocusRequester? = null
 ) {
         val context = LocalContext.current
         val activity = context as? Activity
@@ -91,7 +92,7 @@ fun MainHeader(
         val searchFieldFocusRequester = remember { FocusRequester() }
         val firstHistItemFocusRequester = remember { FocusRequester() }
         val liveButtonFocusRequester = remember { FocusRequester() }
-        val playerReturnFocusRequester = remember { FocusRequester() }
+        val playerReturnFocusRequester = playerReturnFocusRequesterOut ?: remember { FocusRequester() }
         val profileManagerFocusRequester = remember { FocusRequester() }
 
         LaunchedEffect(Unit) {
@@ -371,7 +372,7 @@ fun MainHeader(
                                                  .scale(if (isNowPlayingFocused) 1.02f else 1f)
                                                  .background(
                                                          if (isNowPlayingFocused)
-                                                                 Color.White.copy(alpha = 0.95f)
+                                                                 Color.White
                                                          else
                                                                  MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
                                                  )

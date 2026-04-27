@@ -39,7 +39,7 @@ fun TvFilterChip(
                             .focusable(),
             shape = CircleShape,
             color =
-                    if (isFocused) Color.White.copy(alpha = 0.9f)
+                    if (isFocused) Color.White
                     else if (selected) MaterialTheme.colorScheme.primaryContainer
                     else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
     ) {

@@ -25,15 +25,6 @@ class IptvRepository(private val dao: IptvDao) {
         }
 
         /**
-         * Retourne l'API Xtream pour le profil actif.
-         * Utilisé par StreamService pour générer les URLs de stream.
-         */
-        fun getXtreamApiForProfile(profileId: Int, profiles: List<ProfileEntity>): XtreamApi? {
-                val profile = profiles.find { it.id == profileId } ?: return null
-                return XtreamClient.create(profile.url)
-        }
-
-        /**
          * Crée un profil par défaut si aucun profil n'existe.
          * Appelé au premier lancement de l'application.
          */
@@ -77,11 +68,6 @@ class IptvRepository(private val dao: IptvDao) {
                 limit: Int = 50
         ): Flow<List<ChannelEntity>> = dao.getChannelsByFavoriteListPaginated(listId, profileId, type, offset, limit)
 
-        suspend fun getChannelsByFavoriteListCount(
-                listId: Int,
-                profileId: Int,
-                type: String = "LIVE"
-        ): Int = dao.getChannelsByFavoriteListCount(listId, profileId, type)
 
         fun getAllProfileChannelsByFavoriteList(
                 listId: Int,
@@ -95,10 +81,6 @@ class IptvRepository(private val dao: IptvDao) {
                 limit: Int = 50
         ): Flow<List<ChannelEntity>> = dao.getAllProfileChannelsByFavoriteListPaginated(listId, type, offset, limit)
 
-        suspend fun getAllProfileChannelsByFavoriteListCount(
-                listId: Int,
-                type: String = "LIVE"
-        ): Int = dao.getAllProfileChannelsByFavoriteListCount(listId, type)
 
         fun getRecentChannels(profileId: Int, type: String = "LIVE"): Flow<List<ChannelEntity>> =
                 dao.getRecentChannels(profileId, type)
@@ -110,8 +92,6 @@ class IptvRepository(private val dao: IptvDao) {
                 limit: Int = 50
         ): Flow<List<ChannelEntity>> = dao.getRecentChannelsPaginated(profileId, type, offset, limit)
 
-        suspend fun getRecentChannelsCount(profileId: Int, type: String = "LIVE"): Int =
-                dao.getRecentChannelsCount(profileId, type)
 
         fun getAllRecentChannels(type: String = "LIVE"): Flow<List<ChannelEntity>> =
                 dao.getAllRecentChannels(type)
@@ -122,8 +102,6 @@ class IptvRepository(private val dao: IptvDao) {
                 limit: Int = 50
         ): Flow<List<ChannelEntity>> = dao.getAllRecentChannelsPaginated(type, offset, limit)
 
-        suspend fun getAllRecentChannelsCount(type: String = "LIVE"): Int =
-                dao.getAllRecentChannelsCount(type)
         fun getChannelsByCategory(
                 categoryId: String,
                 profileId: Int,
@@ -138,11 +116,11 @@ class IptvRepository(private val dao: IptvDao) {
                 limit: Int = 50
         ): Flow<List<ChannelEntity>> = dao.getChannelsByCategoryPaginated(categoryId, profileId, type, offset, limit)
 
-        suspend fun getChannelsByCategoryCount(
-                categoryId: String,
-                profileId: Int,
-                type: String = "LIVE"
-        ): Int = dao.getChannelsByCategoryCount(categoryId, profileId, type)
+        suspend fun getChannelCount(profileId: Int, type: String = "LIVE"): Int =
+                dao.getChannelCount(profileId, type)
+        suspend fun getCategoryCount(profileId: Int, type: String = "LIVE"): Int =
+                dao.getCategoryCount(profileId, type)
+
         fun searchChannels(
                 query: String,
                 profileId: Int,
@@ -169,19 +147,6 @@ class IptvRepository(private val dao: IptvDao) {
                 dao.searchChannelsFtsPaginated(ftsQuery, profileId, type, offset, limit)
             } else {
                 kotlinx.coroutines.flow.flowOf(emptyList())
-            }
-        }
-
-        suspend fun searchChannelsCount(
-                query: String,
-                profileId: Int,
-                type: String = "LIVE"
-        ): Int {
-            val ftsQuery = buildFtsQuery(query)
-            return if (ftsQuery.isNotEmpty()) {
-                dao.searchChannelsFtsCount(ftsQuery, profileId, type)
-            } else {
-                0
             }
         }
 
@@ -213,10 +178,7 @@ class IptvRepository(private val dao: IptvDao) {
                 )
                 return dao.searchChannelsAllProfilesRaw(sql)
         }
-        suspend fun getChannelCount(profileId: Int, type: String = "LIVE"): Int =
-                dao.getChannelCount(profileId, type)
-        suspend fun getCategoryCount(profileId: Int, type: String = "LIVE"): Int =
-                dao.getCategoryCount(profileId, type)
+
 
         /**
          * Construit une requête FTS4 à partir de l'entrée utilisateur.
@@ -309,12 +271,20 @@ class IptvRepository(private val dao: IptvDao) {
         suspend fun addProfile(profile: ProfileEntity) = dao.insertProfile(profile)
         suspend fun updateProfile(profile: ProfileEntity) = dao.updateProfile(profile)
         suspend fun deleteProfile(profile: ProfileEntity) {
-                dao.clearCategories(profile.id)
-                dao.clearChannels(profile.id)
-                dao.clearChannelCategoryLinks(profile.id)
-                dao.clearFavoriteLists(profile.id)
-                dao.clearChannelFavorites(profile.id)
-                dao.clearRecents(profile.id)
+                // Nettoyage LIVE
+                dao.clearCategories(profile.id, "LIVE")
+                dao.clearChannels(profile.id, "LIVE")
+                dao.clearChannelCategoryLinks(profile.id, "LIVE")
+                dao.clearFavoriteLists(profile.id, "LIVE")
+                dao.clearChannelFavorites(profile.id, "LIVE")
+                dao.clearRecents(profile.id, "LIVE")
+                // Nettoyage VOD
+                dao.clearCategories(profile.id, "VOD")
+                dao.clearChannels(profile.id, "VOD")
+                dao.clearChannelCategoryLinks(profile.id, "VOD")
+                dao.clearFavoriteLists(profile.id, "VOD")
+                dao.clearChannelFavorites(profile.id, "VOD")
+                dao.clearRecents(profile.id, "VOD")
                 dao.deleteProfile(profile)
         }
         suspend fun selectProfile(profileId: Int) {

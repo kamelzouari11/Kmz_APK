@@ -17,6 +17,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -38,9 +39,12 @@ fun MainContentLandscape(
         onChannelClick: (ChannelEntity) -> Unit,
         countryScrollState: LazyListState,
         categoryScrollState: LazyListState,
-        channelScrollState: LazyListState
+        channelScrollState: LazyListState,
+        playerReturnFocusRequester: FocusRequester
 ) {
     val accueilFocusRequester = remember { FocusRequester() }
+    val categoryFocusRequester = remember { FocusRequester() }
+    val channelFocusRequester = remember { FocusRequester() }
 
     Row(modifier = Modifier.fillMaxSize()) {
         // --- Column 1: Countries / Home ---
@@ -48,6 +52,7 @@ fun MainContentLandscape(
                 viewModel = viewModel,
                 scrollState = countryScrollState,
                 accueilFocusRequester = accueilFocusRequester,
+                categoryFocusRequester = categoryFocusRequester,
                 modifier = Modifier.weight(0.15f)
         )
 
@@ -57,6 +62,9 @@ fun MainContentLandscape(
         CategorySidebar(
                 viewModel = viewModel,
                 scrollState = categoryScrollState,
+                countryFocusRequester = accueilFocusRequester,
+                channelFocusRequester = channelFocusRequester,
+                playerReturnFocusRequester = playerReturnFocusRequester,
                 modifier = Modifier.weight(0.30f)
         )
 
@@ -67,6 +75,7 @@ fun MainContentLandscape(
                 viewModel = viewModel,
                 onChannelClick = onChannelClick,
                 scrollState = channelScrollState,
+                categoryFocusRequester = categoryFocusRequester,
                 modifier = Modifier.weight(0.55f)
         )
     }
@@ -79,6 +88,7 @@ private fun CountrySidebar(
         viewModel: MainViewModel,
         scrollState: LazyListState,
         accueilFocusRequester: FocusRequester,
+        categoryFocusRequester: FocusRequester,
         modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -86,7 +96,10 @@ private fun CountrySidebar(
             modifier = modifier
                     .fillMaxHeight()
                     .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.05f))
-                    .padding(4.dp),
+                    .padding(4.dp)
+                    .focusProperties {
+                        right = categoryFocusRequester
+                    },
             verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         item {
@@ -126,6 +139,9 @@ private fun CountrySidebar(
 private fun CategorySidebar(
         viewModel: MainViewModel,
         scrollState: LazyListState,
+        countryFocusRequester: FocusRequester,
+        channelFocusRequester: FocusRequester,
+        playerReturnFocusRequester: FocusRequester,
         modifier: Modifier = Modifier
 ) {
     LazyColumn(
@@ -133,19 +149,25 @@ private fun CategorySidebar(
             modifier = modifier
                     .fillMaxHeight()
                     .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.02f))
-                    .padding(4.dp),
+                    .padding(4.dp)
+                    .focusProperties {
+                        left = countryFocusRequester
+                        right = channelFocusRequester
+                    },
             verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         // Recents + Favorites only visible when "ALL" country filter
         if (viewModel.uiState.selectedCountryFilter == "ALL") {
             item {
-                RecentsSection(
-                        isSelected = viewModel.uiState.lastGeneratorType == GeneratorType.RECENTS,
-                        recentScope = viewModel.uiState.recentScope,
-                        onShowRecents = { viewModel.showRecents() },
-                        onClearRecents = { viewModel.clearRecents() },
-                        onToggleRecentScope = { viewModel.toggleRecentScope() }
-                )
+                                RecentsSection(
+                                        isSelected = viewModel.uiState.lastGeneratorType == GeneratorType.RECENTS,
+                                        recentScope = viewModel.uiState.recentScope,
+                                        onShowRecents = { viewModel.showRecents() },
+                                        onClearRecents = { viewModel.clearRecents() },
+                                        onToggleRecentScope = { viewModel.toggleRecentScope() },
+                                        upFocusRequester = playerReturnFocusRequester,
+                                        leftFocusRequester = countryFocusRequester
+                                )
             }
             item {
                 FavoritesHeader(
@@ -198,15 +220,23 @@ private fun ChannelListPanel(
         viewModel: MainViewModel,
         onChannelClick: (ChannelEntity) -> Unit,
         scrollState: LazyListState,
+        categoryFocusRequester: FocusRequester,
         modifier: Modifier = Modifier
 ) {
     val isVod = viewModel.uiState.currentMediaMode == MediaMode.VOD
     val isGlobalSearch = viewModel.uiState.lastGeneratorType == GeneratorType.GLOBAL_SEARCH
 
-    when {
-        isGlobalSearch -> GlobalSearchList(viewModel, onChannelClick, scrollState, modifier)
-        isVod -> VodGrid(viewModel, onChannelClick, modifier)
-        else -> LiveChannelList(viewModel, onChannelClick, scrollState, modifier)
+    Box(
+        modifier = modifier
+            .focusProperties {
+                left = categoryFocusRequester
+            }
+    ) {
+        when {
+            isGlobalSearch -> GlobalSearchList(viewModel, onChannelClick, scrollState, Modifier.fillMaxSize())
+            isVod -> VodGrid(viewModel, onChannelClick, Modifier.fillMaxSize())
+            else -> LiveChannelList(viewModel, onChannelClick, scrollState, Modifier.fillMaxSize())
+        }
     }
 }
 

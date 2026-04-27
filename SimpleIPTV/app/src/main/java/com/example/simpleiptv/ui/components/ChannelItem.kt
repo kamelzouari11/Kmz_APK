@@ -66,7 +66,7 @@ fun ChannelItem(
                                          shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
                                          color =
                                           when {
-                                              isChannelFocused -> Color.White.copy(alpha = 0.2f)
+                                              isChannelFocused -> Color.White
                                               isPlaying ->
                                                       Color(0xFFBB86FC).copy(
                                                           alpha = 0.3f
@@ -104,7 +104,7 @@ fun ChannelItem(
                                                 text = channel.name,
                                          color =
                                              when {
-                                                 isChannelFocused -> Color.White
+                                                 isChannelFocused -> Color.Black
                                                  isPlaying -> Color(0xFFBB86FC)
                                                  else -> Color.White.copy(alpha = 0.8f)
                                              },
@@ -117,7 +117,7 @@ fun ChannelItem(
                                                 Text(
                                                         text = "${profile.profileName}  •  ${profile.url}",
                                  color = if (isChannelFocused)
-                                                                 Color.White
+                                                                 Color.Black
                                                                  else
                                                                  Color.White.copy(alpha = 0.5f),
 
@@ -160,14 +160,14 @@ fun ChannelItem(
                                         }
                                         .focusable(),
                         shape = CircleShape,
-                                 color = if (isFavFocused) Color.White.copy(alpha = 0.2f) else Color.Transparent
+                                 color = if (isFavFocused) Color.White else Color.Transparent
 
                 ) {
                         Box(contentAlignment = Alignment.Center) {
                                  Icon(
                                          imageVector = Icons.Default.Star,
                                          contentDescription = null,
-                                         tint = if (isFavFocused) Color.White else if (isFavorite) Color(0xFFBB86FC) else Color.Gray.copy(alpha = 0.6f),
+                                         tint = if (isFavFocused) Color.Black else if (isFavorite) Color(0xFFBB86FC) else Color.Gray.copy(alpha = 0.6f),
                                          modifier = Modifier.size(32.dp)
                                      )
 

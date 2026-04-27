@@ -47,7 +47,7 @@ fun SidebarItem(
                                         containerColor =
                                                 when {
                                                         isItemFocused ->
-                                                                Color.White.copy(alpha = 0.95f)
+                                                                Color.White
                                                         isSelected ->
                                                                 MaterialTheme.colorScheme
                                                                         .primaryContainer

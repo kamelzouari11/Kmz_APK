@@ -127,7 +127,7 @@ private fun ProfileRow(
                         .focusable(),
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
                 color = when {
-                        isSelectFocused -> Color.White.copy(alpha = 0.2f)
+                        isSelectFocused -> Color.White
                         profile.isSelected -> Color(0xFFBB86FC).copy(alpha = 0.3f)
                         else -> Color.Transparent
                 }
@@ -151,7 +151,7 @@ private fun ProfileRow(
                                                  profile.profileName,
                                                  style = MaterialTheme.typography.titleMedium,
                                                  color = when {
-                                                     isSelectFocused -> Color.White
+                                                     isSelectFocused -> Color.Black
                                                      isLoaded -> Color(0xFFBB86FC)
                                                      else -> Color.White.copy(alpha = 0.9f)
                                                  }
@@ -161,7 +161,7 @@ private fun ProfileRow(
                                                  Text(
                                                      "(LOADED)",
                                                      style = MaterialTheme.typography.labelSmall,
-                                                     color = if (isSelectFocused) Color.White else Color(0xFFBB86FC)
+                                                     color = if (isSelectFocused) Color.Black else Color(0xFFBB86FC)
                                                  )
                                          }
                                      }
@@ -169,7 +169,7 @@ private fun ProfileRow(
                                         Text(
                                                 profile.url,
                                                 style = MaterialTheme.typography.bodySmall,
-                                                color = if (isSelectFocused) Color.DarkGray else Color.Gray,
+                                                color = if (isSelectFocused) Color.Black else Color.Gray,
                                                 maxLines = 1
                                         )
                                 }
@@ -213,11 +213,11 @@ private fun ProfileRow(
                         .onFocusChanged { onFocusChange(it.isFocused) }
                         .scale(if (isFocusedState) 1.1f else 1f)
                         .background(
-                                if (isFocusedState) Color.White.copy(alpha = 0.2f) else Color.Transparent,
+                                if (isFocusedState) Color.White else Color.Transparent,
                                 CircleShape
                         )
         ) {
-                Icon(icon, desc, tint = if (isFocusedState) Color.White else tintNormal)
+                Icon(icon, desc, tint = if (isFocusedState) Color.Black else tintNormal)
         }
     }
 

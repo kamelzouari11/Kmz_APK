@@ -40,7 +40,7 @@ fun OverlayListItem(
                         .focusable()
                                  .background(
                                          color = when {
-                                             isFocused -> Color.White.copy(alpha = 0.2f)
+                                             isFocused -> Color.White
                                              isSelected -> Color(0xFFBB86FC).copy(alpha = 0.3f)
                                              else -> Color.Transparent
                                          },
@@ -56,7 +56,7 @@ fun OverlayListItem(
                                  Text(
                                          text = text,
                                          color = when {
-                                             isFocused -> Color.White
+                                             isFocused -> Color.Black
                                              isSelected -> Color(0xFFBB86FC)
                                              else -> Color.White.copy(alpha = 0.7f)
                                          },
