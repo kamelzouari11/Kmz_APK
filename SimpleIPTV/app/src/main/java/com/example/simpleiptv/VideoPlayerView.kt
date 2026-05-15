@@ -26,7 +26,6 @@ import com.example.simpleiptv.data.local.entities.ChannelEntity
 import com.example.simpleiptv.data.local.entities.ProfileEntity
 import com.example.simpleiptv.ui.player.PlaybackErrorOverlay
 import com.example.simpleiptv.ui.player.PlayerOverlay
-import kotlinx.coroutines.launch
 
 @Composable
 fun VideoPlayerView(
@@ -35,9 +34,6 @@ fun VideoPlayerView(
         currentChannels: List<ChannelEntity>,
         categories: List<CategoryEntity>,
         selectedCategoryId: String?,
-        countries: List<String> = emptyList(),
-        selectedCountry: String = "ALL",
-        onCountrySelected: (String) -> Unit = {},
         onChannelSelected: (ChannelEntity) -> Unit,
         onCategorySelected: (CategoryEntity) -> Unit,
         onBack: () -> Unit,
@@ -46,22 +42,20 @@ fun VideoPlayerView(
         isLandscape: Boolean = true,
         playingChannel: ChannelEntity? = null,
         allFavoriteIds: Set<String> = emptySet(),
-        countriesScrollState: LazyListState? = null,
         categoriesScrollState: LazyListState? = null,
         channelsScrollState: LazyListState? = null,
         listLabel: String = "",
         profiles: List<ProfileEntity> = emptyList(),
         activeProfileId: Int = -1,
         onProfileSelected: (Int) -> Unit = {},
+        onProfileToggle: (Int) -> Unit = {},
         viewModel: com.example.simpleiptv.ui.viewmodel.MainViewModel
 ) {
         val isVod = playingChannel?.type == "VOD"
         var isOverlayVisible by remember { mutableStateOf(false) }
         var showExoController by remember(isVod) { mutableStateOf<Boolean>(isVod) }
         var showFullOverlay by remember(isLandscape) { mutableStateOf(isLandscape) }
-        val scope = rememberCoroutineScope()
         val boxFocusRequester = remember { FocusRequester() }
-        val categoryFocusRequester = remember { FocusRequester() }
         val channelFocusRequester = remember { FocusRequester() }
         val vodFocusRequester = remember { FocusRequester() }
 
@@ -93,7 +87,6 @@ fun VideoPlayerView(
                 }
         }
 
-        val countryState = countriesScrollState ?: rememberLazyListState()
         val categoryState = categoriesScrollState ?: rememberLazyListState()
         val channelState = channelsScrollState ?: rememberLazyListState()
 
@@ -110,20 +103,10 @@ fun VideoPlayerView(
         LaunchedEffect(isOverlayVisible, isVod, interactive) {
                 if (isVod && interactive) {
                         try { vodFocusRequester.requestFocus() } catch (e: Exception) {}
-                } else if (isOverlayVisible && !isVod && interactive) {
-                        if (playingIndex >= 0) {
-                                try {
-                                        channelState.scrollToItem(playingIndex)
-                                        channelFocusRequester.requestFocus()
-                                        } catch (e: Exception) {
-                                                try { categoryFocusRequester.requestFocus() } catch (e2: Exception) {}
-                                        }
-                        } else {
-                                try { categoryFocusRequester.requestFocus() } catch (e: Exception) {}
-                        }
                 } else if (!isOverlayVisible && !isVod && interactive) {
                         try { boxFocusRequester.requestFocus() } catch (e: Exception) {}
                 }
+                // Le focus initial dans l'overlay est géré par PlayerOverlay (chaîne en lecture > Récents)
         }
 
         if (isOverlayVisible && !isVod) {
@@ -134,24 +117,19 @@ fun VideoPlayerView(
                 BackHandler { onBack() }
         }
 
+        var playerViewRef by remember { mutableStateOf<PlayerView?>(null) }
+
         Box(
                 modifier = Modifier.fillMaxSize()
                         .background(Color.Black)
                         .focusRequester(boxFocusRequester)
-                        .focusable()
                         .then(
                                 if (!isVod) {
                                         Modifier.onPreviewKeyEvent { event: androidx.compose.ui.input.key.KeyEvent ->
                                                 if (event.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
-                                                        if (isOverlayVisible) {
-                                                                return@onPreviewKeyEvent when (event.nativeKeyEvent.keyCode) {
-                                                                        KeyEvent.KEYCODE_BACK -> {
-                                                                                isOverlayVisible = false
-                                                                                true
-                                                                        }
-                                                                        else -> false
-                                                                }
-                                                        }
+                                                        // Quand l'overlay est visible, laisser le BackHandler gérer BACK
+                                                        // et les DPAD atteindre directement les éléments focusés de l'overlay
+                                                        if (isOverlayVisible) return@onPreviewKeyEvent false
                                                         when (event.nativeKeyEvent.keyCode) {
                                                                 KeyEvent.KEYCODE_BACK -> {
                                                                         if (!interactive) return@onPreviewKeyEvent false
@@ -159,41 +137,12 @@ fun VideoPlayerView(
                                                                         return@onPreviewKeyEvent true
                                                                 }
                                                                   KeyEvent.KEYCODE_DPAD_LEFT,
-                                                                  KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                                                                  KeyEvent.KEYCODE_DPAD_RIGHT,
+                                                                  KeyEvent.KEYCODE_DPAD_CENTER,
+                                                                  KeyEvent.KEYCODE_ENTER -> {
                                                                         if (!interactive) return@onPreviewKeyEvent false
                                                                         showFullOverlay = isLandscape
                                                                         isOverlayVisible = true
-                                                                        if (playingIndex >= 0) {
-                                                                            scope.launch {
-                                                                                try {
-                                                                                    channelState.scrollToItem(playingIndex)
-                                                                                    channelFocusRequester.requestFocus()
-                                                                                } catch (e: Exception) {
-                                                                                    try { categoryFocusRequester.requestFocus() } catch (e2: Exception) {}
-                                                                                }
-                                                                            }
-                                                                        } else {
-                                                                            try { categoryFocusRequester.requestFocus() } catch (e: Exception) {}
-                                                                        }
-                                                                        return@onPreviewKeyEvent true
-                                                                    }
-                                                                   KeyEvent.KEYCODE_DPAD_CENTER,
-                                                                   KeyEvent.KEYCODE_ENTER -> {
-                                                                        if (!interactive) return@onPreviewKeyEvent false
-                                                                        showFullOverlay = isLandscape
-                                                                        isOverlayVisible = true
-                                                                        if (playingIndex >= 0) {
-                                                                            scope.launch {
-                                                                                try {
-                                                                                    channelState.scrollToItem(playingIndex)
-                                                                                    channelFocusRequester.requestFocus()
-                                                                                } catch (e: Exception) {
-                                                                                    try { categoryFocusRequester.requestFocus() } catch (e2: Exception) {}
-                                                                                }
-                                                                            }
-                                                                        } else {
-                                                                            try { categoryFocusRequester.requestFocus() } catch (e: Exception) {}
-                                                                        }
                                                                         return@onPreviewKeyEvent true
                                                                     }
                                                                    KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_CHANNEL_UP -> {
@@ -214,10 +163,20 @@ fun VideoPlayerView(
                                                         }
                                                         false
                                                 }
-                                                .focusRequester(boxFocusRequester)
-                                                .focusable()
-                                    } else Modifier
+                                    } else {
+                                        // VOD : OK affiche tous les contrôles ExoPlayer
+                                        Modifier.onPreviewKeyEvent { event ->
+                                            if (event.nativeKeyEvent.action == KeyEvent.ACTION_DOWN &&
+                                                (event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
+                                                 event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ENTER)
+                                            ) {
+                                                playerViewRef?.showController()
+                                                false
+                                            } else false
+                                        }
+                                    }
                         )
+                        .focusable()
         ) {
                 var isPlayerFocused by remember { mutableStateOf(false) }
 
@@ -230,7 +189,14 @@ fun VideoPlayerView(
                                         keepScreenOn = true
                                         isFocusable = isVod || showExoController
                                         isFocusableInTouchMode = isVod || showExoController
+                                        if (isVod) {
+                                            // Contrôles persistants : 5s d'inactivité avant masquage,
+                                            // OK les ré-affiche immédiatement.
+                                            controllerShowTimeoutMs = 5000
+                                            setControllerHideOnTouch(false)
+                                            showController()
                                         }
+                                }.also { playerViewRef = it }
                         },
                         update = { view ->
                                 view.player = exoPlayer
@@ -260,9 +226,7 @@ fun VideoPlayerView(
                                 profiles = profiles,
                                 activeProfileId = activeProfileId,
                                 onProfileSelected = onProfileSelected,
-                                countries = countries,
-                                selectedCountry = selectedCountry,
-                                onCountrySelected = onCountrySelected,
+                                onProfileToggle = onProfileToggle,
                                 categories = categories,
                                 selectedCategoryId = selectedCategoryId,
                                 onCategorySelected = onCategorySelected,
@@ -273,10 +237,8 @@ fun VideoPlayerView(
                                 onFavoriteClick = onFavoriteClick,
                                 onOverlayDismiss = { isOverlayVisible = false },
                                 showFullOverlay = showFullOverlay,
-                                countryState = countryState,
                                 categoryState = categoryState,
                                 channelState = channelState,
-                                categoryFocusRequester = categoryFocusRequester,
                                 channelFocusRequester = channelFocusRequester,
                                 viewModel = viewModel
                         )

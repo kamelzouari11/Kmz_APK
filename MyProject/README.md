@@ -1,4 +1,4 @@
-# 📱 Budget Rénovation - Application Android
+# 📱 MyProject - Application Android
 
 Une application Android moderne pour gérer les budgets de rénovation de maison, avec une organisation en Lots et Sous-Lots.
 

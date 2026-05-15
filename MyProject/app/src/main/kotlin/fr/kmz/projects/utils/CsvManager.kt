@@ -1,81 +1,87 @@
 package fr.kmz.projects.utils
 
-import fr.kmz.projects.data.model.LotWithSousLots
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import fr.kmz.projects.data.model.Beneficiaire
+import fr.kmz.projects.data.model.Chapitre
+import fr.kmz.projects.data.model.Depense
 
 object CsvManager {
 
-    private const val HEADER = "Lot,Sous-Lot,Article,Quantite,Unite,Prix_Unitaire"
+    private const val HEADER = "Date,Chapitre,Beneficiaire,Montant,Nature"
+    private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
 
-    fun exportToCsv(lots: List<LotWithSousLots>): String {
+    fun exportToCsv(depenses: List<DepenseWithNames>): String {
         val lines = mutableListOf<String>()
         lines.add(HEADER)
 
-        for (lotWithSousLots in lots) {
-            val lotName = escapeCsv(lotWithSousLots.lot.nom)
-
-            if (lotWithSousLots.sousLots.isEmpty()) {
-                lines.add("$lotName,,,,,")
-                continue
-            }
-
-            for (sousLotWithArticles in lotWithSousLots.sousLots) {
-                val sousLotName = escapeCsv(sousLotWithArticles.sousLot.nom)
-
-                if (sousLotWithArticles.articles.isEmpty()) {
-                    lines.add("$lotName,$sousLotName,,,,")
-                    continue
-                }
-
-                for (article in sousLotWithArticles.articles) {
-                    val articleName = escapeCsv(article.nom)
-                    val quantite = article.quantite
-                    val unite = escapeCsv(article.unite)
-                    val prix = article.prixUnitaire
-
-                    lines.add("$lotName,$sousLotName,$articleName,$quantite,$unite,$prix")
-                }
-            }
+        for (depense in depenses) {
+            val date = dateFormat.format(Date(depense.date))
+            val chapitre = escapeCsv(depense.chapitreNom)
+            val beneficiaire = escapeCsv(depense.beneficiaireNom)
+            val montant = depense.montant
+            val nature = escapeCsv(depense.nature)
+            lines.add("$date,$chapitre,$beneficiaire,$montant,$nature")
         }
         return lines.joinToString("\n")
     }
 
-    // Le parseur inverse CSV -> Objets
-    fun parseCsv(csvContent: String): List<CsvRow> {
-        val rows = mutableListOf<CsvRow>()
-        val lines = csvContent.lines().filter { it.isNotBlank() }
-        if (lines.isEmpty()) return rows
+    fun parseCsv(csvContent: String): ParsedData {
+        val chapitresMap = mutableMapOf<String, Chapitre>()
+        val beneficiairesMap = mutableMapOf<String, Beneficiaire>()
+        val depenses = mutableListOf<Depense>()
 
-        val header = lines.first() // on ignore le header
+        val lines = csvContent.lines().filter { it.isNotBlank() }
+        if (lines.isEmpty()) return ParsedData(emptyList(), emptyList(), emptyList())
+
         for (i in 1 until lines.size) {
             val line = lines[i]
-            // Un split basique pour les CSV simples qui ne contiennent pas de virgules dans les
-            // valeurs
-            // Pour un parseur plus robuste, il faudrait utiliser une librairie ou une regex
-            // complexe
-            val parts = line.split(",")
-            if (parts.isNotEmpty()) {
-                val lotName = parts.getOrNull(0)?.trim()?.removeSurrounding("\"") ?: ""
-                val sousLotName = parts.getOrNull(1)?.trim()?.removeSurrounding("\"") ?: ""
-                val articleName = parts.getOrNull(2)?.trim()?.removeSurrounding("\"") ?: ""
-                val quantiteStr = parts.getOrNull(3)?.trim() ?: "0"
-                val unite = parts.getOrNull(4)?.trim()?.removeSurrounding("\"") ?: ""
-                val prixStr = parts.getOrNull(5)?.trim() ?: "0"
+            val parts = smartSplit(line)
+            if (parts.size >= 5) {
+                val dateStr = parts[0].trim()
+                val chapitreNom = parts[1].trim().unescapeCsv()
+                val beneficiaireNom = parts[2].trim().unescapeCsv()
+                val montantStr = parts[3].trim()
+                val nature = parts[4].trim().unescapeCsv()
 
-                if (lotName.isNotBlank()) {
-                    rows.add(
-                            CsvRow(
-                                    lotName = lotName,
-                                    sousLotName = sousLotName,
-                                    articleName = articleName,
-                                    quantite = quantiteStr.toIntOrNull() ?: 1,
-                                    unite = unite,
-                                    prixUnitaire = prixStr.toLongOrNull() ?: 0L
-                            )
+                if (dateStr.isNotBlank() && chapitreNom.isNotBlank() && beneficiaireNom.isNotBlank()) {
+                    val date = try {
+                        dateFormat.parse(dateStr)?.time ?: System.currentTimeMillis()
+                    } catch (e: Exception) {
+                        System.currentTimeMillis()
+                    }
+                    val montant = montantStr.toLongOrNull() ?: 0L
+
+                    // Create or reuse chapitre
+                    val chapitre = chapitresMap.getOrPut(chapitreNom) {
+                        Chapitre(nom = chapitreNom)
+                    }
+
+                    // Create or reuse beneficiaire
+                    val beneficiaire = beneficiairesMap.getOrPut(beneficiaireNom) {
+                        Beneficiaire(nom = beneficiaireNom)
+                    }
+
+                    // Create depense (IDs will be reassigned by Room on insert)
+                    depenses.add(
+                        Depense(
+                            date = date,
+                            chapitreId = chapitre.id,
+                            beneficiaireId = beneficiaire.id,
+                            montant = montant,
+                            nature = nature
+                        )
                     )
                 }
             }
         }
-        return rows
+
+        return ParsedData(
+            chapitres = chapitresMap.values.toList(),
+            beneficiaires = beneficiairesMap.values.toList(),
+            depenses = depenses
+        )
     }
 
     private fun escapeCsv(text: String): String {
@@ -85,13 +91,51 @@ object CsvManager {
             text
         }
     }
+
+    private fun String.unescapeCsv(): String {
+        return if (startsWith("\"") && endsWith("\"")) {
+            substring(1, length - 1).replace("\"\"", "\"")
+        } else {
+            this
+        }
+    }
+
+    private fun smartSplit(line: String): List<String> {
+        val parts = mutableListOf<String>()
+        var current = StringBuilder()
+        var inQuotes = false
+        var i = 0
+
+        while (i < line.length) {
+            val c = line[i]
+            when {
+                c == '"' && (i == 0 || line[i - 1] != '\\') -> {
+                    inQuotes = !inQuotes
+                    current.append(c)
+                }
+                c == ',' && !inQuotes -> {
+                    parts.add(current.toString())
+                    current = StringBuilder()
+                }
+                else -> current.append(c)
+            }
+            i++
+        }
+        parts.add(current.toString())
+        return parts
+    }
 }
 
-data class CsvRow(
-        val lotName: String,
-        val sousLotName: String,
-        val articleName: String,
-        val quantite: Int,
-        val unite: String,
-        val prixUnitaire: Long
+data class DepenseWithNames(
+    val date: Long,
+    val chapitreNom: String,
+    val beneficiaireNom: String,
+    val montant: Long,
+    val nature: String
+)
+
+data class ParsedData(
+    val chapitres: List<Chapitre>,
+    val beneficiaires: List<Beneficiaire>,
+    val depenses: List<Depense>
 )

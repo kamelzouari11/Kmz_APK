@@ -35,9 +35,8 @@ fun OverlayListItem(
                         .fillMaxWidth()
                         .padding(4.dp)
                         .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-                        .onFocusChanged { isFocused = it.isFocused }
+                        .onFocusChanged { isFocused = it.hasFocus }
                         .clickable { onClick() }
-                        .focusable()
                                  .background(
                                          color = when {
                                              isFocused -> Color.White

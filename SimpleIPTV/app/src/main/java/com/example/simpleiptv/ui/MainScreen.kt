@@ -48,7 +48,6 @@ fun MainScreen(
     val isRefreshing = viewModel.uiState.isLoading
 
     // Scroll States for Memory / Sync between Screen A and B
-    val mainCountryScrollState = rememberLazyListState()
     val mainCategoryScrollState = rememberLazyListState()
     val mainChannelScrollState = rememberLazyListState()
 
@@ -121,12 +120,6 @@ fun MainScreen(
                     currentChannels = viewModel.uiState.lastList,
                     categories = viewModel.uiState.filteredCategories,
                     selectedCategoryId = viewModel.uiState.selectedCategoryId,
-                    countries = viewModel.uiState.countryFilters,
-                    selectedCountry = viewModel.uiState.selectedCountryFilter,
-                    onCountrySelected = {
-                        viewModel.setCountryFilter(it)
-                        viewModel.selectCategory(null)
-                    },
                     onChannelSelected = { onChannelClick(it) },
                     onCategorySelected = {
                         viewModel.selectCategory(it.category_id)
@@ -138,14 +131,14 @@ fun MainScreen(
                     allFavoriteIds = viewModel.uiState.allFavoriteIds,
                     isLandscape = isLandscape,
                     playingChannel = viewModel.uiState.playingChannel,
-                    countriesScrollState = mainCountryScrollState,
                     categoriesScrollState = mainCategoryScrollState,
                     channelsScrollState = mainChannelScrollState,
                     listLabel = viewModel.uiState.lastListLabel,
                     profiles = viewModel.uiState.profiles,
                     activeProfileId = viewModel.uiState.activeProfileId,
-                                 onProfileSelected = { profileId -> viewModel.selectProfile(profileId) },
-                                 viewModel = viewModel
+                    onProfileSelected = { profileId -> viewModel.selectProfile(profileId) },
+                    onProfileToggle = { profileId -> viewModel.toggleProfileEnabled(profileId) },
+                    viewModel = viewModel
                             )
         } else {
             Box(modifier = Modifier.fillMaxSize()) {
@@ -207,7 +200,6 @@ fun MainScreen(
                             MainContentLandscape(
                                     viewModel = viewModel,
                                     onChannelClick = onChannelClick,
-                                    countryScrollState = mainCountryScrollState,
                                     categoryScrollState = mainCategoryScrollState,
                                     channelScrollState = mainChannelScrollState,
                                     playerReturnFocusRequester = playerReturnFocusRequester

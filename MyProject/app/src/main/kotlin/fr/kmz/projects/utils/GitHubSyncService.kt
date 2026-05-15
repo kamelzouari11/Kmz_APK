@@ -15,7 +15,7 @@ object GitHubSyncService {
 
     private const val OWNER = "kamelzouari11"
     private const val REPO = "Kmz_APK"
-    private const val FILE_PATH = "MySharedFolder/budget_renovation.csv"
+    private const val FILE_PATH = "MySharedFolder/depenses.csv"
     private const val BRANCH = "main"
 
     private const val API_URL =
@@ -64,7 +64,7 @@ object GitHubSyncService {
     /** Upload CSV content to GitHub */
     suspend fun uploadCsvContent(
             content: String,
-            commitMessage: String = "Update budget_renovation.csv"
+            commitMessage: String = "Update depenses.csv"
     ): Boolean =
             withContext(Dispatchers.IO) {
                 // First get the SHA of the existing file to update it

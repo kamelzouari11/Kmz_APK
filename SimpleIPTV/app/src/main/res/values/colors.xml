@@ -30,8 +30,8 @@
     <color name="error_color_material_dark">#ffff7043</color>
     <color name="error_color_material_light">#ffff5722</color>
     <color name="exo_black_opacity_60">#98000000</color>
-    <color name="exo_black_opacity_70">#b3000000</color>
-    <color name="exo_bottom_bar_background">#b0000000</color>
+    <color name="exo_black_opacity_70">#d9000000</color>
+    <color name="exo_bottom_bar_background">#d9000000</color>
     <color name="exo_edit_mode_background_color">#fff4f3f0</color>
     <color name="exo_error_message_background_color">#aa000000</color>
     <color name="exo_styled_error_message_background">#80808080</color>

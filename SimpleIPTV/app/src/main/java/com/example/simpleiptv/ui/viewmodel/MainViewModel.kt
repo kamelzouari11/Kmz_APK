@@ -11,7 +11,6 @@ import com.example.simpleiptv.data.usecase.ChannelListUseCase
 import com.example.simpleiptv.data.usecase.FavoriteUseCase
 import com.example.simpleiptv.data.usecase.ProfileUseCase
 import com.example.simpleiptv.data.usecase.SearchUseCase
-import com.example.simpleiptv.util.CountryFilterProcessor
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -108,13 +107,38 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
 
     // --- Actions: Profile ---
 
+    // Court appui — toggle ON/OFF (bloqué si actif : actif => toujours ON)
+    fun toggleProfileEnabled(id: Int) {
+        if (id == uiState.activeProfileId) return
+        val profile = uiState.profiles.find { it.id == id } ?: return
+        val turningOn = !profile.isEnabled
+        viewModelScope.launch {
+            repository.setProfileEnabled(id, turningOn)
+            // Si on active un profil non chargé, on le charge
+            if (turningOn && !uiState.loadedProfileIds.contains(id)) {
+                uiState.profiles.find { it.id == id }?.let { p ->
+                    updateUiState { loadingProfileId = id }
+                    try { repository.refreshDatabase(p) } catch (e: Exception) { android.util.Log.e("VM", "load error", e) }
+                    updateUiState { loadingProfileId = -1 }
+                }
+            }
+            // Relancer la recherche globale si active
+            if (uiState.searchQuery.isNotBlank() && uiState.searchScope == SearchScope.ALL_PROFILES) {
+                refreshChannels()
+            }
+        }
+    }
+
+    // Long appui — rend ce profil actif (master) + force ON
     fun selectProfile(id: Int) {
         updateUiState {
-                activeProfileId = id
-            }
+            activeProfileId = id
+            loadingProfileId = id
+        }
         viewModelScope.launch {
             val result = profileUseCase.selectProfile(id, uiState.profiles, uiState.currentMediaMode.name)
             updateUiState {
+                loadingProfileId = -1
                 isLoading = result.isLoading
                 syncError = result.error
                 failedProfileToReload = result.failedProfile
@@ -129,12 +153,7 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
         categoriesJob?.cancel()
         categoriesJob = viewModelScope.launch {
             repository.getCategories(profileId, uiState.currentMediaMode.name).distinctUntilChanged().collect { cats ->
-                val filters = CountryFilterProcessor.computeCountryFilters(cats)
-                updateUiState {
-                this.categories = cats
-                this.countryFilters = filters
-                selectedCountryFilter = if (uiState.selectedCountryFilter in filters) uiState.selectedCountryFilter else "ALL"
-            }
+                updateUiState { this.categories = cats }
             }
         }
     }
@@ -155,7 +174,18 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
     }
 
     fun addProfile(profile: ProfileEntity) {
-        viewModelScope.launch { repository.addProfile(profile) }
+        viewModelScope.launch {
+            repository.addProfile(profile)
+            // Récupérer le profil nouvellement créé (avec son id auto-généré)
+            val created = repository.allProfiles.first().find {
+                it.profileName == profile.profileName && it.url == profile.url
+            } ?: return@launch
+            // Charger ses données et le mettre ON
+            updateUiState { loadingProfileId = created.id }
+            try { repository.refreshDatabase(created) } catch (e: Exception) { android.util.Log.e("VM", "new profile load error", e) }
+            repository.setProfileEnabled(created.id, true)
+            updateUiState { loadingProfileId = -1 }
+        }
     }
 
     fun updateProfile(profile: ProfileEntity) {
@@ -199,12 +229,6 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
     }
 
     // --- Actions: Filters ---
-
-    fun setCountryFilter(filter: String) {
-        updateUiState {
-                selectedCountryFilter = filter
-            }
-    }
 
     fun toggleSearchScope() {
         val newScope = if (uiState.searchScope == SearchScope.ALL_PROFILES) {
@@ -308,9 +332,7 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
                 globalSearchResults = emptyList()
             }
             searchUseCase.searchGlobal(uiState.searchQuery, uiState.currentMediaMode.name)
-                .collect {
-                    updateUiState { globalSearchResults = it }
-                }
+                .collect { updateUiState { globalSearchResults = it } }
         } else {
             updateUiState {
                 lastGeneratorType = GeneratorType.SEARCH

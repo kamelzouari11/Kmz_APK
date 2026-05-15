@@ -20,4 +20,5 @@ class SearchUseCase(private val repository: IptvRepository) {
     ): Flow<List<ChannelWithProfile>> {
         return repository.searchChannelsAllProfiles(query, mediaMode)
     }
+
 }

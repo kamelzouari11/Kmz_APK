@@ -171,6 +171,7 @@ class IptvRepository(private val dao: IptvDao) {
                         INNER JOIN profiles p ON c.profileId = p.id
                         WHERE c.type = ?
                           AND channels_fts MATCH ?
+                          AND p.isEnabled = 1
                         ORDER BY p.profileName ASC, c.sortOrder ASC
                         LIMIT 200
                         """.trimIndent(),
@@ -290,6 +291,11 @@ class IptvRepository(private val dao: IptvDao) {
         suspend fun selectProfile(profileId: Int) {
                 dao.deselectAllProfiles()
                 dao.selectProfile(profileId)
+                dao.forceProfileEnabled(profileId) // actif => toujours ON
+        }
+
+        suspend fun setProfileEnabled(profileId: Int, enabled: Boolean) {
+                dao.setProfileEnabled(profileId, enabled)
         }
 
         // --- Delegated to SyncService ---

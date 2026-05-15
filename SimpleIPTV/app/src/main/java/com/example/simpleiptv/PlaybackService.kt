@@ -9,7 +9,11 @@ import androidx.annotation.OptIn
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.audio.AudioCapabilities
+import androidx.media3.exoplayer.audio.AudioSink
+import androidx.media3.exoplayer.audio.DefaultAudioSink
 import androidx.media3.exoplayer.trackselection.AdaptiveTrackSelection
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.session.MediaSession
@@ -64,8 +68,30 @@ class PlaybackService : MediaSessionService() {
                         )
                 val trackSelector = DefaultTrackSelector(this, trackSelectionFactory)
 
+                // Force software decoding of AC3/E-AC3 to stereo PCM.
+                // DEFAULT_AUDIO_CAPABILITIES = PCM only → no passthrough → downmix happens
+                // inside the decoder instead of being sent raw to HDMI/Bluetooth where
+                // the receiving device may not support Dolby formats.
+                val renderersFactory = object : DefaultRenderersFactory(this) {
+                        override fun buildAudioSink(
+                                context: Context,
+                                enableFloatOutput: Boolean,
+                                enableAudioTrackPlaybackParams: Boolean
+                        ): AudioSink {
+                                @Suppress("DEPRECATION")
+                                return DefaultAudioSink.Builder(context)
+                                        .setAudioCapabilities(AudioCapabilities.DEFAULT_AUDIO_CAPABILITIES)
+                                        .setEnableFloatOutput(enableFloatOutput)
+                                        .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
+                                        .build()
+                        }
+                }.apply {
+                        setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+                        setEnableDecoderFallback(true)
+                }
+
                 val player =
-                        ExoPlayer.Builder(this)
+                        ExoPlayer.Builder(this, renderersFactory)
                                 .setMediaSourceFactory(
                                         androidx.media3.exoplayer.source.DefaultMediaSourceFactory(
                                                         this

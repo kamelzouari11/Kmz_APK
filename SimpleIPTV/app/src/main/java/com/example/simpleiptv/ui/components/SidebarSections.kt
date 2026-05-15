@@ -34,8 +34,7 @@ fun RecentsSection(
         onShowRecents: () -> Unit,
         onClearRecents: () -> Unit,
         onToggleRecentScope: () -> Unit,
-        upFocusRequester: FocusRequester,
-        leftFocusRequester: FocusRequester
+        upFocusRequester: FocusRequester
 ) {
         Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -50,7 +49,6 @@ fun RecentsSection(
                         modifier = Modifier.weight(1f)
                                 .focusProperties {
                                     up = upFocusRequester
-                                    left = leftFocusRequester
                                 }
                 )
                 if (isSelected) {

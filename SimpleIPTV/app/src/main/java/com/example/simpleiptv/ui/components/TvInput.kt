@@ -149,13 +149,10 @@ fun TvInput(
                         editText.setSelection(editText.text.length)
                     } catch (e: Exception) {}
                 }
-                if (isFocused) {
-                    editText.setTextColor(android.graphics.Color.BLACK)
-                    editText.setHintTextColor(android.graphics.Color.DKGRAY)
-                } else {
-                    editText.setTextColor(android.graphics.Color.WHITE)
-                    editText.setHintTextColor(android.graphics.Color.GRAY)
-                }
+                editText.setTextColor(android.graphics.Color.WHITE)
+                editText.setHintTextColor(
+                    if (isFocused) android.graphics.Color.LTGRAY else android.graphics.Color.GRAY
+                )
             }
     )
 }

@@ -1,5 +1,6 @@
 package com.example.simpleiptv.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -9,7 +10,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.simpleiptv.data.local.entities.ChannelEntity
@@ -37,109 +38,64 @@ import com.example.simpleiptv.ui.viewmodel.SearchScope
 fun MainContentLandscape(
         viewModel: MainViewModel,
         onChannelClick: (ChannelEntity) -> Unit,
-        countryScrollState: LazyListState,
         categoryScrollState: LazyListState,
         channelScrollState: LazyListState,
         playerReturnFocusRequester: FocusRequester
 ) {
-    val accueilFocusRequester = remember { FocusRequester() }
     val categoryFocusRequester = remember { FocusRequester() }
     val channelFocusRequester = remember { FocusRequester() }
+    val scope = rememberCoroutineScope()
+
+    // 0 = catégories, 1 = chaînes
+    var focusedColumn by remember { mutableIntStateOf(0) }
+
+    // BACK ramène le focus une colonne en arrière (chaînes → catégories)
+    BackHandler(enabled = focusedColumn > 0) {
+        focusedColumn--
+        scope.launch {
+            try { categoryFocusRequester.requestFocus() } catch (e: Exception) {}
+        }
+    }
 
     Row(modifier = Modifier.fillMaxSize()) {
-        // --- Column 1: Countries / Home ---
-        CountrySidebar(
-                viewModel = viewModel,
-                scrollState = countryScrollState,
-                accueilFocusRequester = accueilFocusRequester,
-                categoryFocusRequester = categoryFocusRequester,
-                modifier = Modifier.weight(0.15f)
-        )
-
-        VerticalDivider(color = Color.Gray.copy(alpha = 0.1f), thickness = 1.dp)
-
-        // --- Column 2: Categories / Favorites / Recents ---
-        CategorySidebar(
+        // --- Colonne 1 : Catégories / Favoris / Récents ---
+        Box(
+            modifier = Modifier
+                .weight(0.35f)
+                .onFocusChanged { if (it.hasFocus) focusedColumn = 0 }
+        ) {
+            CategorySidebar(
                 viewModel = viewModel,
                 scrollState = categoryScrollState,
-                countryFocusRequester = accueilFocusRequester,
                 channelFocusRequester = channelFocusRequester,
-                playerReturnFocusRequester = playerReturnFocusRequester,
-                modifier = Modifier.weight(0.30f)
-        )
+                playerReturnFocusRequester = playerReturnFocusRequester
+            )
+        }
 
         VerticalDivider(color = Color.Gray.copy(alpha = 0.1f), thickness = 1.dp)
 
-        // --- Column 3: Channels ---
-        ChannelListPanel(
+        // --- Colonne 2 : Chaînes ---
+        Box(
+            modifier = Modifier
+                .weight(0.65f)
+                .onFocusChanged { if (it.hasFocus) focusedColumn = 1 }
+        ) {
+            ChannelListPanel(
                 viewModel = viewModel,
                 onChannelClick = onChannelClick,
                 scrollState = channelScrollState,
-                categoryFocusRequester = categoryFocusRequester,
-                modifier = Modifier.weight(0.55f)
-        )
-    }
-}
-
-// ===================== Column 1: Countries =====================
-
-@Composable
-private fun CountrySidebar(
-        viewModel: MainViewModel,
-        scrollState: LazyListState,
-        accueilFocusRequester: FocusRequester,
-        categoryFocusRequester: FocusRequester,
-        modifier: Modifier = Modifier
-) {
-    LazyColumn(
-            state = scrollState,
-            modifier = modifier
-                    .fillMaxHeight()
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.05f))
-                    .padding(4.dp)
-                    .focusProperties {
-                        right = categoryFocusRequester
-                    },
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        item {
-            SidebarItem(
-                    text = "Accueil",
-                    icon = Icons.Default.Home,
-                    isSelected = viewModel.uiState.selectedCountryFilter == "ALL",
-                    onClick = { viewModel.setCountryFilter("ALL") },
-                    modifier = Modifier.focusRequester(accueilFocusRequester)
-            )
-        }
-        item {
-            Text(
-                    text = "Pays",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(start = 8.dp, top = 8.dp, bottom = 4.dp)
-            )
-        }
-        items(viewModel.uiState.countryFilters.filter { it != "ALL" }, key = { it }, contentType = { "country" }) { country ->
-            SidebarItem(
-                    text = country,
-                    icon = null,
-                    isSelected = viewModel.uiState.selectedCountryFilter == country,
-                    onClick = {
-                        viewModel.setCountryFilter(country)
-                        viewModel.selectCategory(null)
-                    }
+                categoryFocusRequester = categoryFocusRequester
             )
         }
     }
 }
 
-// ===================== Column 2: Categories =====================
+// ===================== Colonne 1 : Catégories =====================
 
 @Composable
 private fun CategorySidebar(
         viewModel: MainViewModel,
         scrollState: LazyListState,
-        countryFocusRequester: FocusRequester,
         channelFocusRequester: FocusRequester,
         playerReturnFocusRequester: FocusRequester,
         modifier: Modifier = Modifier
@@ -151,69 +107,62 @@ private fun CategorySidebar(
                     .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.02f))
                     .padding(4.dp)
                     .focusProperties {
-                        left = countryFocusRequester
                         right = channelFocusRequester
                     },
             verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // Recents + Favorites only visible when "ALL" country filter
-        if (viewModel.uiState.selectedCountryFilter == "ALL") {
-            item {
-                                RecentsSection(
-                                        isSelected = viewModel.uiState.lastGeneratorType == GeneratorType.RECENTS,
-                                        recentScope = viewModel.uiState.recentScope,
-                                        onShowRecents = { viewModel.showRecents() },
-                                        onClearRecents = { viewModel.clearRecents() },
-                                        onToggleRecentScope = { viewModel.toggleRecentScope() },
-                                        upFocusRequester = playerReturnFocusRequester,
-                                        leftFocusRequester = countryFocusRequester
-                                )
-            }
-            item {
-                FavoritesHeader(
-                        isSelected = viewModel.uiState.lastGeneratorType == GeneratorType.FAVORITES,
-                        favoriteScope = viewModel.uiState.favoriteScope,
-                        favoriteListScope = viewModel.uiState.favoriteListScope,
-                        onToggleFavoriteScope = { viewModel.toggleFavoriteScope() },
-                        onToggleFavoriteListScope = { viewModel.toggleFavoriteListScope() },
-                        onShowAddListDialog = { viewModel.showAddListDialog() }
-                )
-            }
-            items(viewModel.uiState.filteredFavoriteLists, key = { it.id }, contentType = { "fav" }) { list ->
-                val isSelected = viewModel.uiState.selectedFavoriteListId == list.id
-                SidebarItem(
-                        text = list.name,
-                        icon = Icons.Default.Star,
-                        isSelected = isSelected,
-                                                          onClick = { viewModel.selectFavoriteList(list.id) },
-                                                          onDelete = { viewModel.requestRemoveFavoriteList(list) }
-
-                )
-            }
+        item {
+            RecentsSection(
+                isSelected = viewModel.uiState.lastGeneratorType == GeneratorType.RECENTS,
+                recentScope = viewModel.uiState.recentScope,
+                onShowRecents = { viewModel.showRecents() },
+                onClearRecents = { viewModel.clearRecents() },
+                onToggleRecentScope = { viewModel.toggleRecentScope() },
+                upFocusRequester = playerReturnFocusRequester
+            )
+        }
+        item {
+            FavoritesHeader(
+                isSelected = viewModel.uiState.lastGeneratorType == GeneratorType.FAVORITES,
+                favoriteScope = viewModel.uiState.favoriteScope,
+                favoriteListScope = viewModel.uiState.favoriteListScope,
+                onToggleFavoriteScope = { viewModel.toggleFavoriteScope() },
+                onToggleFavoriteListScope = { viewModel.toggleFavoriteListScope() },
+                onShowAddListDialog = { viewModel.showAddListDialog() }
+            )
+        }
+        items(viewModel.uiState.filteredFavoriteLists, key = { it.id }, contentType = { "fav" }) { list ->
+            val isSelected = viewModel.uiState.selectedFavoriteListId == list.id
+            SidebarItem(
+                text = list.name,
+                icon = Icons.Default.Star,
+                isSelected = isSelected,
+                onClick = { viewModel.selectFavoriteList(list.id) },
+                onDelete = { viewModel.requestRemoveFavoriteList(list) }
+            )
         }
 
         item {
             Text(
-                    text = if (viewModel.uiState.selectedCountryFilter == "ALL") "Catégories"
-                           else "Catégories ${viewModel.uiState.selectedCountryFilter}",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(start = 8.dp, top = 8.dp, bottom = 4.dp)
+                text = "Catégories",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(start = 8.dp, top = 8.dp, bottom = 4.dp)
             )
         }
         items(viewModel.uiState.filteredCategories, key = { it.category_id }, contentType = { "cat" }) { category ->
             val isSelected = viewModel.uiState.selectedCategoryId == category.category_id
             SidebarItem(
-                    text = category.category_name,
-                    icon = null,
-                    isSelected = isSelected,
-                    onClick = { viewModel.selectCategory(category.category_id) }
+                text = category.category_name,
+                icon = null,
+                isSelected = isSelected,
+                onClick = { viewModel.selectCategory(category.category_id) }
             )
         }
     }
 }
 
-// ===================== Column 3: Channels =====================
+// ===================== Colonne 2 : Chaînes =====================
 
 @Composable
 private fun ChannelListPanel(
@@ -257,7 +206,7 @@ private fun GlobalSearchList(
                 Box(Modifier.fillMaxWidth().padding(top = 32.dp), contentAlignment = Alignment.Center) {
                     Text(
                             text = if (viewModel.uiState.searchQuery.isBlank()) "Entrez plusieurs mots pour une recherche globale"
-                                   else "Aucune chaîne trouvée pour \u00ab ${viewModel.uiState.searchQuery} \u00bb",
+                                   else "Aucune chaîne trouvée pour « ${viewModel.uiState.searchQuery} »",
                             color = Color.Gray,
                             style = MaterialTheme.typography.bodyMedium
                     )
@@ -277,7 +226,6 @@ private fun GlobalSearchList(
                 )
             }
 
-            // Indicateur de chargement infini
             if (viewModel.uiState.isLoadingMore) {
                 item {
                     Box(
@@ -307,7 +255,7 @@ private fun VodGrid(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                gridItems(viewModel.uiState.channels, key = { it.stream_id }, contentType = { "vod" }) { channel ->
+                gridItems(viewModel.uiState.channels, key = { "${it.profileId}_${it.stream_id}" }, contentType = { "vod" }) { channel ->
                     val isPlaying = viewModel.uiState.playingChannel?.stream_id == channel.stream_id
                     VodItem(
                             channel = channel,
@@ -334,14 +282,13 @@ private fun LiveChannelList(
     val profileMap = remember(viewModel.uiState.profiles) {
         viewModel.uiState.profiles.associateBy { it.id }
     }
-    val scope = rememberCoroutineScope()
 
     LazyColumn(
             state = scrollState,
             modifier = modifier.fillMaxHeight().padding(4.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        items(viewModel.uiState.channels, key = { it.stream_id }, contentType = { "channel" }) { channel ->
+        items(viewModel.uiState.channels, key = { "${it.profileId}_${it.stream_id}" }, contentType = { "channel" }) { channel ->
             val isPlaying = viewModel.uiState.playingChannel?.stream_id == channel.stream_id
             val isFav = viewModel.uiState.allFavoriteIds.contains("${channel.profileId}_${channel.stream_id}")
             val channelProfile = profileMap[channel.profileId]
@@ -355,13 +302,10 @@ private fun LiveChannelList(
             )
         }
 
-        // Indicateur de chargement infini
         if (viewModel.uiState.isLoadingMore) {
             item {
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator(modifier = Modifier.size(32.dp))
@@ -369,7 +313,6 @@ private fun LiveChannelList(
             }
         }
 
-        // Déclenche le chargement infini quand on approche de la fin
         item {
             LaunchedEffect(scrollState) {
                 snapshotFlow { scrollState.layoutInfo }.collect { layoutInfo ->

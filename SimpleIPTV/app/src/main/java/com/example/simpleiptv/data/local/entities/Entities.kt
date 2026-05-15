@@ -110,7 +110,8 @@ data class ProfileEntity(
         val password: String,
         val macAddress: String? = null,
         val type: String = "xtream", // xtream, stalker
-        val isSelected: Boolean = false
+        val isSelected: Boolean = false,
+        val isEnabled: Boolean = true   // ON = inclus dans recherche/recents ; actif => toujours true
 )
 
 /** Historique global des 20 dernières recherches textuelles. */

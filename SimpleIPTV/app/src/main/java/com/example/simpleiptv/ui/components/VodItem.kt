@@ -32,7 +32,7 @@ fun VodItem(
                 modifier =
                         modifier.padding(4.dp)
                                 .fillMaxWidth()
-                                .aspectRatio(0.7f) // Format affiche de film standard
+                                .aspectRatio(0.72f)
                                 .onFocusChanged { isFocused = it.isFocused }
                                 .scale(if (isFocused) 1.02f else 1f)
                                 .clickable { onClick() }
@@ -55,24 +55,24 @@ fun VodItem(
                         AsyncImage(
                                 model = coil.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
                                         .data(channel.stream_icon)
-                                        .size(400) // Taille adaptée pour les affiches VOD
+                                        .size(400)
                                         .crossfade(true)
                                         .diskCachePolicy(coil.request.CachePolicy.ENABLED)
                                         .memoryCachePolicy(coil.request.CachePolicy.ENABLED)
                                         .build(),
                                 contentDescription = null,
-                                modifier = Modifier.fillMaxWidth().weight(0.70f), // 70% Height
-                                contentScale = ContentScale.Crop
+                                modifier = Modifier.fillMaxWidth().weight(0.82f),
+                                contentScale = ContentScale.Fit
                         )
                         Column(
-                                modifier = Modifier.fillMaxWidth().weight(0.25f).padding(horizontal = 4.dp), // 25% Height
+                                modifier = Modifier.fillMaxWidth().weight(0.18f).padding(horizontal = 4.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Center
                         ) {
                                 Text(
                                         text = channel.name,
                                         modifier = Modifier.fillMaxWidth(),
-                                        style = MaterialTheme.typography.titleSmall,
+                                        style = MaterialTheme.typography.labelMedium,
                                         color = if (isFocused) Color.Black else MaterialTheme.colorScheme.onSurface,
                                         textAlign = TextAlign.Center,
                                         maxLines = 1,
@@ -83,13 +83,12 @@ fun VodItem(
                                                 text = "${profile.profileName}  •  ${profile.url}",
                                                 color = if (isFocused) Color.Black else MaterialTheme.colorScheme.onSurface.copy(alpha=0.5f),
                                                 style = MaterialTheme.typography.labelSmall,
-                                                fontSize = androidx.compose.ui.unit.TextUnit(11f, androidx.compose.ui.unit.TextUnitType.Sp),
+                                                fontSize = androidx.compose.ui.unit.TextUnit(10f, androidx.compose.ui.unit.TextUnitType.Sp),
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis
                                         )
                                 }
                         }
-                        Spacer(modifier = Modifier.weight(0.05f)) // 5% Spacing
                 }
         }
 }

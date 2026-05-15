@@ -51,8 +51,6 @@ class MainUiState {
     var channels by mutableStateOf<List<ChannelEntity>>(emptyList())
     var favoriteLists by mutableStateOf<List<FavoriteListEntity>>(emptyList())
     var globalSearchResults by mutableStateOf<List<ChannelWithProfile>>(emptyList())
-    // Filtres
-    var countryFilters by mutableStateOf<List<String>>(listOf("ALL"))
     // État courant
     var activeProfileId by mutableIntStateOf(-1)
     var currentMediaMode by mutableStateOf(MediaMode.LIVE)
@@ -71,10 +69,10 @@ class MainUiState {
     var favoriteListScope by mutableStateOf(FavoriteListScope.ALL_LISTS)
     var selectedCategoryId by mutableStateOf<String?>(null)
     var selectedFavoriteListId by mutableIntStateOf(-1)
-    var selectedCountryFilter by mutableStateOf("ALL")
     // Meta
     var searchHistory by mutableStateOf<List<String>>(emptyList())
     var loadedProfileIds by mutableStateOf<Set<Int>>(emptySet())
+    var loadingProfileId by mutableIntStateOf(-1)
     var allFavoriteIds by mutableStateOf<Set<String>>(emptySet())
     // Erreurs
     var syncError by mutableStateOf<String?>(null)
@@ -87,11 +85,7 @@ class MainUiState {
     var isLoadingMore by mutableStateOf(false)
 
     val filteredCategories: List<CategoryEntity> by derivedStateOf {
-        val nonSeparatorCategories = categories.filter { !it.category_name.startsWith("-") }
-        if (selectedCountryFilter == "ALL") nonSeparatorCategories
-        else nonSeparatorCategories.filter {
-            it.category_name.startsWith(selectedCountryFilter, ignoreCase = true)
-        }
+        categories.filter { !it.category_name.startsWith("-") }
     }
 
     val filteredFavoriteLists: List<FavoriteListEntity> by derivedStateOf {

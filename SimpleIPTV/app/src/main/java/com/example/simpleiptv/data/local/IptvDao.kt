@@ -411,6 +411,12 @@ interface IptvDao {
 
     @Query("UPDATE profiles SET isSelected = 1 WHERE id = :id") suspend fun selectProfile(id: Int)
 
+    @Query("UPDATE profiles SET isEnabled = :enabled WHERE id = :id")
+    suspend fun setProfileEnabled(id: Int, enabled: Boolean)
+
+    @Query("UPDATE profiles SET isEnabled = 1 WHERE id = :id")
+    suspend fun forceProfileEnabled(id: Int)
+
     @Transaction
     suspend fun syncProfileData(
             profileId: Int,

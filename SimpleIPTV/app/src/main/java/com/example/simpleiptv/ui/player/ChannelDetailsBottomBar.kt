@@ -28,7 +28,6 @@ import com.example.simpleiptv.data.local.entities.ProfileEntity
 fun ChannelDetailsBottomBar(
     channel: ChannelEntity,
     profile: ProfileEntity?,
-    country: String = "N/C",
     category: String = "N/C",
     prevChannelName: String = "Début",
     nextChannelName: String = "Fin",
@@ -65,7 +64,7 @@ fun ChannelDetailsBottomBar(
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = "$country • $category • ${profile?.profileName ?: "Profil"} (${profile?.url ?: "N/C"})",
+                        text = "$category • ${profile?.profileName ?: "Profil"} (${profile?.url ?: "N/C"})",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.White.copy(alpha = 0.6f),
                         maxLines = 1,

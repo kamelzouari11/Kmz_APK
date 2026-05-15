@@ -11,7 +11,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Star
@@ -20,8 +19,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.example.simpleiptv.data.local.entities.ChannelEntity
 import com.example.simpleiptv.data.local.entities.CategoryEntity
@@ -36,7 +35,7 @@ import com.example.simpleiptv.ui.viewmodel.MediaMode
 import kotlinx.coroutines.launch
 
 enum class PortraitNavigationState {
-    COUNTRIES, CATEGORIES, CHANNELS, SEARCH_RESULTS
+    CATEGORIES, CHANNELS, SEARCH_RESULTS
 }
 
 @Composable
@@ -95,14 +94,13 @@ private fun LiveTvTab(
     scrollState: LazyListState,
     playerReturnFocusRequester: FocusRequester
 ) {
-    var navState by remember { mutableStateOf(PortraitNavigationState.COUNTRIES) }
+    var navState by remember { mutableStateOf(PortraitNavigationState.CATEGORIES) }
 
-    BackHandler(enabled = true) {
+    BackHandler(enabled = navState != PortraitNavigationState.CATEGORIES) {
         navState = when (navState) {
             PortraitNavigationState.CHANNELS -> PortraitNavigationState.CATEGORIES
-            PortraitNavigationState.CATEGORIES -> PortraitNavigationState.COUNTRIES
-            PortraitNavigationState.SEARCH_RESULTS -> PortraitNavigationState.COUNTRIES
-            PortraitNavigationState.COUNTRIES -> PortraitNavigationState.COUNTRIES
+            PortraitNavigationState.SEARCH_RESULTS -> PortraitNavigationState.CATEGORIES
+            else -> navState
         }
     }
 
@@ -111,16 +109,6 @@ private fun LiveTvTab(
             SearchResultListPortrait(viewModel, onChannelClick, scrollState)
         } else {
             when (navState) {
-                PortraitNavigationState.COUNTRIES -> {
-                    CountryListVertical(
-                        countries = viewModel.uiState.countryFilters,
-                        selectedCountry = viewModel.uiState.selectedCountryFilter,
-                        onCountrySelected = {
-                            viewModel.setCountryFilter(it)
-                            navState = PortraitNavigationState.CATEGORIES
-                        }
-                    )
-                }
                 PortraitNavigationState.CATEGORIES -> {
                     CategoryListVertical(
                         categories = viewModel.uiState.filteredCategories,
@@ -143,51 +131,36 @@ private fun LiveTvTab(
 }
 
 @Composable
-private fun CountryListVertical(
-    countries: List<String>,
-    selectedCountry: String,
-    onCountrySelected: (String) -> Unit
-) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        item {
-            Text("Sélectionnez un pays", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 16.dp))
-        }
-        items(countries) { country ->
-            FilterChip(
-                selected = country == selectedCountry,
-                onClick = { onCountrySelected(country) },
-                label = { Text(country) },
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-    }
-}
-
-@Composable
 private fun CategoryListVertical(
     categories: List<CategoryEntity>,
     selectedCategory: String?,
     onCategorySelected: (String) -> Unit
 ) {
+    val firstItemFocusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        try { firstItemFocusRequester.requestFocus() } catch (e: Exception) {}
+    }
+
     LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier.fillMaxSize().padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         item {
-            Text("Sélectionnez une catégorie", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 16.dp))
+            Text(
+                "Sélectionnez une catégorie",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)
+            )
         }
-        items(categories) { category ->
-            AssistChip(
+        itemsIndexed(categories) { index, category ->
+            SidebarItem(
+                text = category.category_name,
+                icon = null,
+                isSelected = category.category_id == selectedCategory,
                 onClick = { onCategorySelected(category.category_id) },
-                label = { Text(category.category_name) },
-                modifier = Modifier.fillMaxWidth(),
-                colors = AssistChipDefaults.assistChipColors(
-                    containerColor = if (category.category_id == selectedCategory)
-                        MaterialTheme.colorScheme.primaryContainer else Color.Transparent
-                )
+                modifier = if (index == 0) Modifier.focusRequester(firstItemFocusRequester) else Modifier
             )
         }
     }
@@ -222,7 +195,7 @@ private fun SearchResultListPortrait(
             viewModel.uiState.channels
         }
 
-        items(channelsToDisplay, key = { it.stream_id }) { channel ->
+        items(channelsToDisplay, key = { "${it.profileId}_${it.stream_id}" }) { channel ->
             val isPlaying = viewModel.uiState.playingChannel?.stream_id == channel.stream_id
             val isFav = viewModel.uiState.allFavoriteIds.contains("${channel.profileId}_${channel.stream_id}")
             val channelProfile = profileMap[channel.profileId]
@@ -248,26 +221,30 @@ private fun LiveChannelListPortrait(
     val profileMap = remember(viewModel.uiState.profiles) {
         viewModel.uiState.profiles.associateBy { it.id }
     }
+    val firstChannelFocusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        try { firstChannelFocusRequester.requestFocus() } catch (e: Exception) {}
+    }
 
     LazyColumn(
         state = scrollState,
         modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        if (viewModel.uiState.selectedCountryFilter == "ALL" &&
-            viewModel.uiState.selectedCategoryId == null) {
+        if (viewModel.uiState.selectedCategoryId == null) {
             item {
                 RecentsSection(
                     isSelected = viewModel.uiState.lastGeneratorType == GeneratorType.RECENTS,
                     recentScope = viewModel.uiState.recentScope,
                     onShowRecents = { viewModel.showRecents() },
                     onClearRecents = { viewModel.clearRecents() },
-                    onToggleRecentScope = { viewModel.toggleRecentScope() }, upFocusRequester = playerReturnFocusRequester, leftFocusRequester = androidx.compose.ui.focus.FocusRequester()
+                    onToggleRecentScope = { viewModel.toggleRecentScope() }, upFocusRequester = playerReturnFocusRequester
                 )
             }
         }
 
-        items(viewModel.uiState.channels, key = { it.stream_id }) { channel ->
+        itemsIndexed(viewModel.uiState.channels, key = { _, it -> "${it.profileId}_${it.stream_id}" }) { index, channel ->
             val isPlaying = viewModel.uiState.playingChannel?.stream_id == channel.stream_id
             val isFav = viewModel.uiState.allFavoriteIds.contains("${channel.profileId}_${channel.stream_id}")
             val channelProfile = profileMap[channel.profileId]
@@ -277,7 +254,8 @@ private fun LiveChannelListPortrait(
                 isFavorite = isFav,
                 onClick = { onChannelClick(channel) },
                 onFavoriteClick = { viewModel.initFavoriteAction(channel) },
-                profile = channelProfile
+                profile = channelProfile,
+                modifier = if (index == 0) Modifier.focusRequester(firstChannelFocusRequester) else Modifier
             )
         }
 
@@ -318,7 +296,7 @@ private fun VodTab(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(viewModel.uiState.channels, key = { it.stream_id }) { channel ->
+                items(viewModel.uiState.channels, key = { "${it.profileId}_${it.stream_id}" }) { channel ->
                     val isPlaying = viewModel.uiState.playingChannel?.stream_id == channel.stream_id
                     VodItem(
                         channel = channel,
