@@ -1,0 +1,141 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.football.footballapp"
+4    android:versionCode="2"
+5    android:versionName="0.2" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="24"
+9        android:targetSdkVersion="34" />
+10
+11    <uses-permission android:name="android.permission.INTERNET" />
+11-->/media/kamel/DATA/KmzAPK/Football/app/src/main/AndroidManifest.xml:3:5-67
+11-->/media/kamel/DATA/KmzAPK/Football/app/src/main/AndroidManifest.xml:3:22-64
+12
+13    <permission
+13-->[androidx.core:core:1.13.0] /home/kamel/.gradle/caches/8.10.2/transforms/590fdb64f6b6df3a1c2bfdc2d42097ec/transformed/core-1.13.0/AndroidManifest.xml:22:5-24:47
+14        android:name="com.football.footballapp.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+14-->[androidx.core:core:1.13.0] /home/kamel/.gradle/caches/8.10.2/transforms/590fdb64f6b6df3a1c2bfdc2d42097ec/transformed/core-1.13.0/AndroidManifest.xml:23:9-81
+15        android:protectionLevel="signature" />
+15-->[androidx.core:core:1.13.0] /home/kamel/.gradle/caches/8.10.2/transforms/590fdb64f6b6df3a1c2bfdc2d42097ec/transformed/core-1.13.0/AndroidManifest.xml:24:9-44
+16
+17    <uses-permission android:name="com.football.footballapp.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+17-->[androidx.core:core:1.13.0] /home/kamel/.gradle/caches/8.10.2/transforms/590fdb64f6b6df3a1c2bfdc2d42097ec/transformed/core-1.13.0/AndroidManifest.xml:26:5-97
+17-->[androidx.core:core:1.13.0] /home/kamel/.gradle/caches/8.10.2/transforms/590fdb64f6b6df3a1c2bfdc2d42097ec/transformed/core-1.13.0/AndroidManifest.xml:26:22-94
+18
+19    <application
+19-->/media/kamel/DATA/KmzAPK/Football/app/src/main/AndroidManifest.xml:5:5-23:19
+20        android:name="com.football.footballapp.FootballApp"
+20-->/media/kamel/DATA/KmzAPK/Football/app/src/main/AndroidManifest.xml:6:9-36
+21        android:allowBackup="true"
+21-->/media/kamel/DATA/KmzAPK/Football/app/src/main/AndroidManifest.xml:7:9-35
+22        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+22-->[androidx.core:core:1.13.0] /home/kamel/.gradle/caches/8.10.2/transforms/590fdb64f6b6df3a1c2bfdc2d42097ec/transformed/core-1.13.0/AndroidManifest.xml:28:18-86
+23        android:dataExtractionRules="@xml/data_extraction_rules"
+23-->/media/kamel/DATA/KmzAPK/Football/app/src/main/AndroidManifest.xml:9:9-65
+24        android:debuggable="true"
+25        android:extractNativeLibs="false"
+26        android:fullBackupContent="@xml/backup_rules"
+26-->/media/kamel/DATA/KmzAPK/Football/app/src/main/AndroidManifest.xml:8:9-54
+27        android:icon="@mipmap/ic_launcher"
+27-->/media/kamel/DATA/KmzAPK/Football/app/src/main/AndroidManifest.xml:10:9-43
+28        android:label="Football"
+28-->/media/kamel/DATA/KmzAPK/Football/app/src/main/AndroidManifest.xml:11:9-33
+29        android:roundIcon="@mipmap/ic_launcher_round"
+29-->/media/kamel/DATA/KmzAPK/Football/app/src/main/AndroidManifest.xml:12:9-54
+30        android:supportsRtl="true"
+30-->/media/kamel/DATA/KmzAPK/Football/app/src/main/AndroidManifest.xml:13:9-35
+31        android:theme="@style/Theme.FootballScheduleApp" >
+31-->/media/kamel/DATA/KmzAPK/Football/app/src/main/AndroidManifest.xml:14:9-57
+32        <activity
+32-->/media/kamel/DATA/KmzAPK/Football/app/src/main/AndroidManifest.xml:15:9-22:20
+33            android:name="com.football.footballapp.MainActivity"
+33-->/media/kamel/DATA/KmzAPK/Football/app/src/main/AndroidManifest.xml:16:13-65
+34            android:exported="true" >
+34-->/media/kamel/DATA/KmzAPK/Football/app/src/main/AndroidManifest.xml:17:13-36
+35            <intent-filter>
+35-->/media/kamel/DATA/KmzAPK/Football/app/src/main/AndroidManifest.xml:18:13-21:29
+36                <action android:name="android.intent.action.MAIN" />
+36-->/media/kamel/DATA/KmzAPK/Football/app/src/main/AndroidManifest.xml:19:17-69
+36-->/media/kamel/DATA/KmzAPK/Football/app/src/main/AndroidManifest.xml:19:25-66
+37
+38                <category android:name="android.intent.category.LAUNCHER" />
+38-->/media/kamel/DATA/KmzAPK/Football/app/src/main/AndroidManifest.xml:20:17-77
+38-->/media/kamel/DATA/KmzAPK/Football/app/src/main/AndroidManifest.xml:20:27-74
+39            </intent-filter>
+40        </activity>
+41        <activity
+41-->[androidx.compose.ui:ui-tooling-android:1.6.3] /home/kamel/.gradle/caches/8.10.2/transforms/743c30689af586d8582ae04585a5e660/transformed/ui-tooling-release/AndroidManifest.xml:23:9-25:39
+42            android:name="androidx.compose.ui.tooling.PreviewActivity"
+42-->[androidx.compose.ui:ui-tooling-android:1.6.3] /home/kamel/.gradle/caches/8.10.2/transforms/743c30689af586d8582ae04585a5e660/transformed/ui-tooling-release/AndroidManifest.xml:24:13-71
+43            android:exported="true" />
+43-->[androidx.compose.ui:ui-tooling-android:1.6.3] /home/kamel/.gradle/caches/8.10.2/transforms/743c30689af586d8582ae04585a5e660/transformed/ui-tooling-release/AndroidManifest.xml:25:13-36
+44
+45        <provider
+45-->[androidx.emoji2:emoji2:1.3.0] /home/kamel/.gradle/caches/8.10.2/transforms/05d1c40ae7a62c93620b76cd30462d81/transformed/emoji2-1.3.0/AndroidManifest.xml:24:9-32:20
+46            android:name="androidx.startup.InitializationProvider"
+46-->[androidx.emoji2:emoji2:1.3.0] /home/kamel/.gradle/caches/8.10.2/transforms/05d1c40ae7a62c93620b76cd30462d81/transformed/emoji2-1.3.0/AndroidManifest.xml:25:13-67
+47            android:authorities="com.football.footballapp.androidx-startup"
+47-->[androidx.emoji2:emoji2:1.3.0] /home/kamel/.gradle/caches/8.10.2/transforms/05d1c40ae7a62c93620b76cd30462d81/transformed/emoji2-1.3.0/AndroidManifest.xml:26:13-68
+48            android:exported="false" >
+48-->[androidx.emoji2:emoji2:1.3.0] /home/kamel/.gradle/caches/8.10.2/transforms/05d1c40ae7a62c93620b76cd30462d81/transformed/emoji2-1.3.0/AndroidManifest.xml:27:13-37
+49            <meta-data
+49-->[androidx.emoji2:emoji2:1.3.0] /home/kamel/.gradle/caches/8.10.2/transforms/05d1c40ae7a62c93620b76cd30462d81/transformed/emoji2-1.3.0/AndroidManifest.xml:29:13-31:52
+50                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+50-->[androidx.emoji2:emoji2:1.3.0] /home/kamel/.gradle/caches/8.10.2/transforms/05d1c40ae7a62c93620b76cd30462d81/transformed/emoji2-1.3.0/AndroidManifest.xml:30:17-75
+51                android:value="androidx.startup" />
+51-->[androidx.emoji2:emoji2:1.3.0] /home/kamel/.gradle/caches/8.10.2/transforms/05d1c40ae7a62c93620b76cd30462d81/transformed/emoji2-1.3.0/AndroidManifest.xml:31:17-49
+52            <meta-data
+52-->[androidx.lifecycle:lifecycle-process:2.7.0] /home/kamel/.gradle/caches/8.10.2/transforms/813367e265a5465ddef0de42326afa1b/transformed/lifecycle-process-2.7.0/AndroidManifest.xml:29:13-31:52
+53                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+53-->[androidx.lifecycle:lifecycle-process:2.7.0] /home/kamel/.gradle/caches/8.10.2/transforms/813367e265a5465ddef0de42326afa1b/transformed/lifecycle-process-2.7.0/AndroidManifest.xml:30:17-78
+54                android:value="androidx.startup" />
+54-->[androidx.lifecycle:lifecycle-process:2.7.0] /home/kamel/.gradle/caches/8.10.2/transforms/813367e265a5465ddef0de42326afa1b/transformed/lifecycle-process-2.7.0/AndroidManifest.xml:31:17-49
+55            <meta-data
+55-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/kamel/.gradle/caches/8.10.2/transforms/f3b2d525ceeabd3d141a8bf228e6fa50/transformed/profileinstaller-1.3.1/AndroidManifest.xml:29:13-31:52
+56                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+56-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/kamel/.gradle/caches/8.10.2/transforms/f3b2d525ceeabd3d141a8bf228e6fa50/transformed/profileinstaller-1.3.1/AndroidManifest.xml:30:17-85
+57                android:value="androidx.startup" />
+57-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/kamel/.gradle/caches/8.10.2/transforms/f3b2d525ceeabd3d141a8bf228e6fa50/transformed/profileinstaller-1.3.1/AndroidManifest.xml:31:17-49
+58        </provider>
+59
+60        <receiver
+60-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/kamel/.gradle/caches/8.10.2/transforms/f3b2d525ceeabd3d141a8bf228e6fa50/transformed/profileinstaller-1.3.1/AndroidManifest.xml:34:9-52:20
+61            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+61-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/kamel/.gradle/caches/8.10.2/transforms/f3b2d525ceeabd3d141a8bf228e6fa50/transformed/profileinstaller-1.3.1/AndroidManifest.xml:35:13-76
+62            android:directBootAware="false"
+62-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/kamel/.gradle/caches/8.10.2/transforms/f3b2d525ceeabd3d141a8bf228e6fa50/transformed/profileinstaller-1.3.1/AndroidManifest.xml:36:13-44
+63            android:enabled="true"
+63-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/kamel/.gradle/caches/8.10.2/transforms/f3b2d525ceeabd3d141a8bf228e6fa50/transformed/profileinstaller-1.3.1/AndroidManifest.xml:37:13-35
+64            android:exported="true"
+64-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/kamel/.gradle/caches/8.10.2/transforms/f3b2d525ceeabd3d141a8bf228e6fa50/transformed/profileinstaller-1.3.1/AndroidManifest.xml:38:13-36
+65            android:permission="android.permission.DUMP" >
+65-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/kamel/.gradle/caches/8.10.2/transforms/f3b2d525ceeabd3d141a8bf228e6fa50/transformed/profileinstaller-1.3.1/AndroidManifest.xml:39:13-57
+66            <intent-filter>
+66-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/kamel/.gradle/caches/8.10.2/transforms/f3b2d525ceeabd3d141a8bf228e6fa50/transformed/profileinstaller-1.3.1/AndroidManifest.xml:40:13-42:29
+67                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+67-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/kamel/.gradle/caches/8.10.2/transforms/f3b2d525ceeabd3d141a8bf228e6fa50/transformed/profileinstaller-1.3.1/AndroidManifest.xml:41:17-91
+67-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/kamel/.gradle/caches/8.10.2/transforms/f3b2d525ceeabd3d141a8bf228e6fa50/transformed/profileinstaller-1.3.1/AndroidManifest.xml:41:25-88
+68            </intent-filter>
+69            <intent-filter>
+69-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/kamel/.gradle/caches/8.10.2/transforms/f3b2d525ceeabd3d141a8bf228e6fa50/transformed/profileinstaller-1.3.1/AndroidManifest.xml:43:13-45:29
+70                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+70-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/kamel/.gradle/caches/8.10.2/transforms/f3b2d525ceeabd3d141a8bf228e6fa50/transformed/profileinstaller-1.3.1/AndroidManifest.xml:44:17-85
+70-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/kamel/.gradle/caches/8.10.2/transforms/f3b2d525ceeabd3d141a8bf228e6fa50/transformed/profileinstaller-1.3.1/AndroidManifest.xml:44:25-82
+71            </intent-filter>
+72            <intent-filter>
+72-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/kamel/.gradle/caches/8.10.2/transforms/f3b2d525ceeabd3d141a8bf228e6fa50/transformed/profileinstaller-1.3.1/AndroidManifest.xml:46:13-48:29
+73                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+73-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/kamel/.gradle/caches/8.10.2/transforms/f3b2d525ceeabd3d141a8bf228e6fa50/transformed/profileinstaller-1.3.1/AndroidManifest.xml:47:17-88
+73-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/kamel/.gradle/caches/8.10.2/transforms/f3b2d525ceeabd3d141a8bf228e6fa50/transformed/profileinstaller-1.3.1/AndroidManifest.xml:47:25-85
+74            </intent-filter>
+75            <intent-filter>
+75-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/kamel/.gradle/caches/8.10.2/transforms/f3b2d525ceeabd3d141a8bf228e6fa50/transformed/profileinstaller-1.3.1/AndroidManifest.xml:49:13-51:29
+76                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+76-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/kamel/.gradle/caches/8.10.2/transforms/f3b2d525ceeabd3d141a8bf228e6fa50/transformed/profileinstaller-1.3.1/AndroidManifest.xml:50:17-95
+76-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/kamel/.gradle/caches/8.10.2/transforms/f3b2d525ceeabd3d141a8bf228e6fa50/transformed/profileinstaller-1.3.1/AndroidManifest.xml:50:25-92
+77            </intent-filter>
+78        </receiver>
+79    </application>
+80
+81</manifest>

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- On sauvegarde nos SharedPreferences des filtres -->
+    <include domain="sharedpref" path="filters.xml" />
+</full-backup-content>

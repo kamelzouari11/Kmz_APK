@@ -1,0 +1,20 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.football.footballapp-mergeDebugResources-64:/values-v16/values-v16.xml",
+            "map": [
+                {
+                    "source": "/home/kamel/.gradle/caches/8.10.2/transforms/d37c1aec136b119a61a858019f3153d7/transformed/appcompat-1.6.1/res/values-v16/values-v16.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endLines": "5",
+                        "endColumns": "12",
+                        "endOffsets": "223"
+                    }
+                }
+            ]
+        }
+    ]
+}

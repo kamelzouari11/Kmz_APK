@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Fond vert pelouse -->
+    <path
+        android:fillColor="#1E8E4F"
+        android:pathData="M0,0 L108,0 L108,108 L0,108 Z" />
+    <!-- Bande horizontale plus claire (effet pelouse) -->
+    <path
+        android:fillColor="#26A35C"
+        android:pathData="M0,40 L108,40 L108,68 L0,68 Z" />
+</vector>
