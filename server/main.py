@@ -38,7 +38,7 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.9",
-    "Accept-Encoding": "gzip, deflate, br",
+    "Accept-Encoding": "gzip, deflate",
     "Connection": "keep-alive",
     "Referer": "https://liveonsat.com/",
     "Upgrade-Insecure-Requests": "1",
@@ -60,6 +60,7 @@ LIVEONSAT_URLS = [
     "https://liveonsat.com/2day.php",
     "https://www.liveonsat.com/2day.php"
 ]
+LIVEFOOTBALLONTV_URL = "https://www.live-footballontv.com/"
 RETRY_STRATEGY = Retry(
     total=3,
     status_forcelist=[429, 500, 502, 503, 504],
@@ -119,13 +120,77 @@ def parse_liveonsat_date(date_str: str, current_year: int = None) -> Optional[st
     # Normalize spaces
     date_str = " ".join(date_str.split())
     
-    for fmt in ("%d %B %Y", "%d %b %Y"):
+    has_year = re.search(r'\b\d{4}\b', date_str) is not None
+    if has_year:
+        formats = ("%A %d %B %Y", "%A %d %b %Y", "%d %B %Y", "%d %b %Y")
+    else:
+        formats = ("%A %d %B", "%A %d %b", "%d %B", "%d %b")
+
+    for fmt in formats:
         try:
-            dt = datetime.strptime(f"{date_str} {current_year}", fmt)
+            if has_year:
+                dt = datetime.strptime(date_str, fmt)
+            else:
+                dt = datetime.strptime(f"{date_str} {current_year}", fmt)
             return dt.strftime("%Y-%m-%d")
         except ValueError:
             continue
     return None
+
+
+def scrape_live_football_on_tv() -> List[Dict]:
+    """Scrapes live-footballontv.com and parses fixtures with TV channel info."""
+    session = get_http_session()
+    response = session.get(LIVEFOOTBALLONTV_URL, timeout=20, allow_redirects=True)
+    response.raise_for_status()
+
+    soup = BeautifulSoup(response.text, "html.parser")
+    matches = []
+
+    for group in soup.select("div.fixture-group"):
+        date_div = group.find("div", class_="fixture-date")
+        if not date_div:
+            continue
+        date = parse_liveonsat_date(date_div.get_text(" ", strip=True))
+        if not date:
+            continue
+
+        for fixture in group.select("div.fixture"):
+            teams_div = fixture.find("div", class_="fixture__teams")
+            if not teams_div:
+                continue
+
+            teams_text = " ".join(teams_div.get_text(" ").split())
+            teams = re.split(r'\s+v[s]?\s+', teams_text)
+            if len(teams) < 2:
+                continue
+
+            home_team = teams[0].strip()
+            away_team = teams[1].strip()
+            time_div = fixture.find("div", class_="fixture__time")
+            kickoff_time = time_div.get_text(strip=True) if time_div else "Unknown"
+            league_div = fixture.find("div", class_="fixture__competition")
+            league = league_div.get_text(strip=True) if league_div else "Unknown"
+
+            channels = []
+            for pill in fixture.select("span.channel-pill"):
+                chan_name = pill.get_text(" ", strip=True)
+                if chan_name:
+                    channels.append(chan_name)
+
+            matches.append({
+                "date": date,
+                "league": league,
+                "home": home_team,
+                "away": away_team,
+                "time": kickoff_time,
+                "channels": channels
+            })
+
+    if not matches:
+        raise Exception("Failed to parse Live Football On TV fixtures.")
+    return matches
+
 
 def get_channel_country(channel_name: str) -> str:
     """Map TV channel names to their corresponding countries or regions."""
@@ -337,7 +402,11 @@ def get_matches_cached() -> List[Dict]:
         return cache["data"]
         
     try:
-        matches = scrape_liveonsat()
+        try:
+            matches = scrape_live_football_on_tv()
+        except Exception:
+            matches = scrape_liveonsat()
+
         cache["data"] = matches
         cache["expiry"] = now + CACHE_DURATION
         save_cache_to_disk(matches)
