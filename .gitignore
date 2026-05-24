@@ -34,6 +34,9 @@ captures/
 .DS_Store
 Thumbs.db
 
+# Backend cache
+server/cache.json
+
 .idea/
 *.iml
 __pycache__/

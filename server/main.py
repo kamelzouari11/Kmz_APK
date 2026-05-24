@@ -1,11 +1,15 @@
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+import json
 import requests
 from bs4 import BeautifulSoup
 import re
 import unicodedata
 from datetime import datetime, timedelta
+from pathlib import Path
+from requests.adapters import HTTPAdapter
 from typing import List, Dict, Optional
+from urllib3.util.retry import Retry
 
 app = FastAPI(
     title="Football TV Channels Scraper API",
@@ -27,13 +31,75 @@ cache = {
     "data": None,
     "expiry": None
 }
+CACHE_FILE = Path("cache.json")
 CACHE_DURATION = timedelta(minutes=15)
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Connection": "keep-alive",
+    "Referer": "https://liveonsat.com/",
+    "Upgrade-Insecure-Requests": "1",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-User": "?1",
+    "Sec-Fetch-Dest": "document"
 }
 
-LIVEONSAT_URL = "https://liveonsat.com/2day.php"
+USER_AGENTS = [
+    HEADERS["User-Agent"],
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Firefox/123.0",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_4) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Safari/605.1.15",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
+]
+
+LIVEONSAT_URLS = [
+    "https://liveonsat.com/2day.php",
+    "https://www.liveonsat.com/2day.php"
+]
+RETRY_STRATEGY = Retry(
+    total=3,
+    status_forcelist=[429, 500, 502, 503, 504],
+    allowed_methods=["GET", "HEAD", "OPTIONS"],
+    backoff_factor=0.5
+)
+
+def load_cache_from_disk() -> None:
+    if not CACHE_FILE.exists():
+        return
+    try:
+        raw = json.loads(CACHE_FILE.read_text())
+        expiry = raw.get("expiry")
+        if expiry:
+            cache["expiry"] = datetime.fromisoformat(expiry)
+        cache["data"] = raw.get("data")
+    except Exception:
+        pass
+
+
+def save_cache_to_disk(matches: List[Dict]) -> None:
+    try:
+        CACHE_FILE.write_text(json.dumps({
+            "expiry": (datetime.now() + CACHE_DURATION).isoformat(),
+            "data": matches
+        }))
+    except Exception:
+        pass
+
+
+def get_http_session() -> requests.Session:
+    session = requests.Session()
+    session.trust_env = False
+    session.mount("https://", HTTPAdapter(max_retries=RETRY_STRATEGY))
+    session.headers.update(HEADERS)
+    return session
+
+
+load_cache_from_disk()
+
 
 def parse_liveonsat_date(date_str: str, current_year: int = None) -> Optional[str]:
     """Parse date strings like 'Sunday, 24th  May' into YYYY-MM-DD format."""
@@ -146,9 +212,31 @@ def match_teams(request_team: str, scraped_team: str) -> bool:
 
 def scrape_liveonsat() -> List[Dict]:
     """Scrapes liveonsat.com/2day.php and parses all matches into structured data."""
-    response = requests.get(LIVEONSAT_URL, headers=HEADERS, timeout=15)
+    session = get_http_session()
+    response = None
+    last_exception = None
+
+    for url in LIVEONSAT_URLS:
+        for ua in USER_AGENTS:
+            try:
+                request_headers = {**HEADERS, "User-Agent": ua, "Host": "liveonsat.com"}
+                response = session.get(url, headers=request_headers, timeout=20, allow_redirects=True)
+                if response.status_code == 403:
+                    continue
+                response.raise_for_status()
+                break
+            except requests.RequestException as exc:
+                last_exception = exc
+                continue
+        if response is not None and response.status_code == 200:
+            break
+
+    if response is None:
+        raise Exception(f"Failed to fetch LiveOnSat page: {last_exception}")
+    if response.status_code == 403:
+        raise Exception("LiveOnSat blocked the request (403 Forbidden).")
     response.raise_for_status()
-    
+
     soup = BeautifulSoup(response.text, "html.parser")
     tables = soup.find_all("table")
     if len(tables) <= 10:
@@ -252,6 +340,7 @@ def get_matches_cached() -> List[Dict]:
         matches = scrape_liveonsat()
         cache["data"] = matches
         cache["expiry"] = now + CACHE_DURATION
+        save_cache_to_disk(matches)
         return matches
     except Exception as e:
         # If scraper fails but we have stale cache, return it rather than crashing
@@ -322,5 +411,10 @@ def get_tv_channels(
     }
 
 if __name__ == "__main__":
+    import os
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+
+    port = int(os.environ.get("PORT", 8000))
+    # Enable reload only when explicitly requested via DEV=1 or DEV=true
+    reload_flag = os.environ.get("DEV", "false").lower() in ("1", "true")
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=reload_flag)
