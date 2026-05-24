@@ -61,6 +61,7 @@ LIVEONSAT_URLS = [
     "https://www.liveonsat.com/2day.php"
 ]
 LIVEFOOTBALLONTV_URL = "https://www.live-footballontv.com/"
+LIVE_SOCCERTV_PROXY = "https://r.jina.ai/http://www.livesoccertv.com/fr/schedules/"
 RETRY_STRATEGY = Retry(
     total=3,
     status_forcelist=[429, 500, 502, 503, 504],
@@ -122,20 +123,83 @@ def parse_liveonsat_date(date_str: str, current_year: int = None) -> Optional[st
     
     has_year = re.search(r'\b\d{4}\b', date_str) is not None
     if has_year:
-        formats = ("%A %d %B %Y", "%A %d %b %Y", "%d %B %Y", "%d %b %Y")
+        formats = (
+            "%A %d %B %Y", "%A %d %b %Y",
+            "%d %B %Y", "%d %b %Y",
+            "%B %d %Y", "%b %d %Y",
+            "%A %B %d %Y", "%A %b %d %Y"
+        )
     else:
-        formats = ("%A %d %B", "%A %d %b", "%d %B", "%d %b")
+        formats = (
+            "%A %d %B", "%A %d %b",
+            "%d %B", "%d %b",
+            "%B %d %Y", "%b %d %Y",
+            "%A %B %d %Y", "%A %b %d %Y"
+        )
 
     for fmt in formats:
         try:
-            if has_year:
-                dt = datetime.strptime(date_str, fmt)
+            if has_year or fmt.endswith("%Y"):
+                dt = datetime.strptime(f"{date_str} {current_year}" if not has_year else date_str, fmt)
             else:
-                dt = datetime.strptime(f"{date_str} {current_year}", fmt)
+                dt = datetime.strptime(date_str, fmt)
             return dt.strftime("%Y-%m-%d")
         except ValueError:
             continue
     return None
+
+
+def scrape_live_soccertv() -> List[Dict]:
+    """Scrapes LiveSoccerTV schedule content via a markdown proxy."""
+    session = get_http_session()
+    response = session.get(LIVE_SOCCERTV_PROXY, timeout=30)
+    response.raise_for_status()
+    text = response.text
+
+    matches = []
+    current_date = None
+
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        line = re.sub(r'^[\*\-\+]\s*', '', line)
+
+        if line.startswith('#'):
+            current_date = parse_liveonsat_date(line.lstrip('#').strip())
+            continue
+
+        match_line = re.match(
+            r'^(?P<time>\d{1,2}:\d{2}\s*(?:am|pm))\[(?P<teams>[^\]]+)\]\([^\)]*\)(?P<rest>.*)$',
+            line,
+            flags=re.I
+        )
+        if not match_line or not current_date:
+            continue
+
+        teams_text = match_line.group('teams').strip()
+        teams = re.split(r'\s+v[s]?\s+', teams_text, flags=re.I)
+        if len(teams) < 2:
+            continue
+
+        home_team = teams[0].strip()
+        away_team = teams[1].strip()
+        kickoff_time = match_line.group('time').strip()
+        league = "Unknown"
+
+        channels = re.findall(r'\[([^\]]+)\]\([^\)]*\s+"[^"]+"\)', match_line.group('rest'))
+        matches.append({
+            "date": current_date,
+            "league": league,
+            "home": home_team,
+            "away": away_team,
+            "time": kickoff_time,
+            "channels": channels
+        })
+
+    if not matches:
+        raise Exception("Failed to parse LiveSoccerTV schedule content.")
+    return matches
 
 
 def scrape_live_football_on_tv() -> List[Dict]:
@@ -403,9 +467,12 @@ def get_matches_cached() -> List[Dict]:
         
     try:
         try:
-            matches = scrape_live_football_on_tv()
+            matches = scrape_live_soccertv()
         except Exception:
-            matches = scrape_liveonsat()
+            try:
+                matches = scrape_live_football_on_tv()
+            except Exception:
+                matches = scrape_liveonsat()
 
         cache["data"] = matches
         cache["expiry"] = now + CACHE_DURATION
