@@ -18,7 +18,6 @@ import com.football.footballapp.data.FootballDataApi
 import com.football.footballapp.data.MatchCache
 import com.football.footballapp.data.OpenFootballApi
 import com.football.footballapp.data.MatchDetailApi
-import com.football.footballapp.data.TvChannelsApi
 import com.football.footballapp.repository.MatchRepository
 import com.football.footballapp.repository.MatchDetailRepository
 import com.football.footballapp.ui.MatchListScreen
@@ -48,10 +47,8 @@ class MainActivity : ComponentActivity() {
             apiFootballKey,
             useRapidApi = BuildConfig.API_FOOTBALL_USE_RAPID
         )
-        val tvChannelsApi = TvChannelsApi.create(BuildConfig.TV_SERVER_URL)
         val matchDetailRepository = MatchDetailRepository(
-            matchDetailApi = matchDetailApi,
-            tvChannelsApi = tvChannelsApi
+            matchDetailApi = matchDetailApi
         )
 
         setContent {
@@ -83,8 +80,7 @@ class MainActivity : ComponentActivity() {
                                     factory = MatchDetailViewModel.Factory(matchDetailRepository, match)
                                 )
                                 MatchDetailScreen(
-                                    viewModel = matchDetailViewModel,
-                                    onBack = { navController.popBackStack() }
+                                    viewModel = matchDetailViewModel
                                 )
                             } else {
                                 Surface(modifier = Modifier.fillMaxSize()) {

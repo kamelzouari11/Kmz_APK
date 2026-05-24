@@ -37,9 +37,7 @@ class MatchDetailViewModel(
             repository.getMatchDetail(
                 matchId = match.id,
                 source = match.source,
-                homeTeamName = match.homeTeam.name,
-                awayTeamName = match.awayTeam.name,
-                utcDate = match.utcDate
+                forceRefresh = forceRefresh
             ).onSuccess { detail ->
                 _state.update { it.copy(isLoading = false, matchDetail = detail, error = null) }
             }.onFailure { error ->
@@ -47,6 +45,8 @@ class MatchDetailViewModel(
             }
         }
     }
+
+    
 
     class Factory(
         private val repository: MatchDetailRepository,

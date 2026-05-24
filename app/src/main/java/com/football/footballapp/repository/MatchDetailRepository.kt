@@ -2,7 +2,6 @@ package com.football.footballapp.repository
 
 import android.util.Log
 import com.football.footballapp.data.MatchDetailApi
-import com.football.footballapp.data.TvChannelsApi
 import com.football.footballapp.data.model.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -10,76 +9,26 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
+import java.util.concurrent.ConcurrentHashMap
 
 class MatchDetailRepository(
-    private val matchDetailApi: MatchDetailApi?,
-    private val tvChannelsApi: TvChannelsApi?
+    private val matchDetailApi: MatchDetailApi?
 ) {
     private val TAG = "MatchDetailRepository"
+    private val detailCache = ConcurrentHashMap<Long, MatchDetail>()
+    
 
     suspend fun getMatchDetail(
         matchId: Long,
         source: String,
-        homeTeamName: String,
-        awayTeamName: String,
-        utcDate: String
+        forceRefresh: Boolean = false
     ): Result<MatchDetail> = withContext(Dispatchers.IO) {
+        if (!forceRefresh) {
+            detailCache[matchId]?.let { return@withContext Result.success(it) }
+        }
+
         runCatching {
             coroutineScope {
-                // Parse date to YYYY-MM-DD
-                val formattedDate = try {
-                    val odt = OffsetDateTime.parse(utcDate)
-                    odt.format(DateTimeFormatter.ISO_LOCAL_DATE)
-                } catch (e: Exception) {
-                    utcDate.split("T").first()
-                }
-
-                // 1. Fetch TV Channels in parallel
-                val tvChannelsDeferred = async {
-                    if (tvChannelsApi != null) {
-                        runCatching {
-                            tvChannelsApi.getTvChannels(
-                                home = homeTeamName,
-                                away = awayTeamName,
-                                date = formattedDate
-                            ).channels?.map {
-                                TvChannelGroup(country = it.country, channels = it.channels)
-                            } ?: emptyList()
-                        }.getOrElse {
-                            Log.w(TAG, "Failed to fetch TV channels: ${it.message}")
-                            emptyList()
-                        }
-                    } else {
-                        emptyList()
-                    }
-                }
-
-                // 2. Fetch Match Details (Lineups, Statistics, Events) from API-FOOTBALL
-                val statsDeferred = async {
-                    if (source == "api-football" && matchDetailApi != null) {
-                        runCatching {
-                            matchDetailApi.getStatistics(matchId).response.map { teamStatsDto ->
-                                MatchTeamStats(
-                                    teamId = teamStatsDto.team.id,
-                                    teamName = teamStatsDto.team.name,
-                                    teamLogo = teamStatsDto.team.logo,
-                                    stats = teamStatsDto.statistics.map { statDto ->
-                                        StatItem(
-                                            type = statDto.type,
-                                            value = statDto.value?.toString() ?: "0"
-                                        )
-                                    }
-                                )
-                            }
-                        }.getOrElse {
-                            Log.w(TAG, "Failed to fetch statistics: ${it.message}")
-                            emptyList()
-                        }
-                    } else {
-                        emptyList()
-                    }
-                }
-
                 val lineupsDeferred = async {
                     if (source == "api-football" && matchDetailApi != null) {
                         runCatching {
@@ -194,12 +143,14 @@ class MatchDetailRepository(
                 MatchDetail(
                     matchId = matchId,
                     source = source,
-                    stats = statsDeferred.await(),
+                    stats = emptyList(),
                     lineups = lineupsDeferred.await(),
                     events = eventsDeferred.await(),
-                    tvChannels = tvChannelsDeferred.await()
-                )
+                    tvChannels = emptyList()
+                ).also { detailCache[matchId] = it }
             }
         }
     }
+
+    
 }
