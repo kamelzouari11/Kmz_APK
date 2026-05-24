@@ -16,5 +16,5 @@ public final class BuildConfig {
   // Field from default config.
   public static final String FOOTBALL_DATA_API_KEY = "3a32e31672904bd98e7dcf2905bccb69";
   // Field from default config.
-  public static final String TV_SERVER_URL = "http://10.0.2.2:10000";
+  public static final String TV_SERVER_URL = "https://football-api-9v3x.onrender.com";
 }

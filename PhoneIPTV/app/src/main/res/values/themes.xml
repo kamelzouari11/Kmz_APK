@@ -1,8 +1,0 @@
-<resources>
-    <style name="Theme.SimpleIPTV" parent="Theme.AppCompat.DayNight.NoActionBar">
-        <!-- Force visibility of focus in ExoPlayer controls on TV -->
-        <item name="colorAccent">#00BCD4</item>
-        <item name="colorControlActivated">#00BCD4</item>
-        <item name="colorControlHighlight">#4000BCD4</item>
-    </style>
-</resources>
