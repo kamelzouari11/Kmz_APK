@@ -1,0 +1,17 @@
+Lot,Sous-Lot,Article,Quantite,Unite,Prix_Unitaire
+Faux plafond,placo platre,faux plafonds,1,ft,4000
+Faux plafond,placo platre,cloisons plâtre,1,ft,1000
+Électricité,électricité,électricité,1,ft,10000
+Plomberie sanitaire,travaux,plombier,1,ft,5000
+Plomberie sanitaire,fournitures,fournitures,1,ft,10000
+Menuiserie Bois,menuiserie bois,,,,
+Menuiserie Bois,porte principale,porte principale,1,ft,5000
+Menuiserie Aluminium,fourniture et pose,Alumed,1,ft,30000
+Travaux GC,neji,neji,2,mois,3000
+Travaux GC,autres ouvriers,maçon,1,mois,2000
+Travaux GC,autres ouvriers,ouvrier,1,mois,1500
+menuiserie métallique,porte coulissante,porte coulissante,1,ft,6000
+menuiserie métallique,porte principale,porte principale,1,ft,2500
+menuiserie métallique,garde corps,garde corps,1,ft,2000
+Peinture,peinture,peinture,1,ft,8000
+Cuisine,meubles de cuisine,delta cuisine,1,ft,10000

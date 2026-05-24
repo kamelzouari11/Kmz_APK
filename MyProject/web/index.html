@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Budget Rénovation — Tableur</title>
+  <style>
+    /* ─── Reset & Base ─── */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --card: #22263a;
+      --border: #2e3350;
+      --accent: #5b7cf6;
+      --accent2: #7c5bf6;
+      --green: #22c55e;
+      --red: #ef4444;
+      --orange: #f97316;
+      --text: #e2e8f0;
+      --muted: #8892b0;
+      --header-h: 56px;
+    }
+
+    html {
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      font-family: 'Inter', 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 17px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    header {
+      height: var(--header-h);
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 24px;
+      flex-shrink: 0;
+    }
+
+    header h1 {
+      font-size: 16px;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      flex: 1;
+    }
+
+    #status-msg {
+      font-size: 12px;
+      color: var(--muted);
+      max-width: 300px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+
+    .btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 16px;
+      border-radius: 8px;
+      border: none;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity .15s, transform .1s;
+    }
+
+    .btn:hover {
+      opacity: .85;
+      transform: translateY(-1px);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-success {
+      background: var(--green);
+      color: #fff;
+    }
+
+    .btn-danger {
+      background: var(--red);
+      color: #fff;
+    }
+
+    .btn-ghost {
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    /* ─── Token Modal ─── */
+    #token-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .75);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    #token-overlay.hidden {
+      display: none;
+    }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px;
+      width: 420px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .modal h2 {
+      font-size: 20px;
+    }
+
+    .modal p {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .modal input {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 13px;
+      padding: 10px 14px;
+      width: 100%;
+    }
+
+    .modal input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    /* ─── Main 3-pane layout ─── */
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: row;
+      overflow: hidden;
+    }
+
+    @media (max-width: 850px) {
+      main {
+        flex-direction: column;
+        overflow-y: auto;
+      }
+    }
+
+    .pane {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    #pane-lots {
+      width: 250px;
+      flex-shrink: 0;
+      min-width: 150px;
+      max-width: 400px;
+      border-right: 1px solid var(--border);
+    }
+
+    #pane-souslots {
+      width: 250px;
+      flex-shrink: 0;
+      min-width: 150px;
+      max-width: 400px;
+      border-right: 1px solid var(--border);
+    }
+
+    @media (max-width: 850px) {
+
+      #pane-lots,
+      #pane-souslots {
+        width: 100% !important;
+        height: 250px;
+        flex-shrink: 0;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+      }
+
+      #pane-articles {
+        width: 100% !important;
+        height: auto;
+        min-height: 400px;
+      }
+    }
+
+    #pane-articles {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .resize-handle {
+      width: 5px;
+      background: var(--border);
+      cursor: col-resize;
+      flex-shrink: 0;
+      transition: background .15s;
+      z-index: 10;
+    }
+
+    @media (max-width: 850px) {
+      .resize-handle {
+        display: none;
+      }
+    }
+
+    .resize-handle:hover,
+    .resize-handle.dragging {
+      background: var(--accent);
+    }
+
+    .pane-header {
+      padding: 10px 12px 8px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      color: #c7d2fe;
+      background: rgba(91, 124, 246, .18);
+      border-bottom: 1px solid rgba(91, 124, 246, .35);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .pane-header .add-btn {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      font-size: 16px;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity .15s;
+    }
+
+    .pane-header .add-btn:hover {
+      opacity: .8;
+    }
+
+    .pane-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 6px;
+    }
+
+    .pane-list::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    .pane-list::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    /* ─── List Items ─── */
+    .list-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 7px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background .12s;
+      font-size: 14px;
+      gap: 6px;
+    }
+
+    .list-item:hover {
+      background: var(--card);
+    }
+
+    .list-item.active {
+      background: rgba(91, 124, 246, .18);
+      border-left: 2px solid var(--accent);
+    }
+
+    .list-item .name {
+      flex: 1;
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .list-item .total {
+      font-size: 13px;
+      color: var(--accent);
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .item-actions {
+      display: none;
+      gap: 4px;
+    }
+
+    .list-item:hover .item-actions {
+      display: flex;
+    }
+
+    .icon-btn {
+      width: 20px;
+      height: 20px;
+      border: none;
+      border-radius: 4px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color .12s, background .12s;
+    }
+
+    .icon-btn:hover {
+      color: var(--text);
+      background: var(--border);
+    }
+
+    .icon-btn.del:hover {
+      color: var(--red);
+    }
+
+    /* ─── Articles Table ─── */
+    #pane-articles {
+      display: flex;
+      flex-direction: column;
+    }
+
+    #articles-title {
+      padding: 11px 16px 9px;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      color: #c7d2fe;
+      background: rgba(91, 124, 246, .18);
+      border-bottom: 1px solid rgba(91, 124, 246, .35);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    #articles-title span {
+      font-size: 13px;
+      color: var(--text);
+      text-transform: none;
+      font-weight: 600;
+    }
+
+    .table-header {
+      display: grid;
+      grid-template-columns: 1fr 80px 80px 110px 90px;
+      padding: 7px 16px;
+      font-size: 13px;
+      color: #a5b4fc;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      background: rgba(91, 124, 246, .10);
+      border-bottom: 1px solid rgba(91, 124, 246, .25);
+      flex-shrink: 0;
+    }
+
+    #articles-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 4px 8px;
+    }
+
+    #articles-list::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    #articles-list::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    .article-row {
+      display: grid;
+      grid-template-columns: 1fr 80px 80px 110px 90px;
+      padding: 8px 8px;
+      border-radius: 6px;
+      font-size: 14px;
+      align-items: center;
+      transition: background .1s;
+      gap: 4px;
+    }
+
+    .article-row:hover {
+      background: var(--card);
+    }
+
+    .article-row>* {
+      padding: 0 4px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .article-row .qty {
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .article-row .pu {
+      text-align: right;
+      color: var(--muted);
+    }
+
+    .article-row .tot {
+      text-align: right;
+      color: var(--green);
+      font-weight: 700;
+    }
+
+    .article-row .act {
+      display: flex;
+      gap: 4px;
+      justify-content: flex-end;
+      opacity: 0;
+    }
+
+    .article-row:hover .act {
+      opacity: 1;
+    }
+
+    .recap-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: rgba(91, 124, 246, .1);
+      border-top: 2px solid var(--border);
+      border-radius: 0 0 8px 8px;
+      font-size: 16px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .recap-row .total-label {
+      color: var(--muted);
+    }
+
+    .recap-row .total-val {
+      color: var(--green);
+      font-size: 16px;
+    }
+
+    .pane-total {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      background: rgba(91, 124, 246, .12);
+      border-top: 2px solid rgba(91, 124, 246, .3);
+      font-size: 14px;
+      font-weight: 700;
+      flex-shrink: 0;
+      color: var(--muted);
+    }
+
+    .pane-total .pane-total-val {
+      color: var(--green);
+      font-size: 16px;
+    }
+
+    /* ─── Empty states ─── */
+    .empty {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: 13px;
+      gap: 10px;
+      padding: 32px;
+      text-align: center;
+    }
+
+    .empty .icon {
+      font-size: 36px;
+    }
+
+    /* ─── Inline Edit Modal ─── */
+    #edit-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+    }
+
+    #edit-overlay.hidden {
+      display: none;
+    }
+
+    #edit-form {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      width: 380px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    #edit-form h2 {
+      font-size: 17px;
+    }
+
+    .form-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-row label {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    .form-row input {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 14px;
+      padding: 9px 12px;
+    }
+
+    .form-row input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    /* ─── Spinner ─── */
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+      display: inline-block;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Token Modal -->
+  <div id="token-overlay">
+    <div class="modal">
+      <h2>🔑 Configuration GitHub</h2>
+      <p>Entrez votre Personal Access Token GitHub pour accéder au fichier CSV.<br>Il sera stocké uniquement dans votre
+        navigateur (localStorage).</p>
+      <input type="password" id="token-input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" />
+      <p style="font-size:11px;color:var(--muted)">
+        Repo : <strong>kamelzouari11/Kmz_APK</strong><br>
+        Fichier : <strong>MySharedFolder/budget_renovation.csv</strong>
+      </p>
+      <button class="btn btn-primary" onclick="saveToken()">Confirmer &amp; charger les données</button>
+    </div>
+  </div>
+
+  <!-- Edit Modal -->
+  <div id="edit-overlay" class="hidden">
+    <div id="edit-form">
+      <h2 id="edit-title">Modifier</h2>
+      <div class="form-row" id="field-nom-row">
+        <label>Désignation</label>
+        <input id="field-nom" type="text" />
+      </div>
+      <div class="form-row" id="field-qte-row">
+        <label>Quantité</label>
+        <input id="field-qte" type="number" min="0" />
+      </div>
+      <div class="form-row" id="field-unite-row">
+        <label>Unité</label>
+        <input id="field-unite" type="text" placeholder="ml, m², u..." />
+      </div>
+      <div class="form-row" id="field-prix-row">
+        <label>Prix unitaire (DT)</label>
+        <input id="field-prix" type="number" min="0" />
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-ghost" onclick="closeEdit()">Annuler</button>
+        <button class="btn btn-primary" onclick="saveEdit()">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header>
+    <h1>⚒️ Budget Rénovation</h1>
+    <span id="status-msg">Chargement...</span>
+    <span id="local-status" style="font-size:11px;color:var(--green);margin-left:auto;margin-right:15px;display:none">✔
+      Synchronisé localement</span>
+    <button class="btn btn-ghost" onclick="showToken()">🔑 Token</button>
+    <button class="btn btn-ghost" id="btn-download" onclick="loadFromGitHub()"><span class="spinner" id="spin-dl"
+        style="display:none"></span>⬇️ Télécharger</button>
+    <button class="btn btn-success" id="btn-upload" onclick="uploadToGitHub()"><span class="spinner" id="spin-ul"
+        style="display:none"></span>⬆️ Sauvegarder</button>
+  </header>
+
+  <!-- Main 3-pane -->
+  <main>
+    <!-- Lots -->
+    <div class="pane" id="pane-lots">
+      <div class="pane-header">
+        Lots
+        <button class="add-btn" onclick="addLot()" title="Ajouter un Lot">+</button>
+      </div>
+      <div class="pane-list" id="lots-list"></div>
+      <div class="pane-total">
+        <span>Total général</span>
+        <span class="pane-total-val" id="lots-grand-total">0 DT</span>
+      </div>
+    </div>
+
+    <div class="resize-handle" id="rh-1"></div>
+
+    <!-- Sous-Lots -->
+    <div class="pane" id="pane-souslots">
+      <div class="pane-header">
+        Sous-Lots
+        <button class="add-btn" onclick="addSousLot()" title="Ajouter un Sous-Lot">+</button>
+      </div>
+      <div class="pane-list" id="souslots-list">
+        <div class="empty">
+          <div class="icon">←</div>Sélectionnez un Lot
+        </div>
+      </div>
+      <div class="pane-total">
+        <span id="sl-total-label">Total lot</span>
+        <span class="pane-total-val" id="sl-grand-total">—</span>
+      </div>
+    </div>
+
+    <div class="resize-handle" id="rh-2"></div>
+
+    <!-- Articles -->
+    <div class="pane" id="pane-articles">
+      <div id="articles-title">
+        Articles
+        <button class="btn btn-primary" style="font-size:12px;padding:4px 10px;" onclick="addArticle()">+
+          Article</button>
+      </div>
+      <div class="table-header">
+        <div>Désignation</div>
+        <div style="text-align:center">Qté</div>
+        <div style="text-align:center">Unité</div>
+        <div style="text-align:right">Prix U.</div>
+        <div style="text-align:right">Total</div>
+      </div>
+      <div id="articles-list">
+        <div class="empty">
+          <div class="icon">←</div>Sélectionnez un Sous-Lot
+        </div>
+      </div>
+      <div class="recap-row" id="recap-row" style="display:none">
+        <span class="total-label" id="recap-label">Total</span>
+        <span class="total-val" id="recap-val">0 DT</span>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // ─── Config ───────────────────────────────────────────
+    const OWNER = 'kamelzouari11';
+    const REPO = 'Kmz_APK';
+    const FILE_PATH = 'MySharedFolder/budget_renovation.csv';
+    const BRANCH = 'main';
+    const API_URL = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${FILE_PATH}?ref=${BRANCH}`;
+    const PUT_URL = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${FILE_PATH}`;
+    const LOCAL_KEY = 'kmz_budget_v2_data';
+    const TOKEN_KEY = 'gh_token';
+
+    // ─── State ────────────────────────────────────────────
+    let data = {};     // { lotName: { sousLotName: [ {nom, quantite, unite, prixUnitaire}, ... ] } }
+    let selLot = null;
+    let selSousLot = null;
+    let editCtx = null; // { type:'lot'|'sousLot'|'article', lotName, sousLotName, articleIdx }
+
+    // ─── Token ────────────────────────────────────────────
+    function getToken() { return localStorage.getItem(TOKEN_KEY) || ''; }
+    function saveToken() {
+      const t = document.getElementById('token-input').value.trim();
+      if (!t) return alert('Token vide !');
+      localStorage.setItem(TOKEN_KEY, t);
+      document.getElementById('token-overlay').classList.add('hidden');
+      loadFromGitHub();
+    }
+    function showToken() {
+      document.getElementById('token-input').value = getToken();
+      document.getElementById('token-overlay').classList.remove('hidden');
+    }
+
+    // ─── CSV Parsing ──────────────────────────────────────
+    function parseCsv(text) {
+      const result = {};
+      const lines = text.split('\n').filter(l => l.trim());
+      lines.shift(); // remove header
+      for (const line of lines) {
+        const parts = splitCsvLine(line);
+        const lot = clean(parts[0]);
+        const sousLot = clean(parts[1]);
+        const article = clean(parts[2]);
+        const qte = parseInt(parts[3]) || 0;
+        const unite = clean(parts[4]);
+        const prix = parseInt(parts[5]) || 0;
+        if (!lot) continue;
+        if (!result[lot]) result[lot] = {};
+        if (sousLot) {
+          if (!result[lot][sousLot]) result[lot][sousLot] = [];
+          if (article) result[lot][sousLot].push({ nom: article, quantite: qte, unite, prixUnitaire: prix });
+        }
+      }
+      return result;
+    }
+
+    function splitCsvLine(line) {
+      const result = []; let cur = ''; let inQ = false;
+      for (let i = 0; i < line.length; i++) {
+        if (line[i] === '"') { inQ = !inQ; continue; }
+        if (line[i] === ',' && !inQ) { result.push(cur); cur = ''; continue; }
+        cur += line[i];
+      }
+      result.push(cur);
+      return result;
+    }
+    function clean(s) { return (s || '').trim().replace(/^"|"$/g, ''); }
+
+    function toCsv(data) {
+      const lines = ['Lot,Sous-Lot,Article,Quantite,Unite,Prix_Unitaire'];
+      for (const lot of Object.keys(data)) {
+        const sls = data[lot];
+        if (Object.keys(sls).length === 0) { lines.push(`${esc(lot)},,,,,`); continue; }
+        for (const sl of Object.keys(sls)) {
+          const arts = sls[sl];
+          if (arts.length === 0) { lines.push(`${esc(lot)},${esc(sl)},,,,`); continue; }
+          for (const a of arts) {
+            lines.push(`${esc(lot)},${esc(sl)},${esc(a.nom)},${a.quantite},${esc(a.unite)},${a.prixUnitaire}`);
+          }
+        }
+      }
+      return lines.join('\n');
+    }
+    function esc(s) { return s.includes(',') || s.includes('"') ? `"${s.replace(/"/g, '""')}"` : s; }
+
+    // ─── UTF-8 safe Base64 ────────────────────────────────
+    function b64DecodeUTF8(b64) {
+      const binary = atob(b64.replace(/\n/g, ''));
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return new TextDecoder('utf-8').decode(bytes);
+    }
+    function b64EncodeUTF8(str) {
+      const bytes = new TextEncoder().encode(str);
+      let binary = '';
+      for (const b of bytes) binary += String.fromCharCode(b);
+      return btoa(binary);
+    }
+
+    // ─── GitHub API ───────────────────────────────────────
+    async function loadFromGitHub() {
+      if (document.getElementById('spin-dl').style.display === 'inline-block') return;
+      if (!confirm('Cela va écraser vos modifications locales non sauvegardées par les données de GitHub. Continuer ?')) return;
+
+      setStatus('⏳ Téléchargement...');
+      setSpin('dl', true);
+      try {
+        const resp = await fetch(API_URL, { headers: authHeaders() });
+        if (resp.status === 404) {
+          setStatus('ℹ️ Fichier inexistant sur GitHub');
+          data = {}; render(); return;
+        }
+        if (!resp.ok) throw new Error(`${resp.status} ${resp.statusText}`);
+        const json = await resp.json();
+        const content = b64DecodeUTF8(json.content);
+        data = parseCsv(content);
+        render(); // render will call saveLocal
+        setStatus('✅ Chargé depuis GitHub');
+      } catch (e) {
+        console.error(e); setStatus('❌ Erreur : ' + e.message);
+      } finally { setSpin('dl', false); }
+    }
+
+    async function uploadToGitHub() {
+      if (document.getElementById('spin-ul').style.display === 'inline-block') return;
+      const t = getToken();
+      if (!t) return showToken();
+
+      setStatus('⏳ Envoi vers GitHub...');
+      setSpin('ul', true);
+      try {
+        const csv = toCsv(data);
+        const b64 = b64EncodeUTF8(csv);
+
+        // check if exist to get SHA
+        let sha = null;
+        try {
+          const resp = await fetch(API_URL, { headers: authHeaders() });
+          if (resp.ok) {
+            const json = await resp.json();
+            sha = json.sha;
+          }
+        } catch (e) { }
+
+        const putResp = await fetch(PUT_URL, {
+          method: 'PUT',
+          headers: authHeaders(),
+          body: JSON.stringify({
+            message: 'Mise à jour budget (Web)',
+            content: b64,
+            sha: sha,
+            branch: BRANCH
+          })
+        });
+
+        if (!putResp.ok) throw new Error(`${putResp.status} ${putResp.statusText}`);
+        setStatus('✅ Sauvegardé sur GitHub !');
+      } catch (e) {
+        console.error(e); setStatus('❌ Erreur : ' + e.message);
+      } finally { setSpin('ul', false); }
+    }
+
+    // ─── Local Save ───────────────────────────────────────
+    function saveLocal() {
+      try {
+        localStorage.setItem(LOCAL_KEY, JSON.stringify(data));
+        const el = document.getElementById('local-status');
+        el.style.display = 'inline';
+        setTimeout(() => { if (el) el.style.opacity = '1'; }, 0);
+      } catch (e) { console.error('LocalSave failed', e); }
+    }
+
+    function loadLocal() {
+      try {
+        const saved = localStorage.getItem(LOCAL_KEY);
+        if (saved) {
+          data = JSON.parse(saved);
+          return true;
+        }
+      } catch (e) { console.error('LocalLoad failed', e); }
+      return false;
+    }
+
+    function authHeaders() {
+      return { Authorization: `token ${getToken()}`, Accept: 'application/vnd.github.v3+json' };
+    }
+
+    // ─── Render ───────────────────────────────────────────
+    function fmt(val) {
+      return (val || 0).toLocaleString('fr-FR') + ' DT';
+    }
+
+    function lotTotal(lotName) {
+      let t = 0;
+      for (const sl of Object.values(data[lotName] || {}))
+        for (const a of sl) t += a.quantite * a.prixUnitaire;
+      return t;
+    }
+    function slTotal(lotName, slName) {
+      let t = 0;
+      for (const a of (data[lotName]?.[slName] || [])) t += a.quantite * a.prixUnitaire;
+      return t;
+    }
+
+    function render() {
+      renderLots();
+      renderSousLots();
+      renderArticles();
+      saveLocal();
+    }
+
+    function renderLots() {
+      const el = document.getElementById('lots-list');
+      const grandTotalEl = document.getElementById('lots-grand-total');
+      const lots = Object.keys(data);
+      if (!lots.length) {
+        el.innerHTML = '<div class="empty"><div class="icon">📂</div>Aucun lot</div>';
+        grandTotalEl.textContent = '0 DT';
+        return;
+      }
+      el.innerHTML = lots.map(lot => `
+    <div class="list-item ${lot === selLot ? 'active' : ''}" onclick="selLot='${lot.replace(/'/g, "\\'")}';selSousLot=null;render()" ondblclick="editLot('${lot.replace(/'/g, "\\'")}')">
+      <span class="name" title="${lot}">${lot}</span>
+      <span class="total">${fmt(lotTotal(lot))}</span>
+      <div class="item-actions">
+        <button class="icon-btn" onclick="event.stopPropagation();editLot('${lot.replace(/'/g, "\\'")}')">✏️</button>
+        <button class="icon-btn del" onclick="event.stopPropagation();deleteLot('${lot.replace(/'/g, "\\'")}')">🗑</button>
+      </div>
+    </div>`).join('');
+      const grandTotal = lots.reduce((s, l) => s + lotTotal(l), 0);
+      grandTotalEl.textContent = fmt(grandTotal);
+    }
+
+    function renderSousLots() {
+      const el = document.getElementById('souslots-list');
+      const labelEl = document.getElementById('sl-total-label');
+      const valEl = document.getElementById('sl-grand-total');
+      if (!selLot) {
+        el.innerHTML = '<div class="empty"><div class="icon">←</div>Sélectionnez un Lot</div>';
+        labelEl.textContent = 'Total lot'; valEl.textContent = '—';
+        return;
+      }
+      const sls = Object.keys(data[selLot] || {});
+      if (!sls.length) {
+        el.innerHTML = '<div class="empty"><div class="icon">📁</div>Aucun sous-lot</div>';
+      } else {
+        el.innerHTML = sls.map(sl => `
+    <div class="list-item ${sl === selSousLot ? 'active' : ''}" onclick="selSousLot='${sl.replace(/'/g, "\\'")}';render()" ondblclick="editSousLot('${sl.replace(/'/g, "\\'")}')">
+      <span class="name" title="${sl}">${sl}</span>
+      <span class="total">${fmt(slTotal(selLot, sl))}</span>
+      <div class="item-actions">
+        <button class="icon-btn" onclick="event.stopPropagation();editSousLot('${sl.replace(/'/g, "\\'")}')">✏️</button>
+        <button class="icon-btn del" onclick="event.stopPropagation();deleteSousLot('${sl.replace(/'/g, "\\'")}')">🗑</button>
+      </div>
+    </div>`).join('');
+      }
+      labelEl.textContent = 'Total « ' + selLot + ' »';
+      valEl.textContent = fmt(lotTotal(selLot));
+    }
+
+    function renderArticles() {
+      const titleEl = document.getElementById('articles-title');
+      const listEl = document.getElementById('articles-list');
+      const recap = document.getElementById('recap-row');
+      titleEl.childNodes[0].textContent = selSousLot
+        ? `Articles — ${selSousLot} (${selLot})`
+        : 'Articles';
+
+      if (!selSousLot) {
+        listEl.innerHTML = '<div class="empty"><div class="icon">←</div>Sélectionnez un Sous-Lot</div>';
+        recap.style.display = 'none';
+        return;
+      }
+      const arts = data[selLot]?.[selSousLot] || [];
+      if (!arts.length) {
+        listEl.innerHTML = '<div class="empty"><div class="icon">📝</div>Aucun article</div>';
+        recap.style.display = 'none';
+        return;
+      }
+      let total = 0;
+      listEl.innerHTML = arts.map((a, i) => {
+        const t = a.quantite * a.prixUnitaire; total += t;
+        return `<div class="article-row" ondblclick="editArticle(${i})">
+      <div title="${a.nom}">${a.nom}</div>
+      <div class="qty">${a.quantite}</div>
+      <div class="qty">${a.unite}</div>
+      <div class="pu">${fmt(a.prixUnitaire)}</div>
+      <div class="tot">${fmt(t)}</div>
+      <div class="act">
+        <button class="icon-btn" onclick="editArticle(${i})">✏️</button>
+        <button class="icon-btn del" onclick="deleteArticle(${i})">🗑</button>
+      </div>
+    </div>`;
+      }).join('');
+
+      recap.style.display = 'flex';
+      document.getElementById('recap-label').textContent = `Total ${selSousLot}`;
+      document.getElementById('recap-val').textContent = fmt(total);
+    }
+
+    // ─── Add / Edit / Delete ──────────────────────────────
+    function addLot() {
+      openEdit({ type: 'lot', lotName: null }, 'Nouveau Lot', ['nom']);
+    }
+    function editLot(lotName) {
+      openEdit({ type: 'lot', lotName }, 'Renommer Lot', ['nom'], { nom: lotName });
+    }
+    function deleteLot(lotName) {
+      if (!confirm(`Supprimer le lot "${lotName}" et tous ses sous-lots ?`)) return;
+      delete data[lotName];
+      if (selLot === lotName) { selLot = null; selSousLot = null; }
+      render();
+    }
+
+    function addSousLot() {
+      if (!selLot) return alert('Sélectionnez un Lot d\'abord');
+      openEdit({ type: 'sousLot', lotName: selLot, slName: null }, 'Nouveau Sous-Lot', ['nom']);
+    }
+    function editSousLot(slName) {
+      openEdit({ type: 'sousLot', lotName: selLot, slName }, 'Renommer Sous-Lot', ['nom'], { nom: slName });
+    }
+    function deleteSousLot(slName) {
+      if (!confirm(`Supprimer "${slName}" et tous ses articles ?`)) return;
+      delete data[selLot][slName];
+      if (selSousLot === slName) selSousLot = null;
+      render();
+    }
+
+    function addArticle() {
+      if (!selSousLot) return alert('Sélectionnez un Sous-Lot d\'abord');
+      openEdit({ type: 'article', lotName: selLot, slName: selSousLot, idx: -1 },
+        'Nouvel Article', ['nom', 'qte', 'unite', 'prix']);
+    }
+    function editArticle(idx) {
+      const a = data[selLot][selSousLot][idx];
+      openEdit({ type: 'article', lotName: selLot, slName: selSousLot, idx },
+        'Modifier Article', ['nom', 'qte', 'unite', 'prix'],
+        { nom: a.nom, qte: a.quantite, unite: a.unite, prix: a.prixUnitaire });
+    }
+    function deleteArticle(idx) {
+      if (!confirm('Supprimer cet article ?')) return;
+      data[selLot][selSousLot].splice(idx, 1);
+      render();
+    }
+
+    // ─── Edit Form ────────────────────────────────────────
+    function openEdit(ctx, title, fields, vals = {}) {
+      editCtx = ctx;
+      document.getElementById('edit-title').textContent = title;
+      ['nom', 'qte', 'unite', 'prix'].forEach(f => {
+        const row = document.getElementById(`field-${f}-row`);
+        row.style.display = fields.includes(f) ? 'flex' : 'none';
+      });
+      document.getElementById('field-nom').value = vals.nom ?? '';
+      document.getElementById('field-qte').value = vals.qte ?? 1;
+      document.getElementById('field-unite').value = vals.unite ?? '';
+      document.getElementById('field-prix').value = vals.prix ?? 0;
+      document.getElementById('edit-overlay').classList.remove('hidden');
+      setTimeout(() => document.getElementById('field-nom').focus(), 50);
+    }
+    function closeEdit() {
+      editCtx = null;
+      document.getElementById('edit-overlay').classList.add('hidden');
+    }
+    function saveEdit() {
+      if (!editCtx) return;
+      const nom = document.getElementById('field-nom').value.trim();
+      const qte = parseInt(document.getElementById('field-qte').value) || 0;
+      const unite = document.getElementById('field-unite').value.trim();
+      const prix = parseInt(document.getElementById('field-prix').value) || 0;
+
+      if (editCtx.type === 'lot') {
+        if (!nom) return alert('Nom requis');
+        if (editCtx.lotName) {
+          // rename: preserve keys order
+          const newData = {};
+          for (const k of Object.keys(data)) newData[k === editCtx.lotName ? nom : k] = data[k];
+          data = newData;
+          if (selLot === editCtx.lotName) selLot = nom;
+        } else {
+          data[nom] = {};
+          selLot = nom; selSousLot = null;
+        }
+      } else if (editCtx.type === 'sousLot') {
+        if (!nom) return alert('Nom requis');
+        const lot = data[editCtx.lotName];
+        if (editCtx.slName) {
+          const newLot = {};
+          for (const k of Object.keys(lot)) newLot[k === editCtx.slName ? nom : k] = lot[k];
+          data[editCtx.lotName] = newLot;
+          if (selSousLot === editCtx.slName) selSousLot = nom;
+        } else {
+          lot[nom] = [];
+          selSousLot = nom;
+        }
+      } else if (editCtx.type === 'article') {
+        if (!nom) return alert('Nom requis');
+        const arts = data[editCtx.lotName][editCtx.slName];
+        const article = { nom, quantite: qte, unite, prixUnitaire: prix };
+        if (editCtx.idx === -1) arts.push(article);
+        else arts[editCtx.idx] = article;
+      }
+      closeEdit();
+      render();
+    }
+
+    // ─── Helpers ──────────────────────────────────────────
+    function setStatus(msg) { document.getElementById('status-msg').textContent = msg; }
+    function setSpin(id, on) {
+      document.getElementById(`spin-${id}`).style.display = on ? 'inline-block' : 'none';
+    }
+
+    // Keyboard shortcut: Enter in edit modal
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeEdit();
+      if (e.key === 'Enter' && editCtx && e.target.tagName === 'INPUT') saveEdit();
+    });
+
+    // ─── Resizable Panes ──────────────────────────────────
+    (function () {
+      function makeResizable(handle, getPane, setWidth) {
+        let startX, startW;
+        handle.addEventListener('mousedown', e => {
+          startX = e.clientX;
+          startW = getPane().getBoundingClientRect().width;
+          handle.classList.add('dragging');
+          document.body.style.cursor = 'col-resize';
+          document.body.style.userSelect = 'none';
+
+          function onMove(e) {
+            const delta = e.clientX - startX;
+            const newW = Math.max(120, Math.min(500, startW + delta));
+            setWidth(newW);
+          }
+          function onUp() {
+            handle.classList.remove('dragging');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+          }
+          document.addEventListener('mousemove', onMove);
+          document.addEventListener('mouseup', onUp);
+          e.preventDefault();
+        });
+      }
+
+      const lots = document.getElementById('pane-lots');
+      const sl = document.getElementById('pane-souslots');
+      makeResizable(
+        document.getElementById('rh-1'),
+        () => lots,
+        w => { lots.style.width = w + 'px'; }
+      );
+      makeResizable(
+        document.getElementById('rh-2'),
+        () => sl,
+        w => { sl.style.width = w + 'px'; }
+      );
+    })();
+
+    // ─── Init ─────────────────────────────────────────────
+    window.addEventListener('load', () => {
+      // Pre-fill token input if it exists
+      const token = getToken();
+      if (token) {
+        document.getElementById('token-input').value = token;
+      }
+
+      const tokenExists = !!token;
+      if (!tokenExists) {
+        document.getElementById('token-overlay').classList.remove('hidden');
+        setStatus('Configurez votre token GitHub');
+      }
+
+      // Check Local Progress First
+      if (loadLocal()) {
+        setStatus('📁 Données locales chargées');
+        render();
+      } else if (tokenExists) {
+        loadFromGitHub();
+      } else {
+        data = {};
+        render();
+      }
+    });
+
+    function authHeaders() {
+      return { Authorization: `token ${getToken()}`, Accept: 'application/vnd.github.v3+json' };
+    }
+  </script>
+</body>
+
+</html>

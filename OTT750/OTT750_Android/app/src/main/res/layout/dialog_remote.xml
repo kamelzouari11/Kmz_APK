@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:gravity="center_horizontal"
+    android:background="#2D2D44">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Télécommande"
+        android:textColor="#FFFFFF"
+        android:textSize="18sp"
+        android:layout_marginBottom="16dp"/>
+
+    <GridLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:columnCount="3"
+        android:rowCount="3">
+
+        <!-- Row 0: Up -->
+        <Space android:layout_width="64dp" android:layout_height="64dp" />
+        <Button
+            android:id="@+id/btnUp"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:text="▲"
+            android:backgroundTint="#4CAF50"
+            android:textSize="24sp"
+            android:layout_margin="4dp"/>
+        <Space android:layout_width="64dp" android:layout_height="64dp" />
+
+        <!-- Row 1: Left, OK, Right -->
+        <Button
+            android:id="@+id/btnLeft"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:text="CH-"
+            android:backgroundTint="#4CAF50"
+            android:textSize="18sp"
+            android:layout_margin="4dp"/>
+        <Button
+            android:id="@+id/btnOk"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:text="OK"
+            android:backgroundTint="#2196F3"
+            android:textStyle="bold"
+            android:layout_margin="4dp"/>
+        <Button
+            android:id="@+id/btnRight"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:text="CH+"
+            android:backgroundTint="#4CAF50"
+            android:textSize="18sp"
+            android:layout_margin="4dp"/>
+
+        <!-- Row 2: Down -->
+        <Space android:layout_width="64dp" android:layout_height="64dp" />
+        <Button
+            android:id="@+id/btnDown"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:text="▼"
+            android:backgroundTint="#4CAF50"
+            android:textSize="24sp"
+            android:layout_margin="4dp"/>
+        <Space android:layout_width="64dp" android:layout_height="64dp" />
+    </GridLayout>
+    
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Gauche/Droite = CH-/CH+"
+        android:textColor="#AAAAAA"
+        android:textSize="12sp"
+        android:layout_marginTop="8dp"/>
+
+</LinearLayout>

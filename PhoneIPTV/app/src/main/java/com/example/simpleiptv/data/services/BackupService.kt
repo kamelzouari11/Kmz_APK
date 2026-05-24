@@ -1,0 +1,138 @@
+package com.example.simpleiptv.data.services
+
+import com.example.simpleiptv.data.local.IptvDao
+import com.example.simpleiptv.data.local.entities.ChannelFavoriteCrossRef
+import com.example.simpleiptv.data.local.entities.FavoriteListEntity
+import com.example.simpleiptv.data.model.*
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import kotlinx.coroutines.flow.first
+
+class BackupService(private val dao: IptvDao) {
+    private val moshi = Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
+
+    suspend fun exportFavoritesToJson(profileId: Int): String {
+        val lists =
+                (dao.getAllFavoriteLists(profileId, "LIVE").first() +
+                        dao.getAllFavoriteLists(profileId, "VOD").first())
+        val backupLists =
+                lists.map { list ->
+                    val channels =
+                            dao.getChannelsByFavoriteList(list.id, profileId, list.type).first()
+                    BackupFavoriteList(name = list.name, type = list.type, channels = channels)
+                }
+        val backup = IptvBackup(favoriteLists = backupLists)
+        return moshi.adapter(IptvBackup::class.java).toJson(backup)
+    }
+
+    suspend fun importFavoritesFromJson(profileId: Int, json: String) {
+        val backup = moshi.adapter(IptvBackup::class.java).fromJson(json) ?: return
+        importBackupData(profileId, backup.favoriteLists)
+    }
+
+    suspend fun exportDatabaseToJson(): String {
+        val profiles = dao.getAllProfiles().first()
+        val profileBackups =
+                profiles.map { profile ->
+                    val lists =
+                            (dao.getAllFavoriteLists(profile.id, "LIVE").first() +
+                                    dao.getAllFavoriteLists(profile.id, "VOD").first())
+                    val backupLists =
+                            lists.map { list ->
+                                val channels =
+                                        dao.getChannelsByFavoriteList(
+                                                        list.id,
+                                                        profile.id,
+                                                        list.type
+                                                )
+                                                .first()
+                                BackupFavoriteList(
+                                        name = list.name,
+                                        type = list.type,
+                                        channels = channels
+                                )
+                            }
+                    ProfileBackup(
+                            profile = profile.copy(id = 0, isSelected = false),
+                            favoriteLists = backupLists
+                    )
+                }
+        val searchHistoryEntries = dao.getSearchHistory().map { it.query }
+        val backup = FullDatabaseBackup(profileBackups = profileBackups, searchHistory = searchHistoryEntries)
+        return moshi.adapter(FullDatabaseBackup::class.java).toJson(backup)
+    }
+
+    suspend fun importDatabaseFromJson(json: String) {
+        val backup = moshi.adapter(FullDatabaseBackup::class.java).fromJson(json) ?: return
+        
+        // Clear existing profiles and their associated data
+        val existingProfiles = dao.getAllProfiles().first()
+        existingProfiles.forEach { profile ->
+            listOf("LIVE", "VOD").forEach { type ->
+                dao.clearCategories(profile.id, type)
+                dao.clearChannels(profile.id, type)
+                dao.clearChannelCategoryLinks(profile.id, type)
+                dao.clearFavoriteLists(profile.id, type)
+                dao.clearChannelFavorites(profile.id, type)
+                dao.clearRecents(profile.id, type)
+            }
+            dao.deleteProfile(profile)
+        }
+
+        backup.profileBackups.forEach { profileBackup ->
+            dao.insertProfile(profileBackup.profile)
+            val allProfiles = dao.getAllProfiles().first()
+            val newProfile =
+                    allProfiles.find {
+                        it.profileName == profileBackup.profile.profileName &&
+                                it.url == profileBackup.profile.url
+                    }
+            if (newProfile != null) {
+                importBackupData(newProfile.id, profileBackup.favoriteLists)
+            }
+        }
+
+        // Restaurer l'historique de recherche
+        dao.clearSearchHistory()
+        backup.searchHistory.forEach { query ->
+            dao.insertSearchHistory(
+                com.example.simpleiptv.data.local.entities.SearchHistoryEntity(
+                    query = query,
+                    timestamp = System.currentTimeMillis()
+                )
+            )
+        }
+    }
+
+    private suspend fun importBackupData(profileId: Int, favoriteLists: List<BackupFavoriteList>) {
+        favoriteLists.forEach { backupList ->
+            val mediaType = backupList.type // Use the type from backup
+            dao.insertFavoriteList(
+                    FavoriteListEntity(
+                            name = backupList.name,
+                            profileId = profileId,
+                            type = mediaType
+                    )
+            )
+            val allLists = dao.getAllFavoriteLists(profileId, mediaType).first()
+            val targetList = allLists.find { it.name == backupList.name && it.type == mediaType }
+
+            if (targetList != null) {
+                backupList.channels.forEach { channel ->
+                    dao.insertChannel(channel.copy(profileId = profileId))
+                }
+                backupList.channels.forEachIndexed { index, channel ->
+                    dao.addChannelToFavorite(
+                            ChannelFavoriteCrossRef(
+                                    channel.stream_id,
+                                    targetList.id,
+                                    profileId,
+                                    mediaType,
+                                    index
+                            )
+                    )
+                }
+            }
+        }
+    }
+}

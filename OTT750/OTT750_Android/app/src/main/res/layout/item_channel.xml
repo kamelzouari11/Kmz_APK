@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:padding="8dp"
+    android:background="?android:attr/selectableItemBackground">
+
+    <!-- Checkbox pour sélection -->
+    <CheckBox
+        android:id="@+id/cbSelect"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:minWidth="0dp"
+        android:minHeight="0dp"
+        android:scaleX="0.9"
+        android:scaleY="0.9" />
+
+    <!-- Container pour nom et satellite -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:layout_marginStart="4dp">
+
+        <!-- Nom de la chaîne -->
+        <TextView
+            android:id="@+id/tvChannelName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Nom de la chaîne"
+            android:textColor="@color/channel_name_text"
+            android:textSize="14sp"
+            android:ellipsize="end"
+            android:maxLines="1" />
+
+        <!-- Satellite -->
+        <TextView
+            android:id="@+id/tvSatellite"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="satellite"
+            android:textColor="#888888"
+            android:textSize="10sp"
+            android:visibility="visible" />
+    </LinearLayout>
+
+    <!-- Favoris -->
+    <TextView
+        android:id="@+id/tvFavs"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="★"
+        android:textColor="@color/fav_text"
+        android:textSize="11sp"
+        android:layout_marginEnd="8dp" />
+
+    <!-- Icône Zap -->
+    <ImageView
+        android:id="@+id/ivZap"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:src="@drawable/ic_zap_play"
+        android:contentDescription="Zap"
+        android:visibility="gone" />
+
+</LinearLayout>

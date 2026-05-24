@@ -1,0 +1,41 @@
+# Fichiers de sauvegarde Cloud - Les JSON sont gérés par les apps via GitHub API
+# Le dossier MySharedFolder/ DOIT exister sur GitHub pour que l'API puisse écrire dedans
+# On ignore uniquement les fichiers JSON locaux (qui seront écrasés par l'API)
+MySharedFolder/*.json
+
+# Sécurité - JAMAIS commiter ces fichiers
+github_token.txt
+*token*.txt
+*secret*.txt
+**/local.properties
+local.properties
+
+# Android / Gradle
+**/.gradle/
+build/
+**/build/
+captures/
+**/.externalNativeBuild/
+**/.cxx/
+
+# IDE (Android Studio / IntelliJ)
+**/.idea/
+*.iml
+*.iws
+*.ipr
+.idea/caches/
+.idea/libraries/
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+
+# Systèmes
+.DS_Store
+Thumbs.db
+
+.idea/
+*.iml
+__pycache__/
+venv/
+.DS_Store

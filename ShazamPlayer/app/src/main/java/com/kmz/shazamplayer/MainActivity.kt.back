@@ -1,0 +1,1458 @@
+package com.kmz.shazamplayer
+
+// import com.spotify.sdk.android.auth.AuthorizationClient
+// import com.spotify.sdk.android.auth.AuthorizationResponse
+import android.app.Activity
+import android.net.Uri
+import android.os.Bundle
+import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.OptIn
+import androidx.compose.animation.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.Timer
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.DialogProperties
+import androidx.media3.common.ForwardingPlayer
+import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
+import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.MediaSession
+import coil.compose.AsyncImage
+import com.kmz.shazamplayer.model.Track
+import com.kmz.shazamplayer.network.SoundCloudManager
+import com.kmz.shazamplayer.network.SoundCloudResult
+import com.kmz.shazamplayer.network.SpotifyManager
+import com.kmz.shazamplayer.util.CsvParser
+import kotlin.random.Random
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
+// Navigation Levels
+enum class NavLevel {
+    HOME,
+    PLAYLIST,
+    PLAYER
+}
+
+class MainActivity : ComponentActivity() {
+    private var exoPlayer: ExoPlayer? = null
+    private var mediaSession: MediaSession? = null
+    private val clientId = "vIiNGKzDDokJvMAQTU0hxe3QGK3OklKu"
+    private val spotifyClientId = "YOUR_SPOTIFY_ID" // USER TODO: Replace with real ID
+    private val spotifyRedirectUri = "shazamplayer://callback" // USER TODO: Replace with real URI
+
+    private var spotifyManager: SpotifyManager? = null
+
+    // Callback pour le MediaSession (Boutons Car/MBUX)
+    var onNextAction: (() -> Unit)? = null
+    var onPreviousAction: (() -> Unit)? = null
+
+    @OptIn(UnstableApi::class)
+    inner class CustomForwardingPlayer(player: Player) : ForwardingPlayer(player) {
+        override fun getAvailableCommands(): Player.Commands {
+            return super.getAvailableCommands()
+                    .buildUpon()
+                    .add(COMMAND_SEEK_TO_NEXT)
+                    .add(COMMAND_SEEK_TO_PREVIOUS)
+                    .add(COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
+                    .add(COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
+                    .build()
+        }
+
+        override fun isCommandAvailable(command: Int): Boolean {
+            return when (command) {
+                COMMAND_SEEK_TO_NEXT,
+                COMMAND_SEEK_TO_PREVIOUS,
+                COMMAND_SEEK_TO_NEXT_MEDIA_ITEM,
+                COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM -> true
+                else -> super.isCommandAvailable(command)
+            }
+        }
+
+        override fun seekToNext() {
+            onNextAction?.invoke() ?: super.seekToNext()
+        }
+
+        override fun seekToPrevious() {
+            onPreviousAction?.invoke() ?: super.seekToPrevious()
+        }
+
+        override fun seekToNextMediaItem() {
+            onNextAction?.invoke() ?: super.seekToNextMediaItem()
+        }
+
+        override fun seekToPreviousMediaItem() {
+            onPreviousAction?.invoke() ?: super.seekToPreviousMediaItem()
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        exoPlayer = ExoPlayer.Builder(this).setHandleAudioBecomingNoisy(true).build()
+
+        val forwardingPlayer = CustomForwardingPlayer(exoPlayer!!)
+        mediaSession = MediaSession.Builder(this, forwardingPlayer).build()
+
+        spotifyManager = SpotifyManager(this, spotifyClientId, spotifyRedirectUri)
+
+        setContent {
+            ShazamPlayerTheme {
+                MainScreen(
+                        player = exoPlayer!!,
+                        clientId = clientId,
+                        spotifyManager = spotifyManager!!,
+                        onExit = { shutdown() }
+                )
+            }
+        }
+    }
+
+    private fun shutdown() {
+        exoPlayer?.stop()
+        exoPlayer?.release()
+        exoPlayer = null
+        mediaSession?.release()
+        mediaSession = null
+        spotifyManager?.disconnect()
+        spotifyManager = null
+        finishAffinity()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        exoPlayer?.release()
+        mediaSession?.release()
+        exoPlayer = null
+        mediaSession = null
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MainScreen(
+        player: ExoPlayer,
+        clientId: String,
+        spotifyManager: SpotifyManager,
+        onExit: () -> Unit
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val prefs = remember {
+        context.getSharedPreferences("ShazamPrefs", ComponentActivity.MODE_PRIVATE)
+    }
+
+    // Navigation State
+    var currentLevel by remember { mutableStateOf(NavLevel.HOME) }
+
+    // Data State
+    var shazamTracks by remember { mutableStateOf(emptyList<Track>()) }
+    var filteredTracks by remember { mutableStateOf(emptyList<Track>()) }
+
+    // Discovery State
+    var discoveryTracks by remember { mutableStateOf(emptyList<Track>()) }
+    var isDiscoveryMode by remember { mutableStateOf(false) }
+
+    // Player State
+    var currentTrackIndexInFiltered by remember { mutableIntStateOf(-1) }
+    var alternateStreams by remember { mutableStateOf(emptyList<SoundCloudResult>()) }
+    var currentStreamIndex by remember { mutableIntStateOf(0) }
+    var isActuallyPlaying by remember { mutableStateOf(false) }
+    var isShuffle by remember { mutableStateOf(false) }
+    var isRepeat by remember { mutableStateOf(false) }
+    var isUsingSpotify by remember { mutableStateOf(false) }
+
+    // Filter State
+    var selectedYear by remember { mutableStateOf("Toutes") }
+    var selectedMonth by remember { mutableStateOf("Tous") }
+    var artistFilter by remember { mutableStateOf("") }
+    var titleFilter by remember { mutableStateOf("") }
+
+    // Progress State
+    var currentPosition by remember { mutableLongStateOf(0L) }
+    var duration by remember { mutableLongStateOf(0L) }
+
+    // Sleep Timer State
+    var sleepTimerMinutes by remember { mutableIntStateOf(0) }
+    var sleepTimerRemainingSeconds by remember { mutableIntStateOf(0) }
+
+    // Persistent Filter Inputs (to not lose them on back)
+    var magicArtistInput by remember { mutableStateOf("") }
+    var shazamArtistInput by remember { mutableStateOf("") }
+    var shazamTitleInput by remember { mutableStateOf("") }
+
+    // Artist Radio State
+    var showPlaylistSelection by remember { mutableStateOf(false) }
+    var artistPlaylists by remember {
+        mutableStateOf<List<com.kmz.shazamplayer.network.SoundCloudPlaylist>>(emptyList())
+    }
+    var isSearchingPlaylists by remember { mutableStateOf(false) }
+    var discoveryCreator by remember { mutableStateOf<String?>(null) }
+    var discoveryCreatorId by remember { mutableLongStateOf(0L) }
+
+    val spotifyLauncher =
+            rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.StartActivityForResult()
+            ) { result ->
+                // Spotify Auth désactivé car SDK non trouvé
+                /*
+                val response = AuthorizationClient.getResponse(result.resultCode, result.data)
+                spotifyManager.onAuthenticationResponse(response)
+                if (response.type == AuthorizationResponse.Type.TOKEN) {
+                    spotifyManager.connect({}, {})
+                }
+                */
+            }
+
+    val soundCloudManager = remember { SoundCloudManager(clientId) }
+    val currentTrack =
+            if (currentTrackIndexInFiltered in filteredTracks.indices)
+                    filteredTracks[currentTrackIndexInFiltered]
+            else null
+
+    // Load persisted CSV on startup
+    LaunchedEffect(Unit) {
+        val savedCsv = prefs.getString("csv_data", null)
+        if (savedCsv != null) {
+            shazamTracks = CsvParser.parse(savedCsv.byteInputStream())
+            filteredTracks = shazamTracks
+        }
+    }
+
+    // Navigation back handling
+    BackHandler {
+        when (currentLevel) {
+            NavLevel.PLAYER -> currentLevel = NavLevel.PLAYLIST
+            NavLevel.PLAYLIST -> currentLevel = NavLevel.HOME
+            NavLevel.HOME -> {
+                // On laisse le système gérer pour mettre en arrière-plan
+            }
+        }
+    }
+
+    // Spotify Progress Subscription
+    LaunchedEffect(isUsingSpotify, spotifyManager) {
+        if (isUsingSpotify) {
+            spotifyManager.subscribeToPlayerState { _, pos, dur, playing ->
+                currentPosition = pos
+                duration = dur
+                isActuallyPlaying = playing
+            }
+        }
+    }
+
+    // Progress update loop (for ExoPlayer)
+    LaunchedEffect(isActuallyPlaying, isUsingSpotify) {
+        while (isActuallyPlaying && !isUsingSpotify) {
+            currentPosition = player.currentPosition
+            duration = player.duration.coerceAtLeast(0L)
+            delay(1000)
+        }
+    }
+
+    // Sleep Timer Logic
+    LaunchedEffect(sleepTimerMinutes) {
+        if (sleepTimerMinutes > 0) {
+            sleepTimerRemainingSeconds = sleepTimerMinutes * 60
+            while (sleepTimerRemainingSeconds > 0) {
+                delay(1000)
+                sleepTimerRemainingSeconds--
+            }
+            // Shutting down when timer ends
+            onExit()
+        }
+    }
+
+    fun applyFilters() {
+        val monthMap =
+                mapOf(
+                        "Janvier" to "01",
+                        "Février" to "02",
+                        "Mars" to "03",
+                        "Avril" to "04",
+                        "Mai" to "05",
+                        "Juin" to "06",
+                        "Juillet" to "07",
+                        "Août" to "08",
+                        "Septembre" to "09",
+                        "Octobre" to "10",
+                        "Novembre" to "11",
+                        "Décembre" to "12"
+                )
+        val monthSearch = monthMap[selectedMonth] ?: ""
+
+        val newFiltered =
+                shazamTracks.filter { track ->
+                    val matchesYear =
+                            selectedYear == "Toutes" || track.tagTime.contains(selectedYear)
+                    val matchesMonth =
+                            selectedMonth == "Tous" || track.tagTime.contains("-$monthSearch-")
+                    val matchesArtist =
+                            artistFilter.isEmpty() ||
+                                    track.artist.contains(artistFilter, ignoreCase = true)
+                    val matchesTitle =
+                            titleFilter.isEmpty() ||
+                                    track.title.contains(titleFilter, ignoreCase = true)
+                    matchesYear && matchesMonth && matchesArtist && matchesTitle
+                }
+
+        filteredTracks = newFiltered
+        isDiscoveryMode = false // On repasse en mode librairie quand on applique des filtres
+        currentLevel = NavLevel.PLAYLIST
+    }
+
+    fun playTrack(index: Int, streamIdx: Int = 0) {
+        if (filteredTracks.isEmpty() || index !in filteredTracks.indices) return
+
+        currentTrackIndexInFiltered = index
+        val track = filteredTracks[index]
+
+        scope.launch {
+            // 1. Tenter Spotify en premier (plus fiable)
+            if (spotifyManager.isConnected()) {
+                val spotifyResult = spotifyManager.searchTrack(track.artist, track.title)
+                if (spotifyResult != null) {
+                    player.pause() // Arrêter ExoPlayer si Spotify prend le relais
+                    isUsingSpotify = true
+                    spotifyManager.play(spotifyResult.uri)
+
+                    // Priorité: Cover Spotify > Cover Deezer
+                    spotifyResult.artworkUrl?.let { track.artworkUrl = it }
+
+                    // Enrichissement métadonnées
+                    val officialMeta =
+                            soundCloudManager.getOfficialMetadata(track.artist, track.title)
+                    if (officialMeta != null) {
+                        track.officialDurationMs = officialMeta.durationMs
+                        track.officialAlbum = officialMeta.album
+                        track.officialCoverHD = officialMeta.coverUrlHD
+                        track.artworkUrl = officialMeta.coverUrlHD
+                    }
+                    return@launch
+                }
+            }
+
+            // 2. Fallback sur SoundCloud (original)
+            val results = soundCloudManager.searchTracks(track.artist, track.title)
+
+            if (results.isNotEmpty()) {
+                alternateStreams = results
+                currentStreamIndex = streamIdx % results.size
+                val selected = results[currentStreamIndex]
+
+                // Récupérer les métadonnées officielles pour enrichir le Track
+                val officialMeta = soundCloudManager.getOfficialMetadata(track.artist, track.title)
+                if (officialMeta != null) {
+                    track.officialDurationMs = officialMeta.durationMs
+                    track.officialAlbum = officialMeta.album
+                    track.officialCoverHD = officialMeta.coverUrlHD
+                    track.metadataSource = officialMeta.source
+                }
+
+                track.streamUrl = selected.streamUrl
+                isUsingSpotify = false
+                // Priorité: Cover officielle HD > Cover SoundCloud
+                track.artworkUrl = officialMeta?.coverUrlHD ?: selected.artworkUrl
+
+                val mediaMetadata =
+                        MediaMetadata.Builder()
+                                .setTitle(track.title)
+                                .setArtist(track.artist)
+                                .setArtworkUri(track.artworkUrl?.let { Uri.parse(it) })
+                                .build()
+
+                val mediaItem =
+                        MediaItem.Builder()
+                                .setUri(Uri.parse(selected.streamUrl))
+                                .setMediaMetadata(mediaMetadata)
+                                .build()
+
+                player.setMediaItem(mediaItem)
+                player.prepare()
+                player.play()
+            } else {
+                Toast.makeText(context, "Non trouvé: ${track.title}", Toast.LENGTH_SHORT).show()
+                if (!isRepeat) playTrack(index + 1)
+            }
+        }
+    }
+
+    fun playNext() {
+        if (isRepeat) {
+            player.seekTo(0)
+            player.play()
+        } else if (isShuffle && filteredTracks.isNotEmpty()) {
+            playTrack(Random.nextInt(filteredTracks.size))
+        } else {
+            val next = currentTrackIndexInFiltered + 1
+            if (next < filteredTracks.size) playTrack(next) else playTrack(0)
+        }
+    }
+
+    fun playPrevious() {
+        if (isRepeat) {
+            player.seekTo(0)
+            player.play()
+        } else {
+            val prev = currentTrackIndexInFiltered - 1
+            if (prev >= 0) playTrack(prev)
+            else if (filteredTracks.isNotEmpty()) playTrack(filteredTracks.size - 1)
+        }
+    }
+
+    // Liaison avec l'Activity pour MBUX
+    LaunchedEffect(filteredTracks, currentTrackIndexInFiltered, isShuffle, isRepeat) {
+        val activity = context as? MainActivity
+        activity?.onNextAction = { playNext() }
+        activity?.onPreviousAction = { playPrevious() }
+    }
+
+    fun openArtistRadio(artist: String) {
+        // Search for Top 5 Playlists - NO TOGGLE BACK
+        isSearchingPlaylists = true
+        scope.launch {
+            val playlists = soundCloudManager.searchArtistPlaylists(artist)
+            artistPlaylists = playlists
+            isSearchingPlaylists = false
+            if (playlists.isNotEmpty()) {
+                showPlaylistSelection = true
+            } else {
+                Toast.makeText(context, "Aucune playlist trouvée pour $artist", Toast.LENGTH_SHORT)
+                        .show()
+            }
+        }
+    }
+
+    fun loadPlaylist(playlist: com.kmz.shazamplayer.network.SoundCloudPlaylist) {
+        scope.launch {
+            val tracks = soundCloudManager.getPlaylistTracks(playlist.id, playlist.secretToken)
+            if (tracks.isNotEmpty()) {
+                discoveryTracks = tracks
+                filteredTracks = tracks
+                isDiscoveryMode = true
+                discoveryCreator = playlist.creatorName
+                discoveryCreatorId = playlist.userId
+
+                // Enrichissement et Fallback artwork
+                tracks.forEach { t ->
+                    // Si pas de pochette ou titre contient un séparateur, tenter d'extraire les
+                    // vraies infos
+                    val separators = listOf(" - ", " – ", " — ", " | ", " : ")
+                    var foundSeparator = separators.find { t.title.contains(it) }
+
+                    if (foundSeparator != null) {
+                        val parts = t.title.split(foundSeparator).map { it.trim() }
+                        if (parts.size >= 2) {
+                            val candidate1_Artist = parts[0]
+                            val candidate1_Title = parts[1]
+                            val candidate2_Artist = parts[1]
+                            val candidate2_Title = parts[0]
+
+                            scope.launch {
+                                // Tenter première combinaison (Artiste - Titre)
+                                var meta =
+                                        soundCloudManager.getOfficialMetadata(
+                                                candidate1_Artist,
+                                                candidate1_Title
+                                        )
+                                if (meta == null) {
+                                    // Tenter inversion (Titre - Artiste)
+                                    meta =
+                                            soundCloudManager.getOfficialMetadata(
+                                                    candidate2_Artist,
+                                                    candidate2_Title
+                                            )
+                                }
+
+                                if (meta != null) {
+                                    // On a trouvé mieux !
+                                    t.artworkUrl = meta.coverUrlHD ?: meta.coverUrl ?: t.artworkUrl
+                                    t.artist = meta.artist
+                                    t.title = meta.title
+                                    t.officialAlbum = meta.album
+                                    t.officialCoverHD = meta.coverUrlHD
+                                }
+                            }
+                        }
+                    }
+
+                    // Fallback ultime sur la pochette de la playlist
+                    if (t.artworkUrl.isNullOrBlank()) {
+                        t.artworkUrl = playlist.artworkUrl
+                    }
+                }
+
+                currentTrackIndexInFiltered = 0
+                playTrack(0)
+                currentLevel = NavLevel.PLAYER
+                showPlaylistSelection = false
+            } else {
+                Toast.makeText(context, "Playlist vide ou inaccessible", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    fun openUserRadio(userId: Long, userName: String) {
+        isSearchingPlaylists = true
+        scope.launch {
+            val playlists = soundCloudManager.searchUserPlaylists(userId)
+            artistPlaylists = playlists
+            isSearchingPlaylists = false
+            if (playlists.isNotEmpty()) {
+                showPlaylistSelection = true
+            } else {
+                Toast.makeText(context, "Aucune autre playlist pour $userName", Toast.LENGTH_SHORT)
+                        .show()
+            }
+        }
+    }
+
+    DisposableEffect(player) {
+        val listener =
+                object : Player.Listener {
+                    override fun onIsPlayingChanged(isPlaying: Boolean) {
+                        isActuallyPlaying = isPlaying
+                    }
+                    override fun onPlaybackStateChanged(state: Int) {
+                        if (state == Player.STATE_ENDED) playNext()
+                    }
+                }
+        player.addListener(listener)
+        onDispose { player.removeListener(listener) }
+    }
+
+    val filePickerLauncher =
+            rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) {
+                    uri: Uri? ->
+                uri?.let {
+                    try {
+                        context.contentResolver.openInputStream(it)?.use { inputStream ->
+                            val content = inputStream.bufferedReader().use { it.readText() }
+                            prefs.edit().putString("csv_data", content).apply()
+                            shazamTracks = CsvParser.parse(content.byteInputStream())
+                            filteredTracks = shazamTracks
+                            isDiscoveryMode = false
+                            Toast.makeText(
+                                            context,
+                                            "${shazamTracks.size} morceaux chargés !",
+                                            Toast.LENGTH_SHORT
+                                    )
+                                    .show()
+                        }
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "Erreur : ${e.localizedMessage}", Toast.LENGTH_LONG)
+                                .show()
+                    }
+                }
+            }
+
+    fun backToPlaylist() {
+        currentLevel = NavLevel.PLAYLIST
+    }
+
+    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+        // --- LEVEL ARCHITECTURE ---
+        when (currentLevel) {
+            NavLevel.HOME -> {
+                HomeScreen(
+                        onLoadCsv = { filePickerLauncher.launch("*/*") },
+                        onExit = onExit,
+                        years = listOf("Toutes") + (2021..2026).map { it.toString() },
+                        months =
+                                listOf(
+                                        "Tous",
+                                        "Janvier",
+                                        "Février",
+                                        "Mars",
+                                        "Avril",
+                                        "Mai",
+                                        "Juin",
+                                        "Juillet",
+                                        "Août",
+                                        "Septembre",
+                                        "Octobre",
+                                        "Novembre",
+                                        "Décembre"
+                                ),
+                        selectedYear = selectedYear,
+                        selectedMonth = selectedMonth,
+                        artistFilter = artistFilter,
+                        titleFilter = titleFilter,
+                        magicArtistValue = magicArtistInput,
+                        shazamArtistValue = shazamArtistInput,
+                        shazamTitleValue = shazamTitleInput,
+                        isActuallyPlaying = isActuallyPlaying,
+                        sleepTimerMinutes = sleepTimerMinutes,
+                        onYearChange = { selectedYear = it },
+                        onMonthChange = { selectedMonth = it },
+                        onArtistChange = { artistFilter = it },
+                        onTitleChange = { titleFilter = it },
+                        onMagicArtistInputChange = { magicArtistInput = it },
+                        onShazamArtistInputChange = { shazamArtistInput = it },
+                        onShazamTitleInputChange = { shazamTitleInput = it },
+                        onApply = { applyFilters() },
+                        onMagicSearch = { openArtistRadio(it) },
+                        onSetSleepTimer = { sleepTimerMinutes = it },
+                        onBackToPlaylist = { backToPlaylist() },
+                        onSpotifyLogin = {
+                            // Spotify désactivé
+                            /*
+                            val request = spotifyManager.getAuthenticationRequest()
+                            val intent = AuthorizationClient.createLoginActivityIntent(context as Activity, request)
+                            spotifyLauncher.launch(intent)
+                            */
+                        },
+                        isSpotifyConnected = spotifyManager.isConnected()
+                )
+            }
+            NavLevel.PLAYLIST -> {
+                PlaylistScreen(
+                        tracks = filteredTracks,
+                        selectedIndex = currentTrackIndexInFiltered,
+                        isDiscovery = isDiscoveryMode,
+                        onTrackClick = { idx -> playTrack(idx) },
+                        onBack = { currentLevel = NavLevel.HOME }
+                )
+            }
+            NavLevel.PLAYER -> {
+                if (currentTrack != null) {
+                    FullScreenPlayer(
+                            track = currentTrack,
+                            isPlaying = isActuallyPlaying,
+                            isShuffle = isShuffle,
+                            isRepeat = isRepeat,
+                            currentPosition = currentPosition,
+                            duration = duration,
+                            isDiscovery = isDiscoveryMode,
+                            onClose = { currentLevel = NavLevel.PLAYLIST },
+                            onTogglePlay = {
+                                if (player.isPlaying) player.pause() else player.play()
+                            },
+                            onPrevious = { playPrevious() },
+                            onNext = { playNext() },
+                            onShuffleToggle = { isShuffle = !isShuffle },
+                            onRepeatToggle = { isRepeat = !isRepeat },
+                            onCycleStream = {
+                                if (alternateStreams.size > 1) {
+                                    val nextIdx = (currentStreamIndex + 1) % alternateStreams.size
+                                    playTrack(currentTrackIndexInFiltered, nextIdx)
+                                }
+                            },
+                            onSeek = { player.seekTo(it) },
+                            onArtistRadio = { openArtistRadio(currentTrack.artist) },
+                            isSearchingPlaylists = isSearchingPlaylists,
+                            discoveryCreator = discoveryCreator,
+                            discoveryCreatorId = discoveryCreatorId,
+                            onCreatorClick = { id, name -> openUserRadio(id, name) }
+                    )
+                }
+            }
+        }
+
+        // Playlist Selection Dialog
+        if (showPlaylistSelection) {
+            AlertDialog(
+                    onDismissRequest = { showPlaylistSelection = false },
+                    title = {
+                        Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Playlists de l'artiste", color = Color.White, fontSize = 18.sp)
+                            IconButton(onClick = { showPlaylistSelection = false }) {
+                                Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = "Close",
+                                        tint = Color.Gray
+                                )
+                            }
+                        }
+                    },
+                    text = {
+                        LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 600.dp)) {
+                            itemsIndexed(artistPlaylists) { _, playlist ->
+                                Card(
+                                        onClick = { loadPlaylist(playlist) },
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                                        colors =
+                                                CardDefaults.cardColors(
+                                                        containerColor = Color(0xFF2A2A2A)
+                                                ),
+                                        shape = RoundedCornerShape(16.dp),
+                                        elevation =
+                                                CardDefaults.cardElevation(defaultElevation = 2.dp)
+                                ) {
+                                    Row(
+                                            modifier = Modifier.padding(12.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        AsyncImage(
+                                                model = playlist.artworkUrl,
+                                                contentDescription = null,
+                                                modifier =
+                                                        Modifier.size(70.dp)
+                                                                .clip(RoundedCornerShape(12.dp)),
+                                                contentScale = ContentScale.Crop
+                                        )
+                                        Spacer(modifier = Modifier.width(20.dp))
+                                        Column {
+                                            Text(
+                                                    playlist.title,
+                                                    color = Color.White,
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    fontSize = 12.sp,
+                                                    lineHeight = 18.sp
+                                            )
+                                            val infoText = buildString {
+                                                append("${playlist.trackCount} titres")
+                                                playlist.releaseYear?.let { append(" • $it") }
+                                                append(" • ${playlist.likesCount} ❤️")
+                                            }
+                                            Text(infoText, color = Color.Gray, fontSize = 11.sp)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = {}, // Remove cancel button row to save space
+                    dismissButton = {},
+                    containerColor =
+                            Color(0xFF1A1A1A), // Slightly darker background for premium look
+                    properties = DialogProperties(usePlatformDefaultWidth = false),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
+            )
+        }
+
+        // Mini player (visible in Playlist OR Home level if a track is playing)
+        if (currentTrack != null &&
+                        (currentLevel == NavLevel.PLAYLIST || currentLevel == NavLevel.HOME)
+        ) {
+            Box(modifier = Modifier.align(Alignment.BottomCenter)) {
+                PlayerBottomBar(
+                        currentTrack,
+                        isActuallyPlaying,
+                        onTogglePlay = { if (player.isPlaying) player.pause() else player.play() },
+                        onClick = { currentLevel = NavLevel.PLAYER }
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HomeScreen(
+        onLoadCsv: () -> Unit,
+        onExit: () -> Unit,
+        years: List<String>,
+        months: List<String>,
+        selectedYear: String,
+        selectedMonth: String,
+        artistFilter: String,
+        titleFilter: String,
+        magicArtistValue: String,
+        shazamArtistValue: String,
+        shazamTitleValue: String,
+        isActuallyPlaying: Boolean,
+        sleepTimerMinutes: Int,
+        onYearChange: (String) -> Unit,
+        onMonthChange: (String) -> Unit,
+        onArtistChange: (String) -> Unit,
+        onTitleChange: (String) -> Unit,
+        onMagicArtistInputChange: (String) -> Unit,
+        onShazamArtistInputChange: (String) -> Unit,
+        onShazamTitleInputChange: (String) -> Unit,
+        onApply: () -> Unit,
+        onMagicSearch: (String) -> Unit,
+        onSetSleepTimer: (Int) -> Unit,
+        onBackToPlaylist: () -> Unit,
+        onSpotifyLogin: () -> Unit,
+        isSpotifyConnected: Boolean
+) {
+    val context = LocalContext.current
+    var showTimerDialog by remember { mutableStateOf(false) }
+
+    BackHandler {
+        if (isActuallyPlaying) {
+            // If playing, go back to PLAYLIST instead of exiting
+            onBackToPlaylist()
+        } else {
+            (context as? Activity)?.moveTaskToBack(true)
+        }
+    }
+
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState())) {
+        Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                    "Shazam Player",
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+            )
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Shortcut to Playlist (Screen B)
+                IconButton(onClick = onBackToPlaylist) {
+                    Icon(
+                            Icons.Default.QueueMusic,
+                            contentDescription = "Playlist",
+                            tint = Color(0xFF00FF88)
+                    )
+                }
+
+                IconButton(onClick = { showTimerDialog = true }) {
+                    Icon(
+                            if (sleepTimerMinutes > 0) Icons.Default.Timer
+                            else Icons.Outlined.Timer,
+                            contentDescription = "Sleep Timer",
+                            tint = if (sleepTimerMinutes > 0) Color(0xFF00FF88) else Color.White
+                    )
+                }
+
+                IconButton(onClick = onExit) {
+                    Icon(
+                            Icons.Default.PowerSettingsNew,
+                            contentDescription = "Shutdown",
+                            tint = Color.Red,
+                            modifier = Modifier.size(28.dp)
+                    )
+                }
+            }
+        }
+
+        if (showTimerDialog) {
+            AlertDialog(
+                    onDismissRequest = { showTimerDialog = false },
+                    title = { Text("Sommeil (minutes)") },
+                    text = {
+                        Column {
+                            listOf(0, 10, 20, 30, 40).forEach { mins ->
+                                TextButton(
+                                        onClick = {
+                                            onSetSleepTimer(mins)
+                                            showTimerDialog = false
+                                        },
+                                        modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                            if (mins == 0) "Désactiver" else "$mins min",
+                                            color = Color.White
+                                    )
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { showTimerDialog = false }) { Text("Fermer") }
+                    },
+                    containerColor = Color(0xFF222222),
+                    titleContentColor = Color.White
+            )
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Button(
+                onClick = onLoadCsv,
+                modifier = Modifier.fillMaxWidth().height(40.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0088FF)),
+                shape = RoundedCornerShape(8.dp)
+        ) {
+            Icon(
+                    Icons.Default.FileUpload,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Charger Library CSV", fontSize = 13.sp)
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // --- NOUVEAU : MAGIC SEARCH ---
+        Text(
+                "Magic Artist Radio 🪄",
+                color = Color(0xFF00FF88),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        OutlinedTextField(
+                value = magicArtistValue,
+                onValueChange = onMagicArtistInputChange,
+                label = { Text("Nom de l'artiste (ex: Pink Floyd)", color = Color.Gray) },
+                modifier = Modifier.fillMaxWidth(),
+                trailingIcon = {
+                    IconButton(
+                            onClick = {
+                                if (magicArtistValue.isNotBlank()) onMagicSearch(magicArtistValue)
+                            }
+                    ) {
+                        Icon(
+                                Icons.Default.AutoAwesome,
+                                contentDescription = "Search",
+                                tint = Color(0xFF00FF88)
+                        )
+                    }
+                },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions =
+                        KeyboardActions(
+                                onSearch = {
+                                    if (magicArtistValue.isNotBlank())
+                                            onMagicSearch(magicArtistValue)
+                                }
+                        ),
+                colors =
+                        OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White,
+                                focusedBorderColor = Color(0xFF00FF88),
+                                unfocusedBorderColor = Color.Gray
+                        )
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+        Text("Filtres", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Box(modifier = Modifier.weight(1f)) {
+                FilterDropdown("Année", selectedYear, years, onYearChange)
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Box(modifier = Modifier.weight(1f)) {
+                FilterDropdown("Mois", selectedMonth, months, onMonthChange)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
+                value = shazamArtistValue,
+                onValueChange = onShazamArtistInputChange,
+                label = { Text("Artiste") },
+                modifier = Modifier.fillMaxWidth(),
+                colors =
+                        OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White,
+                                focusedBorderColor = Color.White,
+                                unfocusedBorderColor = Color.Gray
+                        )
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
+                value = shazamTitleValue,
+                onValueChange = onShazamTitleInputChange,
+                label = { Text("Titre") },
+                modifier = Modifier.fillMaxWidth(),
+                colors =
+                        OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White,
+                                focusedBorderColor = Color.White,
+                                unfocusedBorderColor = Color.Gray
+                        )
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+                onClick = onApply,
+                modifier = Modifier.fillMaxWidth().height(44.dp),
+                shape = RoundedCornerShape(10.dp)
+        ) { Text("Afficher la Playlist", fontSize = 15.sp) }
+
+        // Bottom spacer (Screen A) to avoid being covered by mini player
+        Spacer(modifier = Modifier.height(120.dp))
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FilterDropdown(
+        label: String,
+        selected: String,
+        options: List<String>,
+        onSelect: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box(modifier = Modifier.fillMaxWidth()) {
+        OutlinedTextField(
+                value = selected,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text(label) },
+                modifier = Modifier.fillMaxWidth(),
+                trailingIcon = {
+                    IconButton(onClick = { expanded = true }) {
+                        Icon(
+                                Icons.Default.ArrowDropDown,
+                                contentDescription = null,
+                                tint = Color.White
+                        )
+                    }
+                },
+                colors =
+                        OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White,
+                                focusedBorderColor = Color.White,
+                                unfocusedBorderColor = Color.Gray
+                        )
+        )
+        DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier.background(Color(0xFF222222)).fillMaxWidth(0.8f)
+        ) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                        text = { Text(option, color = Color.White) },
+                        onClick = {
+                            onSelect(option)
+                            expanded = false
+                        }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun PlaylistScreen(
+        tracks: List<Track>,
+        selectedIndex: Int,
+        isDiscovery: Boolean,
+        onTrackClick: (Int) -> Unit,
+        onBack: () -> Unit
+) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        Row(
+                modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.Default.ArrowBack, contentDescription = null, tint = Color.White)
+            }
+            val title = if (isDiscovery) "Mode Découverte" else "Ma Library Shazam"
+            Column(modifier = Modifier.padding(start = 16.dp)) {
+                Text(title, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                if (isDiscovery) {
+                    Text(
+                            "Playlist générée par Artiste",
+                            color = Color(0xFF00FF88),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        }
+
+        if (tracks.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("Aucun morceau ne correspond aux filtres", color = Color.Gray)
+            }
+        } else {
+            LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp, 16.dp, 16.dp, 80.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                itemsIndexed(tracks) { index, track ->
+                    TrackRow(track, isSelected = index == selectedIndex) { onTrackClick(index) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun FullScreenPlayer(
+        track: Track,
+        isPlaying: Boolean,
+        isShuffle: Boolean,
+        isRepeat: Boolean,
+        currentPosition: Long,
+        duration: Long,
+        isDiscovery: Boolean,
+        onClose: () -> Unit,
+        onTogglePlay: () -> Unit,
+        onPrevious: () -> Unit,
+        onNext: () -> Unit,
+        onShuffleToggle: () -> Unit,
+        onRepeatToggle: () -> Unit,
+        onCycleStream: () -> Unit,
+        onSeek: (Long) -> Unit,
+        onArtistRadio: () -> Unit,
+        isSearchingPlaylists: Boolean,
+        discoveryCreator: String? = null,
+        discoveryCreatorId: Long = 0L,
+        onCreatorClick: (Long, String) -> Unit = { _, _ -> }
+) {
+    val configuration = LocalConfiguration.current
+    val screenHeight = configuration.screenHeightDp.dp
+
+    Column(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+        // Pochette (50% de la hauteur, 100% largeur, coins droits)
+        Box(modifier = Modifier.fillMaxWidth().height(screenHeight * 0.5f)) {
+            AsyncImage(
+                    model = track.artworkUrl,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+            )
+
+            Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                IconButton(
+                        onClick = onClose,
+                        modifier = Modifier.background(Color.White, CircleShape).size(40.dp)
+                ) {
+                    Icon(
+                            Icons.Default.KeyboardArrowDown,
+                            contentDescription = null,
+                            tint = Color.Black,
+                            modifier = Modifier.size(32.dp)
+                    )
+                }
+
+                // Bouton Magic Artist / Toggle
+                IconButton(
+                        onClick = onArtistRadio,
+                        modifier = Modifier.background(Color.White, CircleShape).size(40.dp)
+                ) {
+                    if (isSearchingPlaylists) {
+                        CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = Color(0xFF0088FF),
+                                strokeWidth = 2.dp
+                        )
+                    } else {
+                        Icon(
+                                imageVector =
+                                        if (isDiscovery) Icons.Default.LibraryMusic
+                                        else Icons.Default.AutoAwesome,
+                                contentDescription = "Discovery Toggle",
+                                tint = if (isDiscovery) Color(0xFF0088FF) else Color(0xFF00FF88),
+                                modifier = Modifier.size(28.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        Column(modifier = Modifier.fillMaxSize().padding(24.dp)) {
+            Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                            text = track.title,
+                            color = Color.White,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                            text = track.artist,
+                            color = Color.Gray,
+                            fontSize = 15.sp,
+                            modifier = Modifier.padding(top = 4.dp)
+                    )
+                    if (isDiscovery && discoveryCreator != null) {
+                        Text(
+                                text = "by $discoveryCreator",
+                                color = Color(0xFF00FF88).copy(alpha = 0.7f),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                modifier =
+                                        Modifier.padding(top = 2.dp).clickable {
+                                            onCreatorClick(discoveryCreatorId, discoveryCreator)
+                                        }
+                        )
+                    }
+                }
+                // Bouton Permutation Flux (HQ)
+                IconButton(onClick = onCycleStream) {
+                    Icon(
+                            Icons.Default.HighQuality,
+                            contentDescription = "Alternative Stream",
+                            tint = Color.White,
+                            modifier = Modifier.size(28.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Barre de progression
+            val progress = if (duration > 0) currentPosition.toFloat() / duration.toFloat() else 0f
+            Slider(
+                    value = progress,
+                    onValueChange = { onSeek((it * duration).toLong()) },
+                    colors =
+                            SliderDefaults.colors(
+                                    thumbColor = Color.White,
+                                    activeTrackColor = Color.White,
+                                    inactiveTrackColor = Color.Gray.copy(alpha = 0.3f)
+                            )
+            )
+            Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(formatTime(currentPosition), color = Color.Gray, fontSize = 11.sp)
+                Text(formatTime(duration), color = Color.Gray, fontSize = 11.sp)
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            // Contrôles
+            Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onShuffleToggle) {
+                    Icon(
+                            Icons.Default.Shuffle,
+                            contentDescription = null,
+                            tint = if (isShuffle) Color(0xFF0088FF) else Color.Gray,
+                            modifier = Modifier.size(26.dp)
+                    )
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onPrevious, modifier = Modifier.size(56.dp)) {
+                        Icon(
+                                Icons.Default.SkipPrevious,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(36.dp)
+                        )
+                    }
+                    Surface(
+                            onClick = onTogglePlay,
+                            shape = CircleShape,
+                            color = Color.White,
+                            modifier = Modifier.size(68.dp).padding(8.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                    imageVector =
+                                            if (isPlaying) Icons.Default.Pause
+                                            else Icons.Default.PlayArrow,
+                                    contentDescription = null,
+                                    tint = Color.Black,
+                                    modifier = Modifier.size(32.dp)
+                            )
+                        }
+                    }
+                    IconButton(onClick = onNext, modifier = Modifier.size(56.dp)) {
+                        Icon(
+                                Icons.Default.SkipNext,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(36.dp)
+                        )
+                    }
+                }
+
+                IconButton(onClick = onRepeatToggle) {
+                    Icon(
+                            Icons.Default.Repeat,
+                            contentDescription = null,
+                            tint = if (isRepeat) Color(0xFF00FF88) else Color.Gray,
+                            modifier = Modifier.size(26.dp)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(32.dp))
+        }
+    }
+}
+
+fun formatTime(ms: Long): String {
+    val totalSeconds = ms / 1000
+    val min = totalSeconds / 60
+    val sec = totalSeconds % 60
+    return "%02d:%02d".format(min, sec)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TrackRow(track: Track, isSelected: Boolean, onClick: () -> Unit) {
+    Card(
+            onClick = onClick,
+            colors =
+                    CardDefaults.cardColors(
+                            containerColor =
+                                    if (isSelected) Color(0xFF0088FF).copy(alpha = 0.2f)
+                                    else Color.White.copy(alpha = 0.05f)
+                    ),
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.fillMaxWidth(),
+            border = if (isSelected) BorderStroke(1.dp, Color(0xFF0088FF)) else null
+    ) {
+        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                    modifier =
+                            Modifier.size(40.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(Color.Gray.copy(alpha = 0.2f)),
+                    contentAlignment = Alignment.Center
+            ) {
+                if (isSelected) {
+                    Icon(
+                            Icons.Default.VolumeUp,
+                            contentDescription = null,
+                            tint = Color(0xFF0088FF)
+                    )
+                } else {
+                    Icon(Icons.Default.MusicNote, contentDescription = null, tint = Color.White)
+                }
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+                Text(
+                        track.title,
+                        color = if (isSelected) Color(0xFF0088FF) else Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                )
+                Text(track.artist, color = Color.Gray, fontSize = 12.sp, maxLines = 1)
+                Text(track.tagTime, color = Color.DarkGray, fontSize = 10.sp)
+            }
+        }
+    }
+}
+
+@Composable
+fun PlayerBottomBar(
+        track: Track,
+        isPlaying: Boolean,
+        onTogglePlay: () -> Unit,
+        onClick: () -> Unit
+) {
+    Surface(
+            color = Color(0xFF252525), // Plus clair pour discerner
+            modifier = Modifier.fillMaxWidth().height(105.dp).clickable { onClick() }
+    ) {
+        Row(
+                modifier = Modifier.padding(horizontal = 16.dp).fillMaxSize(),
+                verticalAlignment = Alignment.CenterVertically
+        ) {
+            AsyncImage(
+                    model = track.artworkUrl,
+                    contentDescription = null,
+                    modifier =
+                            Modifier.size(75.dp) // Augmenté pour rester proportionnel
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color.DarkGray),
+                    contentScale = ContentScale.Crop
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                            track.title,
+                            color = Color.White,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            modifier = Modifier.weight(1f, fill = false)
+                    )
+                    if (track.tagTime == "Playlist Discovery") {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Surface(
+                                color = Color(0xFF00FF88).copy(alpha = 0.2f),
+                                shape = RoundedCornerShape(4.dp)
+                        ) {
+                            Text(
+                                    "DISCOVERY",
+                                    color = Color(0xFF00FF88),
+                                    fontSize = 8.sp,
+                                    fontWeight = FontWeight.Black,
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
+                Text(track.artist, color = Color.Gray, fontSize = 11.sp, maxLines = 1)
+            }
+            IconButton(onClick = onTogglePlay) {
+                Icon(
+                        imageVector =
+                                if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(40.dp) // Icone un peu plus grande
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ShazamPlayerTheme(content: @Composable () -> Unit) {
+    MaterialTheme(
+            colorScheme =
+                    darkColorScheme(
+                            primary = Color(0xFF0088FF),
+                            background = Color.Black,
+                            surface = Color(0xFF121212)
+                    ),
+            content = content
+    )
+}

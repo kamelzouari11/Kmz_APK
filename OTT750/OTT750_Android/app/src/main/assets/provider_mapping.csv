@@ -1,0 +1,67 @@
+satellite,position,freq_min,freq_max,pol,provider,package
+Astra1,19.2E,10714,10714,H,Movistar+,Movistar Plus
+Astra1,19.2E,10729,10729,V,Movistar+,Movistar Plus
+Astra1,19.2E,10744,10744,H,Movistar+,Movistar Plus
+Astra1,19.2E,10758,10758,V,Movistar+,Movistar Plus
+Astra1,19.2E,10773,10773,H,Movistar+,Movistar Plus
+Astra1,19.2E,10788,10788,V,Movistar+,Movistar Plus
+Astra1,19.2E,10803,10803,H,Movistar+,Movistar Plus
+Astra1,19.2E,10818,10818,V,Movistar+,Movistar Plus
+Astra1,19.2E,10832,10832,H,Canal+,Canal+ France
+Astra1,19.2E,10847,10847,V,Canal+,Canal+ France
+Astra1,19.2E,10862,10862,H,Canal+,Canal+ France
+Astra1,19.2E,10876,10876,V,Canal+,Canal+ France
+Astra1,19.2E,10891,10891,H,Canal+,Canal+ France
+Astra1,19.2E,10906,10906,V,Canal+,Canal+ France
+Astra1,19.2E,10921,11100,H,Sky Deutschland,Sky DE
+Astra1,19.2E,11100,11300,V,Sky Deutschland,Sky DE
+Astra1,19.2E,11303,11500,H,HD+,HD+ Germany
+Astra1,19.2E,11500,11700,V,ARD/ZDF,Free German
+Astra1,19.2E,11700,12000,H,RTL/ProSieben,Free German
+Astra1,19.2E,12000,12400,V,Misc,Various
+Hotbird,13E,10719,10719,V,Sky Italia,Sky IT Package
+Hotbird,13E,10727,10727,H,Sky Italia,Sky IT Package
+Hotbird,13E,10758,10758,V,Sky Italia,Sky IT Package
+Hotbird,13E,10775,10775,H,Sky Italia,Sky IT Package
+Hotbird,13E,10796,10796,V,Sky Italia,Sky IT Package
+Hotbird,13E,10814,10814,H,Sky Italia,Sky IT Package
+Hotbird,13E,10853,10853,V,NC+/Cyfra+,Polish Package
+Hotbird,13E,10873,10873,H,NC+/Cyfra+,Polish Package
+Hotbird,13E,10892,10892,V,NC+/Cyfra+,Polish Package
+Hotbird,13E,10911,10911,H,NC+/Cyfra+,Polish Package
+Hotbird,13E,10930,10930,V,Digiturk,Turkish Package
+Hotbird,13E,10949,10949,H,Digiturk,Turkish Package
+Hotbird,13E,10971,10971,V,Tivusat,Italian FTA
+Hotbird,13E,10992,10992,H,Tivusat,Italian FTA
+Hotbird,13E,11013,11013,V,Tivusat,Italian FTA
+Hotbird,13E,11034,11034,H,beIN Sports,beIN MENA
+Hotbird,13E,11054,11054,V,beIN Sports,beIN MENA
+Hotbird,13E,11075,11075,H,beIN Sports,beIN MENA
+Hotbird,13E,11096,11096,V,beIN Sports,beIN MENA
+Hotbird,13E,11117,11200,H,Nova,Nova Greece
+Hotbird,13E,11200,11400,V,Nova,Nova Greece
+Hotbird,13E,11400,11600,H,Globecast,Various
+Hotbird,13E,11600,11800,V,Al Jazeera,Al Jazeera Network
+Hotbird,13E,11800,12000,H,Euronews,European Channels
+Hotbird,13E,12000,12200,V,RAI,RAI Italian
+Hotbird,13E,12200,12400,H,France TV,French Channels
+Nilesat,7W,10719,10719,V,Nilesat,Egyptian Channels
+Nilesat,7W,10758,10758,H,Nilesat,Egyptian Channels
+Nilesat,7W,10796,10796,V,Nilesat,Egyptian Channels
+Nilesat,7W,10815,10815,H,MBC,MBC Group
+Nilesat,7W,10853,10853,V,MBC,MBC Group
+Nilesat,7W,10892,10892,H,MBC,MBC Group
+Nilesat,7W,10930,10930,V,beIN Sports MENA,beIN Arabic
+Nilesat,7W,10971,10971,H,beIN Sports MENA,beIN Arabic
+Nilesat,7W,11013,11013,V,beIN Sports MENA,beIN Arabic
+Nilesat,7W,11054,11054,H,OSN,OSN Package
+Nilesat,7W,11096,11096,V,OSN,OSN Package
+Nilesat,7W,11137,11137,H,OSN,OSN Package
+Nilesat,7W,11176,11176,V,ART,ART Network
+Nilesat,7W,11219,11219,H,ART,ART Network
+Nilesat,7W,11258,11400,V,Al Jazeera,Al Jazeera MENA
+Nilesat,7W,11400,11600,H,Rotana,Rotana Channels
+Nilesat,7W,11600,11800,V,LBC/MTV,Lebanese Channels
+Nilesat,7W,11800,12000,H,CBC/DMC,Egyptian Entertainment
+Nilesat,7W,12000,12200,V,Religious,Religious Channels
+Nilesat,7W,12200,12400,H,Misc,Various Arabic
