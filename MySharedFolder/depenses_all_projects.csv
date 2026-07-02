@@ -19,9 +19,11 @@ BENEFICIAIRE,ennasr,,,innovalu ,,,
 BENEFICIAIRE,Gammarth,,,issam khlif,,,
 BENEFICIAIRE,Gammarth,,,moez trigui ,,,
 BENEFICIAIRE,Gammarth,,,skander zghal,,,
+DEPENSE,Gammarth,2026-07-02,commission ,moez trigui ,2000,ESPC,3ème a avance
+DEPENSE,Gammarth,2026-07-02,travaux ,skander zghal,2000,ESPC,2eme avance
 DEPENSE,Gammarth,2026-06-28,étanchéité ,chedhly étanchéité ,400,ESP,travaux de pose
 DEPENSE,Gammarth,2026-06-28,Divers ,Divers ,45,ESP,démontage porte en bois
-DEPENSE,Gammarth,2026-06-26,électricité ,issam khlif,350,ESP,
+DEPENSE,Gammarth,2026-06-26,électricité ,issam khlif,350,ESPC,fournitures
 DEPENSE,Gammarth,2026-06-26,commission ,moez trigui ,2200,ESP,
 DEPENSE,Gammarth,2026-06-24,étanchéité ,Arybell,1278,CHQ,
 DEPENSE,Gammarth,2026-06-24,commission ,moez trigui ,600,ESP,
