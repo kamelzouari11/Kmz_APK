@@ -4,11 +4,13 @@ PROJET,ennasr,,,,,,
 CHAPITRE,Gammarth,,Divers ,,,,
 CHAPITRE,ennasr,,aluminium ,,,,
 CHAPITRE,Gammarth,,commission ,,,,
+CHAPITRE,Gammarth,,peinture ,,,,
 CHAPITRE,Gammarth,,revêtements ,,,,
 CHAPITRE,ennasr,,revêtements ,,,,
 CHAPITRE,Gammarth,,travaux ,,,,
 CHAPITRE,Gammarth,,électricité ,,,,
 CHAPITRE,Gammarth,,étanchéité ,,,,
+BENEFICIAIRE,Gammarth,,,Ahmed souissi,,,
 BENEFICIAIRE,Gammarth,,,Arybell,,,
 BENEFICIAIRE,Gammarth,,,Divers ,,,
 BENEFICIAIRE,ennasr,,,abdennadher ceramic,,,
@@ -19,6 +21,17 @@ BENEFICIAIRE,ennasr,,,innovalu ,,,
 BENEFICIAIRE,Gammarth,,,issam khlif,,,
 BENEFICIAIRE,Gammarth,,,moez trigui ,,,
 BENEFICIAIRE,Gammarth,,,skander zghal,,,
+BENEFICIAIRE,Gammarth,,,yassine oualha ,,,
+DEPENSE,Gammarth,2026-07-14,travaux ,skander zghal,2430,ESPC,solde de travaux
+DEPENSE,Gammarth,2026-07-14,Divers ,Divers ,40,ESPC,el hassan ouatara
+DEPENSE,Gammarth,2026-07-14,Divers ,Divers ,130,ESPC,khaled jardinier
+DEPENSE,Gammarth,2026-07-13,Divers ,Ahmed souissi,200,ESPC,déplacement radiateur
+DEPENSE,Gammarth,2026-07-11,Divers ,Divers ,80,ESPC,marbre
+DEPENSE,Gammarth,2026-07-11,électricité ,issam khlif,150,ESPC,fournitures
+DEPENSE,Gammarth,2026-07-11,travaux ,skander zghal,2000,ESPC,3ème avance
+DEPENSE,Gammarth,2026-07-10,peinture ,yassine oualha ,1000,ESPC,peinture
+DEPENSE,Gammarth,2026-07-09,Divers ,Divers ,100,ESPC,marbre
+DEPENSE,Gammarth,2026-07-07,électricité ,issam khlif,200,ESPC,1ère avance travaux
 DEPENSE,Gammarth,2026-07-02,commission ,moez trigui ,2000,ESPC,3ème a avance
 DEPENSE,Gammarth,2026-07-02,travaux ,skander zghal,2000,ESPC,2eme avance
 DEPENSE,Gammarth,2026-06-28,étanchéité ,chedhly étanchéité ,400,ESP,travaux de pose
