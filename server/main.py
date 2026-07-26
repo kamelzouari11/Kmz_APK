@@ -32,6 +32,7 @@ app.add_middleware(
 # Cache mémoire + un fichier JSON par date. Les fichiers expirés restent disponibles
 # comme secours si les sites de scraping sont momentanément injoignables.
 cache: Dict[str, Dict] = {}
+empty_tv_retry_after: Dict[str, datetime] = {}
 DEFAULT_CACHE_DIR = Path(__file__).resolve().parent / "tv_cache"
 CACHE_DIR = Path(os.environ.get("TV_CACHE_DIR", str(DEFAULT_CACHE_DIR)))
 CACHE_DURATION = timedelta(minutes=15)
@@ -67,34 +68,6 @@ PRIORITY_N1_RANK = {
     country: rank
     for rank, country in enumerate(PRIORITY_N1_BROADCAST_REGIONS)
 }
-
-# Match-specific broadcasts confirmed by official club/broadcaster announcements.
-# These overlays protect recent announcements from scraper format changes.
-# Sources:
-# - inter.it/en/news/programme-calendar-inter-summer-friendlies-2026
-# - sport.sky.it/calcio/serie-a/2026/07/22/inter-juventus-milan-napoli-amichevoli-25-26-luglio-sky
-# - lequipe.fr/Football/Actualites/A-quelle-heure-et-sur-quelle-chaine-voir-les-matches-de-pre-saison-de-l-inter-milan/1707087
-VERIFIED_BROADCASTS = [
-    {
-        "date": "2026-07-26",
-        "home": "Karlsruher SC",
-        "away": "Internazionale",
-        "channels": [
-            "L'Équipe live foot",
-            "DAZN Italia",
-            "Sky Sport Calcio",
-            "NOW TV",
-            "Onefootball"
-        ],
-        "channelCountries": {
-            "L'Équipe live foot": ["France"],
-            "DAZN Italia": ["Italy"],
-            "Sky Sport Calcio": ["Italy"],
-            "NOW TV": ["Italy"],
-            "Onefootball": ["Italy"]
-        }
-    }
-]
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -555,6 +528,37 @@ def match_teams(request_team: str, scraped_team: str) -> bool:
         
     return False
 
+
+def find_matching_match(
+    matches: List[Dict],
+    home: str,
+    away: str,
+    date: str
+) -> Optional[Dict]:
+    """Match both orientations because friendly sources often swap home and away."""
+    dated_matches = [match for match in matches if match.get("date") == date]
+    for match in dated_matches:
+        if (
+            match_teams(home, match.get("home", "")) and
+            match_teams(away, match.get("away", ""))
+        ):
+            return match
+    for match in dated_matches:
+        if (
+            match_teams(home, match.get("away", "")) and
+            match_teams(away, match.get("home", ""))
+        ):
+            return match
+    return None
+
+
+def tv_retry_key(home: str, away: str, date: str) -> str:
+    teams = sorted([
+        " ".join(sorted(normalize_team_name(home))),
+        " ".join(sorted(normalize_team_name(away)))
+    ])
+    return f"{date}|{'|'.join(teams)}"
+
 def scrape_liveonsat() -> List[Dict]:
     """Scrapes liveonsat.com/2day.php and parses all matches into structured data."""
     session = get_http_session()
@@ -804,44 +808,37 @@ def get_tv_channels(
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"Failed to fetch broadcast data: {str(e)}")
         
-    # Find match using robust matching criteria
-    target_match = None
-    for m in matches:
-        # Match date
-        if m["date"] != date:
-            continue
-            
-        # Match teams
-        if match_teams(home, m["home"]) and match_teams(away, m["away"]):
-            target_match = m
-            break
+    target_match = find_matching_match(matches, home, away, date)
 
-    verified_match = next(
-        (
-            match for match in VERIFIED_BROADCASTS
-            if match["date"] == date and
-            match_teams(home, match["home"]) and
-            match_teams(away, match["away"])
-        ),
-        None
-    )
-    if verified_match is not None:
-        if target_match is None:
-            target_match = {
-                "date": date,
-                "home": verified_match["home"],
-                "away": verified_match["away"],
-                "channels": [],
-                "channelCountries": {}
-            }
-        target_match = deduplicate_matches([
-            target_match,
-            {
-                **target_match,
-                "channels": verified_match["channels"],
-                "channelCountries": verified_match["channelCountries"]
-            }
-        ])[0]
+    # TV listings are frequently announced shortly before kickoff, while the full
+    # daily schedule can still be cached for 15 minutes. Re-scrape an empty result
+    # at most once every two minutes, independently for each match.
+    retry_key = tv_retry_key(home, away, date)
+    retry_allowed_at = empty_tv_retry_after.get(retry_key)
+    if (
+        (target_match is None or not target_match.get("channels")) and
+        (retry_allowed_at is None or retry_allowed_at <= datetime.now())
+    ):
+        empty_tv_retry_after[retry_key] = datetime.now() + EMPTY_CACHE_DURATION
+        try:
+            freshly_scraped = scrape_schedule_for_date(date)
+            save_scraped_dates(freshly_scraped)
+            fresh_for_date = [
+                match for match in freshly_scraped
+                if match.get("date") == date
+            ]
+            refreshed_match = find_matching_match(
+                fresh_for_date, home, away, date
+            )
+            if refreshed_match is not None:
+                target_match = refreshed_match
+            if target_match is not None and target_match.get("channels"):
+                empty_tv_retry_after.pop(retry_key, None)
+        except Exception as exc:
+            LOGGER.warning(
+                "Empty TV refresh failed for %s vs %s on %s: %s",
+                home, away, date, exc
+            )
 
     if not target_match:
         # Return empty list of channels as fallback (expected by client)

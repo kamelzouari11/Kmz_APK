@@ -24,10 +24,12 @@ class DailyCacheTests(unittest.TestCase):
         self.previous_cache_dir = main.CACHE_DIR
         main.CACHE_DIR = Path(self.temp_dir.name)
         main.cache.clear()
+        main.empty_tv_retry_after.clear()
 
     def tearDown(self) -> None:
         main.CACHE_DIR = self.previous_cache_dir
         main.cache.clear()
+        main.empty_tv_retry_after.clear()
         self.temp_dir.cleanup()
 
     def test_each_date_is_written_to_its_own_json(self) -> None:
@@ -205,28 +207,46 @@ class DailyCacheTests(unittest.TestCase):
             ]
         )
 
-    def test_verified_broadcasts_survive_an_empty_scrape(self) -> None:
-        with patch.object(main, "get_matches_cached", return_value=[]):
+    def test_tv_match_accepts_reversed_home_and_away(self) -> None:
+        reversed_match = match(
+            "2026-07-26", home="Roma", away="Cannes"
+        )
+        reversed_match["channels"] = ["DAZN Italia"]
+
+        with patch.object(
+            main, "get_matches_cached", return_value=[reversed_match]
+        ):
             response = main.get_tv_channels(
-                "Karlsruher SC", "Internazionale", "2026-07-26"
+                "AS Cannes", "AS Roma", "2026-07-26"
             )
 
         self.assertEqual(
             [group["country"] for group in response["channels"]],
-            ["France", "Italy"]
+            ["Italy"]
         )
         self.assertEqual(
             response["channels"][0]["channels"],
-            ["L'Équipe live foot"]
+            ["DAZN Italia"]
         )
+
+    def test_empty_tv_result_forces_a_fresh_scrape(self) -> None:
+        cached = match("2026-07-26", "Roma", "Cannes")
+        cached["channels"] = []
+        fresh = {**cached, "channels": ["DAZN Italia"]}
+
+        with patch.object(
+            main, "get_matches_cached", return_value=[cached]
+        ), patch.object(
+            main, "scrape_schedule_for_date", return_value=[fresh]
+        ) as scraper:
+            response = main.get_tv_channels(
+                "AS Cannes", "AS Roma", "2026-07-26"
+            )
+
+        scraper.assert_called_once_with("2026-07-26")
         self.assertEqual(
-            response["channels"][1]["channels"],
-            [
-                "DAZN Italia",
-                "Sky Sport Calcio",
-                "NOW TV",
-                "Onefootball"
-            ]
+            response["channels"],
+            [{"country": "Italy", "channels": ["DAZN Italia"]}]
         )
 
     def test_tv_response_prioritizes_explicit_european_countries(self) -> None:
