@@ -166,6 +166,69 @@ class DailyCacheTests(unittest.TestCase):
             ]
         )
 
+    def test_live_match_with_score_and_minute_keeps_tv_channels(self) -> None:
+        markdown = """
+▴[Club Friendly](http://www.livesoccertv.com/competitions/international/club-friendly/)
+2:30pm 36'[Karlsruher SC 0 - 0 Internazionale](http://www.livesoccertv.com/match/internazionale-vs-karlsruher-sc/2kdt1 "Karlsruher SC vs Internazionale")
+
+[Onefootball](http://www.livesoccertv.com/channels/onefootball-uk/ "Onefootball"), [DAZN Germany](http://www.livesoccertv.com/channels/dazn-europe/ "DAZN Germany"), [DAZN Italia](http://www.livesoccertv.com/channels/dazn-italy/ "DAZN Italia"), [Sport TV2](http://www.livesoccertv.com/channels/sport-tv2/ "Sport TV2"), [Inter TV](http://www.livesoccertv.com/channels/inter-channel/ "Inter TV")
+"""
+
+        class Response:
+            text = markdown
+
+            @staticmethod
+            def raise_for_status() -> None:
+                return None
+
+        class Session:
+            headers = {}
+
+            @staticmethod
+            def get(*args, **kwargs):
+                return Response()
+
+        with patch.object(main, "get_http_session", return_value=Session()):
+            matches = main.scrape_live_soccertv("2026-07-26")
+
+        self.assertEqual(len(matches), 1)
+        self.assertEqual(matches[0]["home"], "Karlsruher SC")
+        self.assertEqual(matches[0]["away"], "Internazionale")
+        self.assertEqual(
+            matches[0]["channels"],
+            [
+                "Onefootball",
+                "DAZN Germany",
+                "DAZN Italia",
+                "Sport TV2",
+                "Inter TV"
+            ]
+        )
+
+    def test_verified_broadcasts_survive_an_empty_scrape(self) -> None:
+        with patch.object(main, "get_matches_cached", return_value=[]):
+            response = main.get_tv_channels(
+                "Karlsruher SC", "Internazionale", "2026-07-26"
+            )
+
+        self.assertEqual(
+            [group["country"] for group in response["channels"]],
+            ["France", "Italy"]
+        )
+        self.assertEqual(
+            response["channels"][0]["channels"],
+            ["L'Équipe live foot"]
+        )
+        self.assertEqual(
+            response["channels"][1]["channels"],
+            [
+                "DAZN Italia",
+                "Sky Sport Calcio",
+                "NOW TV",
+                "OneFootball"
+            ]
+        )
+
     def test_tv_response_prioritizes_explicit_european_countries(self) -> None:
         scraped = [match("2026-07-28")]
         scraped[0]["channels"] = [

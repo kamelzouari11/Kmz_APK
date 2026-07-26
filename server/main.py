@@ -68,6 +68,34 @@ PRIORITY_N1_RANK = {
     for rank, country in enumerate(PRIORITY_N1_BROADCAST_REGIONS)
 }
 
+# Match-specific broadcasts confirmed by official club/broadcaster announcements.
+# These overlays protect recent announcements from scraper format changes.
+# Sources:
+# - inter.it/en/news/programme-calendar-inter-summer-friendlies-2026
+# - sport.sky.it/calcio/serie-a/2026/07/22/inter-juventus-milan-napoli-amichevoli-25-26-luglio-sky
+# - lequipe.fr/Football/Actualites/A-quelle-heure-et-sur-quelle-chaine-voir-les-matches-de-pre-saison-de-l-inter-milan/1707087
+VERIFIED_BROADCASTS = [
+    {
+        "date": "2026-07-26",
+        "home": "Karlsruher SC",
+        "away": "Internazionale",
+        "channels": [
+            "L'Équipe live foot",
+            "DAZN Italia",
+            "Sky Sport Calcio",
+            "NOW TV",
+            "OneFootball"
+        ],
+        "channelCountries": {
+            "L'Équipe live foot": ["France"],
+            "DAZN Italia": ["Italy"],
+            "Sky Sport Calcio": ["Italy"],
+            "NOW TV": ["Italy"],
+            "OneFootball": ["Italy"]
+        }
+    }
+]
+
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
@@ -316,7 +344,8 @@ def scrape_live_soccertv(target_date: Optional[str] = None) -> List[Dict]:
             continue
 
         match_line = re.match(
-            r'^(?P<time>\d{1,2}:\d{2}\s*(?:am|pm))\s*'
+            r'^(?:Live\s+)?(?P<time>\d{1,2}:\d{2}\s*(?:am|pm))'
+            r"(?:\s+\d{1,3}(?:\+\d+)?')?\s*"
             r'\[(?P<teams>[^\]]+)\]\([^\)]*\)(?P<rest>.*)$',
             line,
             flags=re.I
@@ -337,6 +366,16 @@ def scrape_live_soccertv(target_date: Optional[str] = None) -> List[Dict]:
 
         teams_text = match_line.group('teams').strip()
         teams = re.split(r'\s+v[s]?\s+', teams_text, flags=re.I)
+        if len(teams) < 2:
+            live_score_teams = re.match(
+                r'^(.*?)\s+\d+\s*-\s*\d+\s+(.*?)$',
+                teams_text
+            )
+            if live_score_teams:
+                teams = [
+                    live_score_teams.group(1),
+                    live_score_teams.group(2)
+                ]
         if len(teams) < 2:
             continue
 
@@ -773,7 +812,34 @@ def get_tv_channels(
         if match_teams(home, m["home"]) and match_teams(away, m["away"]):
             target_match = m
             break
-            
+
+    verified_match = next(
+        (
+            match for match in VERIFIED_BROADCASTS
+            if match["date"] == date and
+            match_teams(home, match["home"]) and
+            match_teams(away, match["away"])
+        ),
+        None
+    )
+    if verified_match is not None:
+        if target_match is None:
+            target_match = {
+                "date": date,
+                "home": verified_match["home"],
+                "away": verified_match["away"],
+                "channels": [],
+                "channelCountries": {}
+            }
+        target_match = deduplicate_matches([
+            target_match,
+            {
+                **target_match,
+                "channels": verified_match["channels"],
+                "channelCountries": verified_match["channelCountries"]
+            }
+        ])[0]
+
     if not target_match:
         # Return empty list of channels as fallback (expected by client)
         return {
