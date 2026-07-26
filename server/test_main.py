@@ -225,7 +225,7 @@ class DailyCacheTests(unittest.TestCase):
                 "DAZN Italia",
                 "Sky Sport Calcio",
                 "NOW TV",
-                "OneFootball"
+                "Onefootball"
             ]
         )
 
@@ -256,6 +256,8 @@ class DailyCacheTests(unittest.TestCase):
         self.assertEqual(main.get_channel_country("M4 Sport"), "Hungary")
         self.assertEqual(main.get_channel_country("Cosmote Sport 1 HD"), "Greece")
         self.assertEqual(main.get_channel_country("Sportdigital FUSSBALL"), "Germany")
+        self.assertEqual(main.get_channel_country("DAZN Germany"), "Germany")
+        self.assertEqual(main.get_channel_country("Inter TV"), "Italy")
 
     def test_schedule_response_contains_utc_kickoff(self) -> None:
         scraped = [match("2026-07-28")]

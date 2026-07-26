@@ -84,14 +84,14 @@ VERIFIED_BROADCASTS = [
             "DAZN Italia",
             "Sky Sport Calcio",
             "NOW TV",
-            "OneFootball"
+            "Onefootball"
         ],
         "channelCountries": {
             "L'Équipe live foot": ["France"],
             "DAZN Italia": ["Italy"],
             "Sky Sport Calcio": ["Italy"],
             "NOW TV": ["Italy"],
-            "OneFootball": ["Italy"]
+            "Onefootball": ["Italy"]
         }
     }
 ]
@@ -469,10 +469,13 @@ def get_channel_country(channel_name: str) -> str:
         ("Ireland", ["ireland", "eire"]),
         ("France", ["france", "canal+ live", "canal+ foot", "rmc sport", "bein sports france"]),
         ("Spain", ["espana", "españa", "laliga", "movistar", "dazn españa", "dazn espana"]),
-        ("Italy", ["italia", "calcio", "sky sport 25", "sky sport italia", "rai"]),
+        ("Italy", [
+            "italia", "calcio", "sky sport 25", "sky sport italia", "rai",
+            "inter tv"
+        ]),
         ("Germany", [
             "deutsch", "bundesliga", "sky sport premier league de",
-            "dazn 1 bar deutsch", "dazn de", "sportdigital"
+            "dazn 1 bar deutsch", "dazn de", "dazn germany", "sportdigital"
         ]),
         ("Portugal", ["portugal", "sport tv"]),
         ("Netherlands", ["nederland", "ziggo", "espn 1 nederland"]),
