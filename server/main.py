@@ -1,6 +1,8 @@
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import json
+import logging
+import os
 import requests
 from bs4 import BeautifulSoup
 import re
@@ -8,8 +10,9 @@ import unicodedata
 from datetime import datetime, timedelta
 from pathlib import Path
 from requests.adapters import HTTPAdapter
-from typing import List, Dict, Optional
+from typing import Callable, List, Dict, Optional
 from urllib3.util.retry import Retry
+from zoneinfo import ZoneInfo
 
 app = FastAPI(
     title="Football TV Channels Scraper API",
@@ -26,13 +29,44 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# In-memory cache for scraped matches to ensure maximum performance and respect liveonsat.com's bandwidth
-cache = {
-    "data": None,
-    "expiry": None
-}
-CACHE_FILE = Path("cache.json")
+# Cache mémoire + un fichier JSON par date. Les fichiers expirés restent disponibles
+# comme secours si les sites de scraping sont momentanément injoignables.
+cache: Dict[str, Dict] = {}
+DEFAULT_CACHE_DIR = Path(__file__).resolve().parent / "tv_cache"
+CACHE_DIR = Path(os.environ.get("TV_CACHE_DIR", str(DEFAULT_CACHE_DIR)))
 CACHE_DURATION = timedelta(minutes=15)
+EMPTY_CACHE_DURATION = timedelta(minutes=2)
+LOGGER = logging.getLogger("football-tv-cache")
+
+EUROPE_BROADCAST_REGIONS = {
+    "Albania", "Andorra", "Austria", "Belgium", "Bosnia and Herzegovina",
+    "Bulgaria", "Croatia", "Cyprus", "Czech Republic", "Czechia", "Denmark",
+    "Estonia", "Finland", "France", "Germany", "Greece", "Hungary", "Iceland",
+    "Ireland", "Italy", "Kosovo", "Latvia", "Liechtenstein", "Lithuania",
+    "Luxembourg", "Malta", "Moldova", "Monaco", "Montenegro", "Netherlands",
+    "North Macedonia", "Norway", "Poland", "Portugal", "Romania", "San Marino",
+    "Serbia", "Slovakia", "Slovenia", "Spain", "Sweden", "Switzerland",
+    "Turkey", "Türkiye", "Ukraine", "United Kingdom", "Vatican City",
+    "United Kingdom & Ireland", "Balkans", "Scandinavia & Baltics"
+}
+
+PRIORITY_N1_BROADCAST_REGIONS = [
+    "France",
+    "United Kingdom",
+    "United Kingdom & Ireland",
+    "Germany",
+    "Spain",
+    "Italy",
+    "Portugal",
+    "Switzerland",
+    "Austria",
+    "Belgium",
+    "Netherlands"
+]
+PRIORITY_N1_RANK = {
+    country: rank
+    for rank, country in enumerate(PRIORITY_N1_BROADCAST_REGIONS)
+}
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -61,7 +95,7 @@ LIVEONSAT_URLS = [
     "https://www.liveonsat.com/2day.php"
 ]
 LIVEFOOTBALLONTV_URL = "https://www.live-footballontv.com/"
-LIVE_SOCCERTV_PROXY = "https://r.jina.ai/http://www.livesoccertv.com/fr/schedules/"
+LIVE_SOCCERTV_PROXY = "https://r.jina.ai/http://www.livesoccertv.com/schedules"
 RETRY_STRATEGY = Retry(
     total=3,
     status_forcelist=[429, 500, 502, 503, 504],
@@ -69,27 +103,87 @@ RETRY_STRATEGY = Retry(
     backoff_factor=0.5
 )
 
-def load_cache_from_disk() -> None:
-    if not CACHE_FILE.exists():
-        return
+def cache_file_for(date: str) -> Path:
+    return CACHE_DIR / f"{date}.json"
+
+
+def load_cache_from_disk(date: str) -> Optional[Dict]:
+    cache_file = cache_file_for(date)
+    if not cache_file.exists():
+        return None
     try:
-        raw = json.loads(CACHE_FILE.read_text())
+        raw = json.loads(cache_file.read_text(encoding="utf-8"))
         expiry = raw.get("expiry")
-        if expiry:
-            cache["expiry"] = datetime.fromisoformat(expiry)
-        cache["data"] = raw.get("data")
-    except Exception:
-        pass
+        entry = {
+            "expiry": datetime.fromisoformat(expiry) if expiry else None,
+            "data": raw.get("data") or []
+        }
+        cache[date] = entry
+        return entry
+    except (OSError, ValueError, TypeError) as exc:
+        LOGGER.warning("Unable to read cache for %s: %s", date, exc)
+        return None
 
 
-def save_cache_to_disk(matches: List[Dict]) -> None:
+def save_cache_to_disk(date: str, matches: List[Dict]) -> None:
+    expiry = datetime.now() + (
+        CACHE_DURATION if matches else EMPTY_CACHE_DURATION
+    )
+    entry = {"expiry": expiry, "data": matches}
+    cache[date] = entry
     try:
-        CACHE_FILE.write_text(json.dumps({
-            "expiry": (datetime.now() + CACHE_DURATION).isoformat(),
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        target = cache_file_for(date)
+        temporary = target.with_suffix(".json.tmp")
+        temporary.write_text(json.dumps({
+            "date": date,
+            "expiry": expiry.isoformat(),
             "data": matches
-        }))
-    except Exception:
-        pass
+        }, ensure_ascii=False), encoding="utf-8")
+        temporary.replace(target)
+    except OSError as exc:
+        LOGGER.warning("Unable to write cache for %s: %s", date, exc)
+
+
+def save_scraped_dates(matches: List[Dict]) -> None:
+    matches_by_date: Dict[str, List[Dict]] = {}
+    for match in matches:
+        date = match.get("date")
+        if date and re.fullmatch(r"\d{4}-\d{2}-\d{2}", date):
+            matches_by_date.setdefault(date, []).append(match)
+    for date, date_matches in matches_by_date.items():
+        save_cache_to_disk(date, deduplicate_matches(date_matches))
+
+
+def deduplicate_matches(matches: List[Dict]) -> List[Dict]:
+    by_key: Dict[tuple, Dict] = {}
+    for match in matches:
+        key = (
+            match.get("date"),
+            " ".join(sorted(normalize_team_name(match.get("home", "")))),
+            " ".join(sorted(normalize_team_name(match.get("away", ""))))
+        )
+        existing = by_key.get(key)
+        if existing is None:
+            by_key[key] = match
+            continue
+        channels = list(dict.fromkeys(
+            (existing.get("channels") or []) + (match.get("channels") or [])
+        ))
+        channel_countries = {
+            channel: list(countries)
+            for channel, countries in (existing.get("channelCountries") or {}).items()
+        }
+        for channel, countries in (match.get("channelCountries") or {}).items():
+            channel_countries[channel] = list(dict.fromkeys(
+                channel_countries.get(channel, []) + countries
+            ))
+        by_key[key] = {
+            **existing,
+            "channels": channels,
+            "channelCountries": channel_countries
+        }
+    return list(by_key.values())
 
 
 def get_http_session() -> requests.Session:
@@ -98,9 +192,6 @@ def get_http_session() -> requests.Session:
     session.mount("https://", HTTPAdapter(max_retries=RETRY_STRATEGY))
     session.headers.update(HEADERS)
     return session
-
-
-load_cache_from_disk()
 
 
 def parse_liveonsat_date(date_str: str, current_year: int = None) -> Optional[str]:
@@ -149,15 +240,61 @@ def parse_liveonsat_date(date_str: str, current_year: int = None) -> Optional[st
     return None
 
 
-def scrape_live_soccertv() -> List[Dict]:
+CHANNEL_MARKDOWN_RE = re.compile(
+    r'\[([^\]]+)\]\((https?://[^\s)]*/channels/[^\s)]*)'
+    r'(?:\s+"([^"]*)")?\)'
+)
+
+
+def countries_from_channel_title(title: Optional[str]) -> List[str]:
+    """Extract territory metadata such as '(Italy, San Marino)' from a link title."""
+    if not title:
+        return []
+    groups = re.findall(r'\(([^()]*)\)', title)
+    if not groups:
+        return []
+    territory_text = groups[-1].strip()
+    low = territory_text.lower()
+    if "live stream" in low or "on demand" in low:
+        return []
+    return [
+        country.strip().rstrip("…").strip()
+        for country in territory_text.split(",")
+        if country.strip()
+    ]
+
+
+def extract_markdown_channels(line: str) -> List[tuple]:
+    return [
+        (name.strip(), countries_from_channel_title(title))
+        for name, _url, title in CHANNEL_MARKDOWN_RE.findall(line)
+        if name.strip()
+    ]
+
+
+def scrape_live_soccertv(target_date: Optional[str] = None) -> List[Dict]:
     """Scrapes LiveSoccerTV schedule content via a markdown proxy."""
     session = get_http_session()
-    response = session.get(LIVE_SOCCERTV_PROXY, timeout=30)
+    # Jina rejects the browser-navigation headers required by the HTML scrapers.
+    # A minimal requests session is accepted and returns plain Markdown.
+    if hasattr(session, "headers"):
+        session.headers.clear()
+    schedule_url = (
+        f"{LIVE_SOCCERTV_PROXY}/{target_date}/"
+        if target_date
+        else f"{LIVE_SOCCERTV_PROXY}/"
+    )
+    response = session.get(schedule_url, timeout=30)
     response.raise_for_status()
     text = response.text
 
     matches = []
-    current_date = None
+    # The date-specific Jina page does not contain a Markdown date heading.
+    # In that case the requested date is the authoritative schedule date.
+    current_date = target_date
+    current_league = "Unknown"
+    last_match = None
+    target_year = int(target_date[:4]) if target_date else None
 
     for raw_line in text.splitlines():
         line = raw_line.strip()
@@ -165,16 +302,37 @@ def scrape_live_soccertv() -> List[Dict]:
             continue
         line = re.sub(r'^[\*\-\+]\s*', '', line)
 
+        league_line = re.match(r'^▴\[([^\]]+)\]\(', line)
+        if league_line:
+            current_league = league_line.group(1).strip()
+            last_match = None
+            continue
+
         if line.startswith('#'):
-            current_date = parse_liveonsat_date(line.lstrip('#').strip())
+            current_date = parse_liveonsat_date(
+                line.lstrip('#').strip(),
+                current_year=target_year
+            )
             continue
 
         match_line = re.match(
-            r'^(?P<time>\d{1,2}:\d{2}\s*(?:am|pm))\[(?P<teams>[^\]]+)\]\([^\)]*\)(?P<rest>.*)$',
+            r'^(?P<time>\d{1,2}:\d{2}\s*(?:am|pm))\s*'
+            r'\[(?P<teams>[^\]]+)\]\([^\)]*\)(?P<rest>.*)$',
             line,
             flags=re.I
         )
-        if not match_line or not current_date:
+        if not match_line:
+            if last_match is not None:
+                for channel, countries in extract_markdown_channels(line):
+                    if channel not in last_match["channels"]:
+                        last_match["channels"].append(channel)
+                    if countries:
+                        previous = last_match["channelCountries"].get(channel, [])
+                        last_match["channelCountries"][channel] = list(dict.fromkeys(
+                            previous + countries
+                        ))
+            continue
+        if not current_date:
             continue
 
         teams_text = match_line.group('teams').strip()
@@ -185,17 +343,24 @@ def scrape_live_soccertv() -> List[Dict]:
         home_team = teams[0].strip()
         away_team = teams[1].strip()
         kickoff_time = match_line.group('time').strip()
-        league = "Unknown"
 
-        channels = re.findall(r'\[([^\]]+)\]\([^\)]*\s+"[^"]+"\)', match_line.group('rest'))
-        matches.append({
+        channel_links = extract_markdown_channels(match_line.group('rest'))
+        channels = [channel for channel, _countries in channel_links]
+        channel_countries = {
+            channel: countries
+            for channel, countries in channel_links
+            if countries
+        }
+        last_match = {
             "date": current_date,
-            "league": league,
+            "league": current_league,
             "home": home_team,
             "away": away_team,
             "time": kickoff_time,
-            "channels": channels
-        })
+            "channels": channels,
+            "channelCountries": channel_countries
+        }
+        matches.append(last_match)
 
     if not matches:
         raise Exception("Failed to parse LiveSoccerTV schedule content.")
@@ -266,18 +431,28 @@ def get_channel_country(channel_name: str) -> str:
         ("France", ["france", "canal+ live", "canal+ foot", "rmc sport", "bein sports france"]),
         ("Spain", ["espana", "españa", "laliga", "movistar", "dazn españa", "dazn espana"]),
         ("Italy", ["italia", "calcio", "sky sport 25", "sky sport italia", "rai"]),
-        ("Germany", ["deutsch", "bundesliga", "sky sport premier league de", "dazn 1 bar deutsch", "dazn de"]),
+        ("Germany", [
+            "deutsch", "bundesliga", "sky sport premier league de",
+            "dazn 1 bar deutsch", "dazn de", "sportdigital"
+        ]),
         ("Portugal", ["portugal", "sport tv"]),
         ("Netherlands", ["nederland", "ziggo", "espn 1 nederland"]),
         ("Belgium", ["belgium", "play sports"]),
+        ("Switzerland", ["switzerland", "rsi la", "srf ", "blue sport", "teleclub", "rts deux"]),
+        ("Austria", ["austria", "orf eins", "orf 1", "orf on"]),
+        ("Croatia", ["croatia", "hrvatska", "maxtv", "hrt 2"]),
+        ("Slovenia", ["slovenia", "kanal a", "sportklub slovenia"]),
+        ("Czechia", ["czech", "čt sport", "ct sport", "nova sport"]),
+        ("Slovakia", ["slovakia", "joj sport"]),
         ("Balkans", ["bih", "srbija", "hrvatska", "slovenija", "montenegro", "arena premium", "arena sport", "sportklub", "art motion"]),
         ("Scandinavia & Baltics", ["norge", "sverige", "suomi", "danmark", "dansk", "svensk", "baltic", "baltics", "v sport", "viaplay", "voyo", "tv2 play"]),
         ("Turkey", ["türkiye", "turkey", "tivibu", "exxen", "s sport"]),
         ("Bulgaria", ["bulgaria", "diema", "max sport"]),
         ("Romania", ["romania", "digi sport", "prima sport", "primaplay", "voyo pro tv"]),
+        ("Poland", ["poland", "polska", "polsat sport", "tvp sport", "canal+ polska"]),
         ("Ukraine", ["ukraine", "megogo", "setanta sports ukraine"]),
-        ("Hungary", ["hungary", "spíler", "match 4"]),
-        ("Greece", ["hellas", "greece", "cosmote", "nova sports"]),
+        ("Hungary", ["hungary", "magyar", "spíler", "match 4", "m4 sport"]),
+        ("Greece", ["hellas", "greece", "greek", "cosmote", "nova sports"]),
         ("USA", ["usa", "nbc", "cnbc", "paramount+", "peacock", "universo", "telemundo", "syfy"]),
         ("Canada", ["canada", "fubo tv canada", "fubotv canada"]),
         ("Australia", ["australia", "stan sport", "optus"]),
@@ -286,7 +461,6 @@ def get_channel_country(channel_name: str) -> str:
         ("Japan", ["japan", "dazn japan", "j sport"]),
         ("India", ["india", "star sports", "sony", "jio"]),
         ("China", ["china"]),
-        ("Austria", ["austria"]),
         ("Israel", ["israel"]),
         ("Azerbaijan", ["azerbaijan"]),
         ("Tajikistan", ["tajikistan"]),
@@ -459,30 +633,77 @@ def scrape_liveonsat() -> List[Dict]:
             
     return matches
 
-def get_matches_cached() -> List[Dict]:
-    """Retrieve match schedule from cache if fresh, otherwise scrape."""
-    now = datetime.now()
-    if cache["data"] is not None and cache["expiry"] > now:
-        return cache["data"]
-        
-    try:
+def scrape_schedule_for_date(target_date: str) -> List[Dict]:
+    """Try date-aware and generic sources until the requested day is covered."""
+    matches: List[Dict] = []
+    errors: List[str] = []
+    scrapers: List[Callable[[], List[Dict]]] = [
+        lambda: scrape_live_soccertv(target_date),
+        scrape_live_football_on_tv,
+        scrape_liveonsat
+    ]
+    for scraper in scrapers:
         try:
-            matches = scrape_live_soccertv()
-        except Exception:
-            try:
-                matches = scrape_live_football_on_tv()
-            except Exception:
-                matches = scrape_liveonsat()
+            matches = deduplicate_matches(matches + scraper())
+            if any(match.get("date") == target_date for match in matches):
+                break
+        except Exception as exc:
+            errors.append(str(exc))
+            LOGGER.warning("TV scraper failed for %s: %s", target_date, exc)
 
-        cache["data"] = matches
-        cache["expiry"] = now + CACHE_DURATION
-        save_cache_to_disk(matches)
-        return matches
-    except Exception as e:
-        # If scraper fails but we have stale cache, return it rather than crashing
-        if cache["data"] is not None:
-            return cache["data"]
-        raise e
+    if not matches:
+        raise Exception("; ".join(errors) or "No scraper returned match data.")
+    return matches
+
+
+def get_matches_cached(target_date: str) -> List[Dict]:
+    """Return one day's schedule, retaining stale daily JSON as an outage fallback."""
+    now = datetime.now()
+    entry = cache.get(target_date) or load_cache_from_disk(target_date)
+    if (
+        entry is not None and
+        entry.get("expiry") is not None and
+        entry["expiry"] > now and
+        (
+            bool(entry.get("data")) or
+            entry["expiry"] <= now + EMPTY_CACHE_DURATION
+        )
+    ):
+        return entry["data"]
+
+    try:
+        scraped = scrape_schedule_for_date(target_date)
+        save_scraped_dates(scraped)
+        refreshed = cache.get(target_date)
+        if refreshed is not None:
+            return refreshed["data"]
+
+        # A successful scrape that genuinely has no entry for this day is cached too,
+        # so repeated requests for the same absent date do not scrape again.
+        save_cache_to_disk(target_date, [])
+        return []
+    except Exception:
+        if entry is not None:
+            return entry["data"]
+        raise
+
+
+def scraped_match_utc_date(match: Dict) -> Optional[str]:
+    """Convert the US-Eastern time exposed by the Jina schedule to UTC."""
+    raw_date = match.get("date")
+    raw_time = (match.get("time") or "").replace(" ", "").upper()
+    if not raw_date or not raw_time or raw_time == "UNKNOWN":
+        return None
+    for time_format in ("%I:%M%p", "%H:%M"):
+        try:
+            local = datetime.strptime(
+                f"{raw_date} {raw_time}",
+                f"%Y-%m-%d {time_format}"
+            ).replace(tzinfo=ZoneInfo("America/New_York"))
+            return local.astimezone(ZoneInfo("UTC")).isoformat().replace("+00:00", "Z")
+        except ValueError:
+            continue
+    return None
 
 @app.get("/")
 def read_root():
@@ -490,9 +711,39 @@ def read_root():
         "status": "online",
         "service": "Football TV Channels Scraper API",
         "endpoints": {
-            "/tv": "Fetch TV channels broadcasting a specific match. Query parameters: home, away, date."
+            "/tv": "Fetch TV channels broadcasting a specific match. Query parameters: home, away, date.",
+            "/schedule": "Fetch the scraped match schedule for one date."
         }
     }
+
+
+@app.get("/schedule")
+def get_schedule(
+    date: str = Query(..., description="Schedule date in YYYY-MM-DD format")
+):
+    """Return a date-aware fallback schedule for clients with limited free APIs."""
+    try:
+        datetime.strptime(date, "%Y-%m-%d")
+    except ValueError:
+        raise HTTPException(status_code=422, detail="date must use YYYY-MM-DD format")
+
+    try:
+        matches = get_matches_cached(date)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Failed to fetch schedule data: {str(exc)}"
+        )
+
+    return {
+        "date": date,
+        "matches": [
+            {**match, "utcDate": scraped_match_utc_date(match)}
+            for match in matches
+            if match.get("date") == date
+        ]
+    }
+
 
 @app.get("/tv")
 def get_tv_channels(
@@ -502,7 +753,12 @@ def get_tv_channels(
 ):
     """Retrieve and group TV channels broadcasting the requested match on the specified date."""
     try:
-        matches = get_matches_cached()
+        datetime.strptime(date, "%Y-%m-%d")
+    except ValueError:
+        raise HTTPException(status_code=422, detail="date must use YYYY-MM-DD format")
+
+    try:
+        matches = get_matches_cached(date)
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"Failed to fetch broadcast data: {str(e)}")
         
@@ -528,16 +784,27 @@ def get_tv_channels(
         
     # Group channels by country/region
     grouped_channels: Dict[str, List[str]] = {}
+    channel_countries = target_match.get("channelCountries") or {}
     for chan in target_match["channels"]:
-        country = get_channel_country(chan)
-        if country not in grouped_channels:
-            grouped_channels[country] = []
-        grouped_channels[country].append(chan)
+        countries = channel_countries.get(chan) or [get_channel_country(chan)]
+        for country in countries:
+            if country not in grouped_channels:
+                grouped_channels[country] = []
+            if chan not in grouped_channels[country]:
+                grouped_channels[country].append(chan)
         
     # Convert grouped channels to list of objects required by the Kotlin client
     channel_groups = [
         {"country": country, "channels": chans}
-        for country, chans in grouped_channels.items()
+        for country, chans in sorted(
+            grouped_channels.items(),
+            key=lambda item: (
+                0 if item[0] in PRIORITY_N1_RANK else
+                1 if item[0] in EUROPE_BROADCAST_REGIONS else 2,
+                PRIORITY_N1_RANK.get(item[0], len(PRIORITY_N1_RANK)),
+                item[0].lower()
+            )
+        )
     ]
     
     return {
