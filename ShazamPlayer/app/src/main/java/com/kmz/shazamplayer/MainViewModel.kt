@@ -230,6 +230,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         spotifyManager?.pause()
         isUsingSpotify = false
         isUsingYouTube = true
+        syncYouTubeQueue(index)
         isActuallyPlaying = false
         youtubeVideoId = null
         youtubeChannel = null
@@ -254,6 +255,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             track.metadataSource = meta.source
                             track.artworkUrl = meta.coverUrlHD ?: meta.coverUrl ?: track.artworkUrl
                             currentArtworkUrl = track.artworkUrl
+                            syncYouTubeQueue(index)
                         }
 
                         val results =
@@ -281,6 +283,51 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         if (currentTrackIndexInFiltered == index) isTrackLoading = false
                     }
                 }
+    }
+
+    /**
+     * Exposes a small, circular Media3 timeline while YouTube provides the actual audio.
+     *
+     * MBUX hides its standard previous/next controls when the MediaSession timeline is empty. The
+     * placeholder items are never prepared or played by ExoPlayer; CustomForwardingPlayer routes
+     * the car controls back to [playPrevious] and [playNext]. Keeping only three items also avoids
+     * sending a potentially very large CSV playlist through the Bluetooth media session.
+     */
+    private fun syncYouTubeQueue(currentIndex: Int) {
+        if (currentIndex !in filteredTracks.indices) return
+
+        val trackCount = filteredTracks.size
+        val queueIndices =
+                listOf(
+                        (currentIndex - 1 + trackCount) % trackCount,
+                        currentIndex,
+                        (currentIndex + 1) % trackCount
+                )
+        val queueItems =
+                queueIndices.mapIndexed { slot, trackIndex ->
+                    val track = filteredTracks[trackIndex]
+                    val metadata =
+                            MediaMetadata.Builder()
+                                    .setTitle(track.title)
+                                    .setArtist(track.artist)
+                                    .setAlbumTitle(track.officialAlbum)
+                                    .apply {
+                                        (track.officialCoverHD ?: track.artworkUrl)
+                                                ?.takeIf { it.isNotBlank() }
+                                                ?.let { setArtworkUri(Uri.parse(it)) }
+                                    }
+                                    .build()
+
+                    MediaItem.Builder()
+                            .setMediaId("shazam-queue:$trackIndex:$slot")
+                            // A URI lets ExoPlayer create its placeholder timeline. It is never
+                            // prepared because YouTube remains the active playback engine.
+                            .setUri("https://localhost.invalid/shazam-queue/$trackIndex.mp3")
+                            .setMediaMetadata(metadata)
+                            .build()
+                }
+
+        exoPlayer?.setMediaItems(queueItems, /* startIndex= */ 1, /* startPositionMs= */ 0L)
     }
 
     /** Preserved rollback path. It performs no request while SOUNDCLOUD_FALLBACK_ENABLED is false. */
