@@ -167,7 +167,7 @@ class YouTubeManager(context: Context, private val apiKey: String) {
                                 .appendQueryParameter("videoEmbeddable", "true")
                                 .appendQueryParameter("videoSyndicated", "true")
                                 .appendQueryParameter("order", "viewCount")
-                                .appendQueryParameter("maxResults", "25")
+                                .appendQueryParameter("maxResults", "50")
                                 .appendQueryParameter("safeSearch", "none")
                                 .appendQueryParameter("key", apiKey)
                                 .build()
@@ -260,7 +260,8 @@ class YouTubeManager(context: Context, private val apiKey: String) {
                                                     score = 0
                                             ),
                                     viewCount = viewCount,
-                                    canonicalTitle = normalize(cleanTitle)
+                                    canonicalTitle =
+                                            canonicalArtistTrackTitle(artist, candidateTitle)
                             )
                 }
 
@@ -296,6 +297,23 @@ class YouTubeManager(context: Context, private val apiKey: String) {
             }
         }
         return title.trim(' ', '-', '|').takeIf { it.isNotBlank() } ?: rawTitle
+    }
+
+    private fun canonicalArtistTrackTitle(artist: String, rawTitle: String): String {
+        val baseTitle = normalize(cleanArtistTrackTitle(artist, rawTitle))
+        var canonical = baseTitle
+        val wantedArtist = normalize(artist)
+        if (canonical.startsWith("$wantedArtist ")) {
+            canonical = canonical.removePrefix(wantedArtist).trim()
+        }
+        canonical =
+                canonical
+                        .replace(ARTIST_CREDIT_SUFFIX, " ")
+                        .replace(VERSION_WORDS, " ")
+                        .replace(RELEASE_YEAR, " ")
+                        .replace("\\s+".toRegex(), " ")
+                        .trim()
+        return canonical.ifBlank { baseTitle }
     }
 
     private fun executeJson(url: String): JSONObject {
@@ -507,8 +525,8 @@ class YouTubeManager(context: Context, private val apiKey: String) {
                 val canonicalTitle: String
         )
 
-        private const val ARTIST_RADIO_CACHE_TOKEN = "artist-radio-v1"
-        private const val MAX_ARTIST_RADIO_TRACKS = 20
+        private const val ARTIST_RADIO_CACHE_TOKEN = "artist-radio-v2"
+        private const val MAX_ARTIST_RADIO_TRACKS = 50
         private const val MIN_ARTIST_TRACK_DURATION_MS = 45_000L
         private const val MAX_ARTIST_TRACK_DURATION_MS = 15 * 60_000L
         private val VIDEO_ID = "[A-Za-z0-9_-]{11}".toRegex()
@@ -516,6 +534,12 @@ class YouTubeManager(context: Context, private val apiKey: String) {
         private val VIDEO_TITLE_QUALIFIER =
                 """\s*[\[(](?:(?:official|music|officiel|clip)\s+)*(?:video|audio|lyrics?|visuali[sz]er|hd|4k|clip)[^)\]]*[)\]]"""
                         .toRegex(RegexOption.IGNORE_CASE)
+        private val ARTIST_CREDIT_SUFFIX =
+                """\b(?:feat|ft|featuring)\b.*$""".toRegex(RegexOption.IGNORE_CASE)
+        private val VERSION_WORDS =
+                """\b(?:official|music|video|audio|lyrics?|visuali[sz]er|clip|officiel|hd|4k|explicit|remaster(?:ed)?|version|radio|edit|album|single)\b"""
+                        .toRegex(RegexOption.IGNORE_CASE)
+        private val RELEASE_YEAR = """\b(?:19|20)\d{2}\b""".toRegex()
         private val ARTIST_RADIO_EXCLUSIONS =
                 listOf(
                         " live at ",
