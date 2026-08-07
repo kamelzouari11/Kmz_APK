@@ -242,6 +242,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         playbackError = null
         isTrackLoading = true
 
+        track.youtubeVideoId?.takeIf { it.isNotBlank() }?.let { videoId ->
+            youtubeResults =
+                    listOf(
+                            YouTubeResult(
+                                    videoId = videoId,
+                                    title = track.title,
+                                    channelTitle = track.youtubeChannel ?: track.artist,
+                                    artworkUrl = currentArtworkUrl,
+                                    durationMs = track.officialDurationMs ?: 0L,
+                                    score = Int.MAX_VALUE
+                            )
+                    )
+            applyYouTubeResult(0)
+            isTrackLoading = false
+            return
+        }
+
         playbackSearchJob =
                 viewModelScope.launch {
                     try {
@@ -441,12 +458,63 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun openArtistRadio(artist: String) {
-        Toast.makeText(
-                        context,
-                        "Radio artiste temporairement désactivée pendant le test YouTube.",
-                        Toast.LENGTH_SHORT
-                )
-                .show()
+        val requestedArtist = artist.trim()
+        if (requestedArtist.isEmpty() || isSearchingPlaylists) return
+
+        viewModelScope.launch {
+            isSearchingPlaylists = true
+            try {
+                val results = youtubeManager?.searchArtistTopTracks(requestedArtist).orEmpty()
+                if (results.isEmpty()) {
+                    Toast.makeText(
+                                    context,
+                                    "Aucun titre populaire trouvé pour $requestedArtist",
+                                    Toast.LENGTH_SHORT
+                            )
+                            .show()
+                    return@launch
+                }
+
+                val tracks =
+                        results.mapIndexed { index, result ->
+                            Track(
+                                    index = (index + 1).toString(),
+                                    tagTime = "",
+                                    title = result.title,
+                                    artist = requestedArtist,
+                                    shazamUrl = "",
+                                    trackKey = "youtube:${result.videoId}",
+                                    artworkUrl = result.artworkUrl,
+                                    officialDurationMs = result.durationMs,
+                                    officialCoverHD = result.artworkUrl,
+                                    metadataSource = "youtube",
+                                    youtubeVideoId = result.videoId,
+                                    youtubeChannel = result.channelTitle
+                            )
+                        }
+
+                discoveryTracks = tracks
+                filteredTracks = tracks
+                isDiscoveryMode = true
+                discoveryCreator = requestedArtist
+                discoveryCreatorId = 0L
+                showPlaylistSelection = false
+                currentTrackIndexInFiltered = 0
+                playTrack(0)
+                currentLevel = NavLevel.PLAYER
+            } catch (error: YouTubeApiException) {
+                Toast.makeText(context, error.message, Toast.LENGTH_LONG).show()
+            } catch (error: Exception) {
+                Toast.makeText(
+                                context,
+                                "Radio artiste indisponible : ${error.localizedMessage ?: "erreur réseau"}",
+                                Toast.LENGTH_LONG
+                        )
+                        .show()
+            } finally {
+                isSearchingPlaylists = false
+            }
+        }
     }
 
     fun loadPlaylist(playlist: SoundCloudPlaylist) {
@@ -500,19 +568,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun openUserRadio(userId: Long, userName: String) {
-        viewModelScope.launch {
-            isSearchingPlaylists = true
-            val playlists = soundCloudManager?.searchUserPlaylists(userId) ?: emptyList()
-            artistPlaylists = playlists
-            isSearchingPlaylists = false
-            if (playlists.isNotEmpty()) {
-                showPlaylistSelection = true
-            } else {
-                Toast.makeText(context, "Aucune autre playlist pour $userName", Toast.LENGTH_SHORT)
-                        .show()
-            }
-        }
+        openArtistRadio(userName)
     }
 
     fun startSleepTimer(minutes: Int) {

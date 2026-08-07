@@ -146,8 +146,156 @@ class YouTubeManager(context: Context, private val apiKey: String) {
                 }
             }
 
+    /** Returns embeddable popular music videos for an artist, ordered by YouTube view count. */
+    suspend fun searchArtistTopTracks(artist: String): List<YouTubeResult> =
+            withContext(Dispatchers.IO) {
+                readCache(artist, ARTIST_RADIO_CACHE_TOKEN)?.let { return@withContext it }
+
+                if (apiKey.isBlank()) {
+                    throw YouTubeApiException(
+                            "Clé YouTube absente. Ajoutez YOUTUBE_API_KEY dans local.properties."
+                    )
+                }
+
+                val searchUrl =
+                        Uri.parse("https://www.googleapis.com/youtube/v3/search")
+                                .buildUpon()
+                                .appendQueryParameter("part", "snippet")
+                                .appendQueryParameter("q", "$artist official music")
+                                .appendQueryParameter("type", "video")
+                                .appendQueryParameter("videoCategoryId", "10")
+                                .appendQueryParameter("videoEmbeddable", "true")
+                                .appendQueryParameter("videoSyndicated", "true")
+                                .appendQueryParameter("order", "viewCount")
+                                .appendQueryParameter("maxResults", "25")
+                                .appendQueryParameter("safeSearch", "none")
+                                .appendQueryParameter("key", apiKey)
+                                .build()
+                                .toString()
+
+                val searchItems =
+                        executeJson(searchUrl).optJSONArray("items") ?: return@withContext emptyList()
+                val orderedIds = buildList {
+                    for (index in 0 until searchItems.length()) {
+                        val videoId =
+                                searchItems
+                                        .optJSONObject(index)
+                                        ?.optJSONObject("id")
+                                        ?.optString("videoId")
+                                        .orEmpty()
+                        if (VIDEO_ID.matches(videoId)) add(videoId)
+                    }
+                }
+                if (orderedIds.isEmpty()) return@withContext emptyList()
+
+                val detailsUrl =
+                        Uri.parse("https://www.googleapis.com/youtube/v3/videos")
+                                .buildUpon()
+                                .appendQueryParameter(
+                                        "part",
+                                        "contentDetails,status,snippet,statistics"
+                                )
+                                .appendQueryParameter("id", orderedIds.joinToString(","))
+                                .appendQueryParameter("key", apiKey)
+                                .build()
+                                .toString()
+                val detailItems =
+                        executeJson(detailsUrl).optJSONArray("items") ?: return@withContext emptyList()
+                val candidates = mutableListOf<ArtistRadioCandidate>()
+                val wantedArtist = normalize(artist)
+
+                for (index in 0 until detailItems.length()) {
+                    val item = detailItems.optJSONObject(index) ?: continue
+                    val status = item.optJSONObject("status") ?: continue
+                    if (!status.optBoolean("embeddable", false)) continue
+
+                    val videoId = item.optString("id")
+                    val snippet = item.optJSONObject("snippet") ?: continue
+                    val candidateTitle = decodeHtml(snippet.optString("title"))
+                    val channelTitle = decodeHtml(snippet.optString("channelTitle"))
+                    val description = decodeHtml(snippet.optString("description"))
+                    val normalizedIdentity = normalize("$candidateTitle $channelTitle")
+                    val normalizedContext = normalize("$normalizedIdentity $description")
+                    if (!normalizedIdentity.contains(wantedArtist) &&
+                                    !normalizedContext.contains(wantedArtist)
+                    ) {
+                        continue
+                    }
+
+                    val normalizedTitle = " ${normalize(candidateTitle)} "
+                    if (ARTIST_RADIO_EXCLUSIONS.any { normalizedTitle.contains(it) }) continue
+
+                    val durationMs =
+                            parseIsoDurationMs(
+                                    item.optJSONObject("contentDetails")
+                                            ?.optString("duration")
+                                            .orEmpty()
+                            )
+                    if (durationMs !in MIN_ARTIST_TRACK_DURATION_MS..MAX_ARTIST_TRACK_DURATION_MS) {
+                        continue
+                    }
+
+                    val artwork =
+                            snippet.optJSONObject("thumbnails")?.let { thumbnails ->
+                                listOf("maxres", "standard", "high", "medium", "default")
+                                        .firstNotNullOfOrNull { size ->
+                                            thumbnails
+                                                    .optJSONObject(size)
+                                                    ?.optString("url")
+                                                    ?.takeIf { it.isNotBlank() }
+                                        }
+                            }
+                    val cleanTitle = cleanArtistTrackTitle(artist, candidateTitle)
+                    val viewCount =
+                            item.optJSONObject("statistics")?.optLong("viewCount", 0L) ?: 0L
+                    candidates +=
+                            ArtistRadioCandidate(
+                                    result =
+                                            YouTubeResult(
+                                                    videoId = videoId,
+                                                    title = cleanTitle,
+                                                    channelTitle = channelTitle,
+                                                    artworkUrl = artwork,
+                                                    durationMs = durationMs,
+                                                    score = 0
+                                            ),
+                                    viewCount = viewCount,
+                                    canonicalTitle = normalize(cleanTitle)
+                            )
+                }
+
+                candidates
+                        .sortedByDescending { it.viewCount }
+                        .distinctBy { it.canonicalTitle }
+                        .map { it.result }
+                        .take(MAX_ARTIST_RADIO_TRACKS)
+                        .also { results ->
+                            if (results.isNotEmpty()) {
+                                writeCache(artist, ARTIST_RADIO_CACHE_TOKEN, results)
+                            }
+                        }
+            }
+
     fun clearCachedTrack(artist: String, title: String) {
         cache.edit().remove(cacheKey(artist, title)).apply()
+    }
+
+    private fun cleanArtistTrackTitle(artist: String, rawTitle: String): String {
+        var title = rawTitle.replace(VIDEO_TITLE_QUALIFIER, " ").replace("\\s+".toRegex(), " ").trim()
+        val separator = listOf(" - ", " – ", " — ", " | ").firstOrNull { title.contains(it) }
+        if (separator != null) {
+            val parts = title.split(separator, limit = 2).map { it.trim() }
+            if (parts.size == 2) {
+                val wantedArtist = normalize(artist)
+                title =
+                        when {
+                            normalize(parts[0]).contains(wantedArtist) -> parts[1]
+                            normalize(parts[1]).contains(wantedArtist) -> parts[0]
+                            else -> title
+                        }
+            }
+        }
+        return title.trim(' ', '-', '|').takeIf { it.isNotBlank() } ?: rawTitle
     }
 
     private fun executeJson(url: String): JSONObject {
@@ -353,7 +501,39 @@ class YouTubeManager(context: Context, private val apiKey: String) {
                     .getOrNull()
 
     companion object {
+        private data class ArtistRadioCandidate(
+                val result: YouTubeResult,
+                val viewCount: Long,
+                val canonicalTitle: String
+        )
+
+        private const val ARTIST_RADIO_CACHE_TOKEN = "artist-radio-v1"
+        private const val MAX_ARTIST_RADIO_TRACKS = 20
+        private const val MIN_ARTIST_TRACK_DURATION_MS = 45_000L
+        private const val MAX_ARTIST_TRACK_DURATION_MS = 15 * 60_000L
         private val VIDEO_ID = "[A-Za-z0-9_-]{11}".toRegex()
         private val ISO_DURATION = "PT(?:(\\d+)H)?(?:(\\d+)M)?(?:(\\d+)S)?".toRegex()
+        private val VIDEO_TITLE_QUALIFIER =
+                """\s*[\[(](?:(?:official|music|officiel|clip)\s+)*(?:video|audio|lyrics?|visuali[sz]er|hd|4k|clip)[^)\]]*[)\]]"""
+                        .toRegex(RegexOption.IGNORE_CASE)
+        private val ARTIST_RADIO_EXCLUSIONS =
+                listOf(
+                        " live at ",
+                        " live from ",
+                        " live performance ",
+                        " live session ",
+                        " ao vivo ",
+                        " cover by ",
+                        " cover version ",
+                        " karaoke ",
+                        " reaction ",
+                        " interview ",
+                        " tutorial ",
+                        " slowed ",
+                        " sped up ",
+                        " nightcore ",
+                        " remix ",
+                        " 1 hour "
+                )
     }
 }
