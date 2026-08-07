@@ -36,6 +36,7 @@ empty_tv_retry_after: Dict[str, datetime] = {}
 DEFAULT_CACHE_DIR = Path(__file__).resolve().parent / "tv_cache"
 CACHE_DIR = Path(os.environ.get("TV_CACHE_DIR", str(DEFAULT_CACHE_DIR)))
 CACHE_DURATION = timedelta(minutes=15)
+FUTURE_CACHE_DURATION = timedelta(hours=6)
 EMPTY_CACHE_DURATION = timedelta(minutes=2)
 LOGGER = logging.getLogger("football-tv-cache")
 
@@ -48,26 +49,94 @@ EUROPE_BROADCAST_REGIONS = {
     "North Macedonia", "Norway", "Poland", "Portugal", "Romania", "San Marino",
     "Serbia", "Slovakia", "Slovenia", "Spain", "Sweden", "Switzerland",
     "Turkey", "Türkiye", "Ukraine", "United Kingdom", "Vatican City",
-    "United Kingdom & Ireland", "Balkans", "Scandinavia & Baltics"
+    "United Kingdom & Ireland", "Balkans", "Scandinavia & Baltics", "Europe"
 }
 
+MENA_BROADCAST_REGIONS = {
+    "Algeria", "Bahrain", "Chad", "Djibouti", "Egypt", "Iran", "Iraq",
+    "Israel", "Jordan", "Kuwait", "Lebanon", "Libya", "Mauritania", "Morocco",
+    "Oman", "Palestine", "Palestinian Territory", "Qatar", "Saudi Arabia",
+    "Somalia", "Sudan", "Syria", "Tunisia", "United Arab Emirates", "Yemen",
+    "MENA (Middle East)"
+}
+
+VISIBLE_MENA_BROADCAST_REGIONS = MENA_BROADCAST_REGIONS - {
+    "Chad", "Djibouti", "Somalia"
+}
+
+NORTH_AMERICA_BROADCAST_REGIONS = {
+    "Canada", "Mexico", "North America", "USA"
+}
+
+VISIBLE_BROADCAST_REGIONS = (
+    EUROPE_BROADCAST_REGIONS |
+    VISIBLE_MENA_BROADCAST_REGIONS |
+    NORTH_AMERICA_BROADCAST_REGIONS
+)
+
 PRIORITY_N1_BROADCAST_REGIONS = [
+    "MENA (Middle East)",
     "France",
+    "Italy",
+    "Spain",
     "United Kingdom",
     "United Kingdom & Ireland",
     "Germany",
-    "Spain",
-    "Italy",
+    "Poland",
+    "Romania",
+    "Netherlands",
+    "Qatar",
+    "USA",
+    "Canada",
     "Portugal",
     "Switzerland",
     "Austria",
-    "Belgium",
-    "Netherlands"
+    "Belgium"
 ]
 PRIORITY_N1_RANK = {
     country: rank
     for rank, country in enumerate(PRIORITY_N1_BROADCAST_REGIONS)
 }
+
+BROADCAST_COUNTRY_ALIASES = {
+    "england": "United Kingdom",
+    "great britain": "United Kingdom",
+    "ireland republic": "Ireland",
+    "uk": "United Kingdom",
+    "royaume uni": "United Kingdom",
+    "angleterre": "United Kingdom",
+    "united states": "USA",
+    "united states of america": "USA",
+    "us": "USA",
+    "etats unis": "USA",
+    "the netherlands": "Netherlands",
+    "holland": "Netherlands",
+    "pays bas": "Netherlands",
+    "polska": "Poland",
+    "macedonia": "North Macedonia",
+    "italia": "Italy",
+    "espana": "Spain",
+    "deutschland": "Germany",
+    "canada": "Canada",
+    "qatar": "Qatar",
+    "mexico": "Mexico",
+    "uae": "United Arab Emirates",
+    "emirates": "United Arab Emirates",
+    "palestine": "Palestinian Territory"
+}
+
+
+def canonical_broadcast_country(country: str) -> str:
+    """Return one stable label so aliases are grouped and ordered together."""
+    cleaned = " ".join((country or "").strip().split())
+    if not cleaned:
+        return "Other / International"
+    key = "".join(
+        char for char in unicodedata.normalize("NFD", cleaned.casefold())
+        if unicodedata.category(char) != "Mn"
+    )
+    key = re.sub(r"[^a-z0-9]+", " ", key).strip()
+    return BROADCAST_COUNTRY_ALIASES.get(key, cleaned)
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -97,6 +166,9 @@ LIVEONSAT_URLS = [
 ]
 LIVEFOOTBALLONTV_URL = "https://www.live-footballontv.com/"
 LIVE_SOCCERTV_PROXY = "https://r.jina.ai/http://www.livesoccertv.com/schedules"
+LIVE_SOCCERTV_MATCH_PROXY = "https://r.jina.ai/https://www.livesoccertv.com"
+JINA_FUTURE_CACHE_TOLERANCE_SECONDS = 6 * 60 * 60
+JINA_CURRENT_CACHE_TOLERANCE_SECONDS = 5 * 60
 RETRY_STRATEGY = Retry(
     total=3,
     status_forcelist=[429, 500, 502, 503, 504],
@@ -127,9 +199,16 @@ def load_cache_from_disk(date: str) -> Optional[Dict]:
 
 
 def save_cache_to_disk(date: str, matches: List[Dict]) -> None:
-    expiry = datetime.now() + (
-        CACHE_DURATION if matches else EMPTY_CACHE_DURATION
-    )
+    if not matches:
+        duration = EMPTY_CACHE_DURATION
+    else:
+        target_date = datetime.strptime(date, "%Y-%m-%d").date()
+        duration = (
+            FUTURE_CACHE_DURATION
+            if target_date > datetime.now().date()
+            else CACHE_DURATION
+        )
+    expiry = datetime.now() + duration
     entry = {"expiry": expiry, "data": matches}
     cache[date] = entry
     try:
@@ -273,6 +352,74 @@ def extract_markdown_channels(line: str) -> List[tuple]:
     ]
 
 
+def parse_live_soccertv_international_coverage(text: str) -> tuple:
+    """Parse the country-by-country table exposed on a match detail page."""
+    channels: List[str] = []
+    channel_countries: Dict[str, List[str]] = {}
+    in_coverage = False
+
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if line == "## International Coverage":
+            in_coverage = True
+            continue
+        if not in_coverage:
+            continue
+        if line.startswith("## ") or line.startswith("Content disclaimer:"):
+            break
+
+        channel_links = extract_markdown_channels(line)
+        if not channel_links or "[" not in line:
+            continue
+        country = line.split("[", 1)[0].strip(" :-|\t")
+        if not country or country.startswith("#") or len(country) > 80:
+            continue
+
+        for channel, _countries in channel_links:
+            if channel not in channels:
+                channels.append(channel)
+            countries = channel_countries.setdefault(channel, [])
+            if country not in countries:
+                countries.append(country)
+
+    return channels, channel_countries
+
+
+def enrich_live_soccertv_match(match: Dict) -> Dict:
+    """Load a match page to obtain complete, explicit coverage by country."""
+    source_url = match.get("sourceUrl") or ""
+    path_match = re.search(
+        r'https?://(?:www\.)?livesoccertv\.com(?P<path>/match/[^?#\s]+)',
+        source_url,
+        flags=re.I
+    )
+    if not path_match:
+        return match
+
+    session = get_http_session()
+    if hasattr(session, "headers"):
+        session.headers.clear()
+    response = session.get(
+        f"{LIVE_SOCCERTV_MATCH_PROXY}{path_match.group('path')}",
+        timeout=30
+    )
+    response.raise_for_status()
+    channels, channel_countries = parse_live_soccertv_international_coverage(
+        response.text
+    )
+    if not channels:
+        return match
+
+    return {
+        **match,
+        "channels": channels,
+        "channelCountries": channel_countries,
+        "source": "LiveSoccerTV",
+        "sourceUrl": source_url.split("#", 1)[0],
+        "verifiedAt": datetime.now(ZoneInfo("UTC")).isoformat(timespec="seconds")
+    }
+
+
 def scrape_live_soccertv(target_date: Optional[str] = None) -> List[Dict]:
     """Scrapes LiveSoccerTV schedule content via a markdown proxy."""
     session = get_http_session()
@@ -285,7 +432,30 @@ def scrape_live_soccertv(target_date: Optional[str] = None) -> List[Dict]:
         if target_date
         else f"{LIVE_SOCCERTV_PROXY}/"
     )
-    response = session.get(schedule_url, timeout=30)
+    is_future = bool(
+        target_date and
+        datetime.strptime(target_date, "%Y-%m-%d").date() > datetime.now().date()
+    )
+    reader_headers = {
+        # La page contient menus, calendriers, publicités et recommandations. La table
+        # `schedules` contient à elle seule tous les matchs de la date demandée.
+        "X-Target-Selector": "table.schedules",
+        "X-Respond-With": "markdown",
+        "X-Cache-Tolerance": str(
+            JINA_FUTURE_CACHE_TOLERANCE_SECONDS
+            if is_future
+            else JINA_CURRENT_CACHE_TOLERANCE_SECONDS
+        )
+    }
+    response = session.get(schedule_url, headers=reader_headers, timeout=15)
+    # Protection si LiveSoccerTV change son conteneur HTML : conserver l'ancienne
+    # extraction de page complète plutôt que perdre le programme de la journée.
+    if getattr(response, "status_code", None) == 422:
+        fallback_headers = {
+            "X-Respond-With": "markdown",
+            "X-Cache-Tolerance": reader_headers["X-Cache-Tolerance"]
+        }
+        response = session.get(schedule_url, headers=fallback_headers, timeout=30)
     response.raise_for_status()
     text = response.text
 
@@ -318,14 +488,17 @@ def scrape_live_soccertv(target_date: Optional[str] = None) -> List[Dict]:
 
         match_line = re.match(
             r'^(?:Live\s+)?(?P<time>\d{1,2}:\d{2}\s*(?:am|pm))'
-            r"(?:\s+\d{1,3}(?:\+\d+)?')?\s*"
-            r'\[(?P<teams>[^\]]+)\]\([^\)]*\)(?P<rest>.*)$',
+            r"(?:\s+(?:\d{1,3}(?:\+\d+)?'|HT|FT|AET|PEN|LIVE))*\s*"
+            r'\[(?P<teams>[^\]]+)\]\('
+            r'(?P<url>https?://[^\s\)]+)(?:\s+"[^"]*")?\)'
+            r'(?P<rest>.*)$',
             line,
             flags=re.I
         )
         if not match_line:
             if last_match is not None:
-                for channel, countries in extract_markdown_channels(line):
+                channel_links = extract_markdown_channels(line)
+                for channel, countries in channel_links:
                     if channel not in last_match["channels"]:
                         last_match["channels"].append(channel)
                     if countries:
@@ -333,6 +506,9 @@ def scrape_live_soccertv(target_date: Optional[str] = None) -> List[Dict]:
                         last_match["channelCountries"][channel] = list(dict.fromkeys(
                             previous + countries
                         ))
+                # Channel listings belong to the immediately preceding match only.
+                # This prevents navigation/sidebar links from leaking into it.
+                last_match = None
             continue
         if not current_date:
             continue
@@ -370,7 +546,9 @@ def scrape_live_soccertv(target_date: Optional[str] = None) -> List[Dict]:
             "away": away_team,
             "time": kickoff_time,
             "channels": channels,
-            "channelCountries": channel_countries
+            "channelCountries": channel_countries,
+            "source": "LiveSoccerTV",
+            "sourceUrl": match_line.group("url").split("#", 1)[0]
         }
         matches.append(last_match)
 
@@ -438,9 +616,9 @@ def get_channel_country(channel_name: str) -> str:
     channel_name_lower = channel_name.lower()
     
     mappings = [
-        ("United Kingdom & Ireland", ["uk", "great britain", "gb", "sky sports", "premier sports gb", "tnt sports", "itv", "bbc", "discovery+"]),
+        ("United Kingdom & Ireland", ["uk", "great britain", "gb", "sky sports", "premier sports gb", "tnt sports", "itv", "bbc", "discovery+", "mutv"]),
         ("Ireland", ["ireland", "eire"]),
-        ("France", ["france", "canal+ live", "canal+ foot", "rmc sport", "bein sports france"]),
+        ("France", ["france", "canal+ live", "canal+ foot", "mycanal", "rmc sport", "bein sports france"]),
         ("Spain", ["espana", "españa", "laliga", "movistar", "dazn españa", "dazn espana"]),
         ("Italy", [
             "italia", "calcio", "sky sport 25", "sky sport italia", "rai",
@@ -451,7 +629,9 @@ def get_channel_country(channel_name: str) -> str:
             "dazn 1 bar deutsch", "dazn de", "dazn germany", "sportdigital"
         ]),
         ("Portugal", ["portugal", "sport tv"]),
-        ("Netherlands", ["nederland", "ziggo", "espn 1 nederland"]),
+        ("Netherlands", ["nederland", "ziggo", "espn 1 nederland", "canal+ nl"]),
+        ("Norway", ["norway", "norge", "vg+"]),
+        ("Sweden", ["sweden", "sverige", "sport bladet", "aftonbladet"]),
         ("Belgium", ["belgium", "play sports"]),
         ("Switzerland", ["switzerland", "rsi la", "srf ", "blue sport", "teleclub", "rts deux"]),
         ("Austria", ["austria", "orf eins", "orf 1", "orf on"]),
@@ -461,6 +641,7 @@ def get_channel_country(channel_name: str) -> str:
         ("Slovakia", ["slovakia", "joj sport"]),
         ("Balkans", ["bih", "srbija", "hrvatska", "slovenija", "montenegro", "arena premium", "arena sport", "sportklub", "art motion"]),
         ("Scandinavia & Baltics", ["norge", "sverige", "suomi", "danmark", "dansk", "svensk", "baltic", "baltics", "v sport", "viaplay", "voyo", "tv2 play"]),
+        ("Qatar", ["qatar", "alkass", "al kass"]),
         ("Turkey", ["türkiye", "turkey", "tivibu", "exxen", "s sport"]),
         ("Bulgaria", ["bulgaria", "diema", "max sport"]),
         ("Romania", ["romania", "digi sport", "prima sport", "primaplay", "voyo pro tv"]),
@@ -468,10 +649,14 @@ def get_channel_country(channel_name: str) -> str:
         ("Ukraine", ["ukraine", "megogo", "setanta sports ukraine"]),
         ("Hungary", ["hungary", "magyar", "spíler", "match 4", "m4 sport"]),
         ("Greece", ["hellas", "greece", "greek", "cosmote", "nova sports"]),
-        ("USA", ["usa", "nbc", "cnbc", "paramount+", "peacock", "universo", "telemundo", "syfy"]),
-        ("Canada", ["canada", "fubo tv canada", "fubotv canada"]),
+        ("USA", ["usa", "nbc", "cnbc", "paramount+", "peacock", "universo", "telemundo", "syfy", "bein sports usa"]),
+        ("Canada", ["canada", "fubo tv canada", "fubotv canada", "tsn", "dazn canada"]),
+        ("Mexico", ["mexico", "méxico", "azteca 7", "canal 5 televisa"]),
         ("Australia", ["australia", "stan sport", "optus"]),
-        ("MENA (Middle East)", ["mena", "bein sports mena", "ssc", "dubai sports", "abu dhabi"]),
+        ("MENA (Middle East)", [
+            "mena", "bein sports", "bein sport", "bein connect", "tod",
+            "stc tv", "ssc", "dubai sports", "abu dhabi"
+        ]),
         ("Africa", ["africa", "supersport", "azam", "morocco", "canal+ afrique"]),
         ("Japan", ["japan", "dazn japan", "j sport"]),
         ("India", ["india", "star sports", "sony", "jio"]),
@@ -490,6 +675,29 @@ def get_channel_country(channel_name: str) -> str:
                 
     return "Other / International"
 
+
+def is_mena_broadcaster(channel_name: str, countries: List[str]) -> bool:
+    """Collapse pan-MENA beIN/TOD listings instead of repeating them per territory."""
+    normalized_name = "".join(
+        char for char in unicodedata.normalize("NFD", channel_name.casefold())
+        if unicodedata.category(char) != "Mn"
+    )
+    is_mena_service = any(marker in normalized_name for marker in (
+        "bein sport", "bein connect", "bein sports connect", "tod"
+    ))
+    mena_territory_count = len({
+        canonical_broadcast_country(country)
+        for country in countries
+        if canonical_broadcast_country(country) in MENA_BROADCAST_REGIONS
+    })
+    has_mena_territory = mena_territory_count > 0
+    return (
+        "mena" in normalized_name or
+        "arabia" in normalized_name or
+        (is_mena_service and has_mena_territory) or
+        mena_territory_count >= 2
+    )
+
 def normalize_team_name(name: str) -> set:
     """Normalize team name by stripping accents, punctuation, and common terms."""
     # Lowercase
@@ -501,6 +709,12 @@ def normalize_team_name(name: str) -> set:
     )
     # Remove dots, hyphens, and other punctuation
     name = re.sub(r'[^\w\s]', '', name)
+    # LiveSoccerTV uses short commercial/common names for some clubs while the
+    # fixture APIs expose their official name. Canonicalize those before tokenizing.
+    name = {
+        "psg": "paris saint germain",
+        "paris sg": "paris saint germain",
+    }.get(name.strip(), name)
     # Remove common team prefixes and suffixes
     common_terms = {"fc", "sc", "cf", "fk", "utd", "united", "city", "hotspur", "town", "athletic", "atlético", "atletico", "real"}
     words = [w for w in name.split() if w not in common_terms and len(w) > 1]
@@ -533,10 +747,22 @@ def find_matching_match(
     matches: List[Dict],
     home: str,
     away: str,
-    date: str
+    date: str,
+    source_url: Optional[str] = None
 ) -> Optional[Dict]:
-    """Match both orientations because friendly sources often swap home and away."""
+    """Prefer LiveSoccerTV's stable match URL, then fall back to team names."""
     dated_matches = [match for match in matches if match.get("date") == date]
+    requested_path = live_soccertv_match_path(source_url)
+    if requested_path:
+        by_url = next(
+            (
+                match for match in dated_matches
+                if live_soccertv_match_path(match.get("sourceUrl")) == requested_path
+            ),
+            None
+        )
+        if by_url is not None:
+            return by_url
     for match in dated_matches:
         if (
             match_teams(home, match.get("home", "")) and
@@ -550,6 +776,18 @@ def find_matching_match(
         ):
             return match
     return None
+
+
+def live_soccertv_match_path(source_url: Optional[str]) -> Optional[str]:
+    """Return a provider-owned stable identity without trusting arbitrary URLs."""
+    if not source_url:
+        return None
+    matched = re.search(
+        r'https?://(?:www\.)?livesoccertv\.com(?P<path>/match/[^?#\s]+)',
+        source_url,
+        flags=re.I
+    )
+    return matched.group("path").rstrip("/").lower() if matched else None
 
 
 def tv_retry_key(home: str, away: str, date: str) -> str:
@@ -702,6 +940,35 @@ def scrape_schedule_for_date(target_date: str) -> List[Dict]:
     return matches
 
 
+def scrape_match_for_date(
+    home: str,
+    away: str,
+    target_date: str
+) -> List[Dict]:
+    """Try every TV source until the requested fixture itself is found."""
+    matches: List[Dict] = []
+    errors: List[str] = []
+    scrapers: List[Callable[[], List[Dict]]] = [
+        lambda: scrape_live_soccertv(target_date),
+        scrape_live_football_on_tv,
+        scrape_liveonsat
+    ]
+    for scraper in scrapers:
+        try:
+            matches = deduplicate_matches(matches + scraper())
+            if find_matching_match(matches, home, away, target_date) is not None:
+                break
+        except Exception as exc:
+            errors.append(str(exc))
+            LOGGER.warning(
+                "Targeted TV scraper failed for %s vs %s: %s",
+                home, away, exc
+            )
+    if not matches and errors:
+        raise Exception("; ".join(errors))
+    return matches
+
+
 def get_matches_cached(target_date: str) -> List[Dict]:
     """Return one day's schedule, retaining stale daily JSON as an outage fallback."""
     now = datetime.now()
@@ -795,7 +1062,8 @@ def get_schedule(
 def get_tv_channels(
     home: str = Query(..., description="Home team name"),
     away: str = Query(..., description="Away team name"),
-    date: str = Query(..., description="Match date in YYYY-MM-DD format")
+    date: str = Query(..., description="Match date in YYYY-MM-DD format"),
+    source_url: Optional[str] = None
 ):
     """Retrieve and group TV channels broadcasting the requested match on the specified date."""
     try:
@@ -808,7 +1076,9 @@ def get_tv_channels(
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"Failed to fetch broadcast data: {str(e)}")
         
-    target_match = find_matching_match(matches, home, away, date)
+    target_match = find_matching_match(
+        matches, home, away, date, source_url=source_url
+    )
 
     # TV listings are frequently announced shortly before kickoff, while the full
     # daily schedule can still be cached for 15 minutes. Re-scrape an empty result
@@ -821,14 +1091,14 @@ def get_tv_channels(
     ):
         empty_tv_retry_after[retry_key] = datetime.now() + EMPTY_CACHE_DURATION
         try:
-            freshly_scraped = scrape_schedule_for_date(date)
+            freshly_scraped = scrape_match_for_date(home, away, date)
             save_scraped_dates(freshly_scraped)
             fresh_for_date = [
                 match for match in freshly_scraped
                 if match.get("date") == date
             ]
             refreshed_match = find_matching_match(
-                fresh_for_date, home, away, date
+                fresh_for_date, home, away, date, source_url=source_url
             )
             if refreshed_match is not None:
                 target_match = refreshed_match
@@ -840,11 +1110,24 @@ def get_tv_channels(
                 home, away, date, exc
             )
 
+    verified_at = datetime.now(ZoneInfo("UTC")).isoformat(timespec="seconds")
+    if target_match is not None and target_match.get("sourceUrl"):
+        try:
+            target_match = enrich_live_soccertv_match(target_match)
+        except Exception as exc:
+            LOGGER.warning(
+                "LiveSoccerTV match detail failed for %s vs %s: %s",
+                home, away, exc
+            )
+
     if not target_match:
-        # Return empty list of channels as fallback (expected by client)
         return {
             "match": f"{home} vs {away}",
             "date": date,
+            "status": "unknown",
+            "source": None,
+            "sourceUrl": None,
+            "verifiedAt": verified_at,
             "channels": []
         }
         
@@ -853,7 +1136,19 @@ def get_tv_channels(
     channel_countries = target_match.get("channelCountries") or {}
     for chan in target_match["channels"]:
         countries = channel_countries.get(chan) or [get_channel_country(chan)]
-        for country in countries:
+        if is_mena_broadcaster(chan, countries):
+            countries = [
+                "MENA (Middle East)",
+                *[
+                    country for country in countries
+                    if canonical_broadcast_country(country)
+                    not in MENA_BROADCAST_REGIONS
+                ]
+            ]
+        for raw_country in countries:
+            country = canonical_broadcast_country(raw_country)
+            if country not in VISIBLE_BROADCAST_REGIONS:
+                continue
             if country not in grouped_channels:
                 grouped_channels[country] = []
             if chan not in grouped_channels[country]:
@@ -865,8 +1160,10 @@ def get_tv_channels(
         for country, chans in sorted(
             grouped_channels.items(),
             key=lambda item: (
-                0 if item[0] in PRIORITY_N1_RANK else
-                1 if item[0] in EUROPE_BROADCAST_REGIONS else 2,
+                0 if item[0] == "MENA (Middle East)" else
+                1 if item[0] in EUROPE_BROADCAST_REGIONS else
+                2 if item[0] in VISIBLE_MENA_BROADCAST_REGIONS else
+                3 if item[0] in NORTH_AMERICA_BROADCAST_REGIONS else 4,
                 PRIORITY_N1_RANK.get(item[0], len(PRIORITY_N1_RANK)),
                 item[0].lower()
             )
@@ -876,6 +1173,10 @@ def get_tv_channels(
     return {
         "match": f"{target_match['home']} vs {target_match['away']}",
         "date": date,
+        "status": "confirmed" if channel_groups else "unknown",
+        "source": target_match.get("source") or "TV listings",
+        "sourceUrl": target_match.get("sourceUrl"),
+        "verifiedAt": target_match.get("verifiedAt") or verified_at,
         "channels": channel_groups
     }
 

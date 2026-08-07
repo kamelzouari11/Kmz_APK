@@ -130,6 +130,46 @@ class DailyCacheTests(unittest.TestCase):
         self.assertEqual(matches[0]["channels"], ["Sport One"])
         self.assertEqual(matches[0]["channelCountries"], {"Sport One": ["Sweden"]})
 
+    def test_live_soccertv_requests_only_the_daily_schedule_table(self) -> None:
+        markdown = """
+▴[League](https://example.test/competition)
+3:00pm[Home vs Away](https://example.test/match "Home vs Away")
+"""
+        captured = {}
+
+        class Response:
+            status_code = 200
+            text = markdown
+
+            @staticmethod
+            def raise_for_status() -> None:
+                return None
+
+        class Session:
+            headers = {}
+
+            @staticmethod
+            def get(url, **kwargs):
+                captured["url"] = url
+                captured.update(kwargs)
+                return Response()
+
+        with patch.object(main, "get_http_session", return_value=Session()):
+            matches = main.scrape_live_soccertv("2026-08-09")
+
+        self.assertEqual(len(matches), 1)
+        self.assertTrue(captured["url"].endswith("/2026-08-09/"))
+        self.assertEqual(
+            captured["headers"]["X-Target-Selector"],
+            "table.schedules"
+        )
+        self.assertEqual(captured["headers"]["X-Respond-With"], "markdown")
+        self.assertEqual(
+            captured["headers"]["X-Cache-Tolerance"],
+            str(main.JINA_FUTURE_CACHE_TOLERANCE_SECONDS)
+        )
+        self.assertEqual(captured["timeout"], 15)
+
     def test_galatasaray_venezia_channels_are_returned(self) -> None:
         markdown = """
 ▴[Club Friendly](http://www.livesoccertv.com/competitions/international/club-friendly/)
@@ -162,8 +202,8 @@ class DailyCacheTests(unittest.TestCase):
         self.assertEqual(
             response["channels"],
             [
-                {"country": "Germany", "channels": ["Sportdigital FUSSBALL"]},
                 {"country": "Italy", "channels": ["DAZN Italia"]},
+                {"country": "Germany", "channels": ["Sportdigital FUSSBALL"]},
                 {"country": "Turkey", "channels": ["S Sport+"]}
             ]
         )
@@ -207,6 +247,117 @@ class DailyCacheTests(unittest.TestCase):
             ]
         )
 
+    def test_half_time_match_is_parsed_with_its_detail_url(self) -> None:
+        markdown = """
+▴[Club Friendly](http://www.livesoccertv.com/competitions/international/club-friendly/)
+11:30am HT[Manchester City 1 - 1 Internazionale](http://www.livesoccertv.com/match/manchester-city-vs-internazionale/1juxp#5634286 "Manchester City vs Internazionale")
+
+[CITY+](http://www.livesoccertv.com/channels/man-city-for-tv/ "CITY+"), [Onefootball](http://www.livesoccertv.com/channels/onefootball-uk/ "Onefootball")
+"""
+
+        class Response:
+            text = markdown
+
+            @staticmethod
+            def raise_for_status() -> None:
+                return None
+
+        class Session:
+            headers = {}
+
+            @staticmethod
+            def get(*args, **kwargs):
+                return Response()
+
+        with patch.object(main, "get_http_session", return_value=Session()):
+            matches = main.scrape_live_soccertv("2026-08-01")
+
+        self.assertEqual(len(matches), 1)
+        self.assertEqual(matches[0]["home"], "Manchester City")
+        self.assertEqual(matches[0]["away"], "Internazionale")
+        self.assertEqual(matches[0]["channels"], ["CITY+", "Onefootball"])
+        self.assertEqual(
+            matches[0]["sourceUrl"],
+            "http://www.livesoccertv.com/match/manchester-city-vs-internazionale/1juxp"
+        )
+
+    def test_unrelated_channel_link_does_not_leak_into_previous_match(self) -> None:
+        markdown = """
+▴[Club Friendly](http://www.livesoccertv.com/competition)
+1:00pm[Home vs Away](http://www.livesoccertv.com/match/home-vs-away/abc "Home vs Away")
+Navigation text
+[Unrelated](http://www.livesoccertv.com/channels/unrelated/ "Unrelated")
+"""
+
+        class Response:
+            text = markdown
+
+            @staticmethod
+            def raise_for_status() -> None:
+                return None
+
+        class Session:
+            headers = {}
+
+            @staticmethod
+            def get(*args, **kwargs):
+                return Response()
+
+        with patch.object(main, "get_http_session", return_value=Session()):
+            matches = main.scrape_live_soccertv("2026-08-01")
+
+        self.assertEqual(matches[0]["channels"], [])
+
+    def test_international_coverage_is_grouped_by_explicit_country(self) -> None:
+        markdown = """
+## International Coverage
+
+#### Manchester City vs Internazionale Live Stream and TV Schedule
+
+Italy[DAZN Italia](https://www.livesoccertv.com/channels/dazn-italy/)[Sky Sport Calcio](https://www.livesoccertv.com/channels/sky-sport-serie-a/)
+San Marino[Sky Sport Calcio](https://www.livesoccertv.com/channels/sky-sport-serie-a/)
+## Match Details
+"""
+
+        channels, countries = main.parse_live_soccertv_international_coverage(
+            markdown
+        )
+
+        self.assertEqual(channels, ["DAZN Italia", "Sky Sport Calcio"])
+        self.assertEqual(countries["DAZN Italia"], ["Italy"])
+        self.assertEqual(countries["Sky Sport Calcio"], ["Italy", "San Marino"])
+
+    def test_tv_response_exposes_confirmed_source_metadata(self) -> None:
+        scraped = match(
+            "2026-08-01", "Manchester City", "Internazionale"
+        )
+        scraped.update({
+            "source": "LiveSoccerTV",
+            "sourceUrl": "https://www.livesoccertv.com/match/example"
+        })
+        enriched = {
+            **scraped,
+            "channels": ["Sky Sport Calcio"],
+            "channelCountries": {"Sky Sport Calcio": ["Italy"]},
+            "verifiedAt": "2026-08-01T12:35:00+00:00"
+        }
+
+        with patch.object(
+            main, "get_matches_cached", return_value=[scraped]
+        ), patch.object(
+            main, "enrich_live_soccertv_match", return_value=enriched
+        ):
+            response = main.get_tv_channels(
+                "Manchester City", "Internazionale", "2026-08-01"
+            )
+
+        self.assertEqual(response["status"], "confirmed")
+        self.assertEqual(response["source"], "LiveSoccerTV")
+        self.assertEqual(
+            response["channels"],
+            [{"country": "Italy", "channels": ["Sky Sport Calcio"]}]
+        )
+
     def test_tv_match_accepts_reversed_home_and_away(self) -> None:
         reversed_match = match(
             "2026-07-26", home="Roma", away="Cannes"
@@ -237,17 +388,93 @@ class DailyCacheTests(unittest.TestCase):
         with patch.object(
             main, "get_matches_cached", return_value=[cached]
         ), patch.object(
-            main, "scrape_schedule_for_date", return_value=[fresh]
+            main, "scrape_match_for_date", return_value=[fresh]
         ) as scraper:
             response = main.get_tv_channels(
                 "AS Cannes", "AS Roma", "2026-07-26"
             )
 
-        scraper.assert_called_once_with("2026-07-26")
+        scraper.assert_called_once_with("AS Cannes", "AS Roma", "2026-07-26")
         self.assertEqual(
             response["channels"],
             [{"country": "Italy", "channels": ["DAZN Italia"]}]
         )
+
+    def test_psg_alias_matches_reversed_live_soccertv_fixture(self) -> None:
+        scraped = match(
+            "2026-08-08", home="Manchester United", away="PSG"
+        )
+        scraped.update({
+            "source": "LiveSoccerTV",
+            "sourceUrl": "https://www.livesoccertv.com/match/manchester-united-vs-psg/1bea6"
+        })
+        enriched = {
+            **scraped,
+            "channels": ["STC TV", "beIN Sports 1", "MUTV"],
+            "channelCountries": {
+                "STC TV": ["Algeria", "Qatar", "Tunisia"],
+                "beIN Sports 1": ["France"],
+                "MUTV": ["Great Britain", "Ireland Republic"]
+            }
+        }
+
+        with patch.object(
+            main, "get_matches_cached", return_value=[scraped]
+        ), patch.object(
+            main, "enrich_live_soccertv_match", return_value=enriched
+        ):
+            response = main.get_tv_channels(
+                "Paris Saint-Germain", "Manchester United", "2026-08-08"
+            )
+
+        self.assertEqual(response["status"], "confirmed")
+        self.assertEqual(response["channels"], [
+            {"country": "MENA (Middle East)", "channels": ["STC TV"]},
+            {"country": "France", "channels": ["beIN Sports 1"]},
+            {"country": "United Kingdom", "channels": ["MUTV"]},
+            {"country": "Ireland", "channels": ["MUTV"]}
+        ])
+
+    def test_tv_match_uses_stable_source_url_before_team_names(self) -> None:
+        expected = match(
+            "2026-08-08", home="Bayer Leverkusen", away="Sevilla"
+        )
+        expected.update({
+            "source": "LiveSoccerTV",
+            "sourceUrl": "https://www.livesoccertv.com/match/bayer-leverkusen-vs-sevilla/abc"
+        })
+        unrelated = match(
+            "2026-08-08", home="Bayern München", away="Sevilla"
+        )
+        unrelated["sourceUrl"] = (
+            "https://www.livesoccertv.com/match/bayern-munchen-vs-sevilla/xyz"
+        )
+        enriched = {
+            **expected,
+            "channels": ["Premier Sports 1"],
+            "channelCountries": {"Premier Sports 1": ["Great Britain"]}
+        }
+
+        with patch.object(
+            main, "get_matches_cached", return_value=[unrelated, expected]
+        ), patch.object(
+            main, "enrich_live_soccertv_match", return_value=enriched
+        ):
+            response = main.get_tv_channels(
+                "Bayern Leverkusen",
+                "Seville",
+                "2026-08-08",
+                source_url=(
+                    "http://livesoccertv.com/match/"
+                    "bayer-leverkusen-vs-sevilla/abc#123"
+                )
+            )
+
+        self.assertEqual(response["match"], "Bayer Leverkusen vs Sevilla")
+        self.assertEqual(response["channels"], [{
+            "country": "United Kingdom",
+            "channels": ["Premier Sports 1"]
+        }])
 
     def test_tv_response_prioritizes_explicit_european_countries(self) -> None:
         scraped = [match("2026-07-28")]
@@ -267,8 +494,89 @@ class DailyCacheTests(unittest.TestCase):
 
         self.assertEqual(
             [group["country"] for group in response["channels"]],
-            ["France", "United Kingdom", "Netherlands", "Poland", "USA"]
+            ["France", "United Kingdom", "Poland", "Netherlands", "USA"]
         )
+
+    def test_tv_response_keeps_only_selected_regions_and_requested_priority(self) -> None:
+        scraped = [match("2026-07-28")]
+        requested = [
+            "France", "Italy", "Spain", "England", "Germany", "Poland",
+            "Romania", "Qatar", "United States", "Canada", "Netherlands",
+            "Japan"
+        ]
+        scraped[0]["channels"] = [f"Channel {country}" for country in requested]
+        scraped[0]["channelCountries"] = {
+            f"Channel {country}": [country] for country in requested
+        }
+
+        with patch.object(main, "get_matches_cached", return_value=scraped):
+            response = main.get_tv_channels("Home", "Away", "2026-07-28")
+
+        self.assertEqual(
+            [group["country"] for group in response["channels"]],
+            [
+                "France", "Italy", "Spain", "United Kingdom", "Germany",
+                "Poland", "Romania", "Netherlands", "Qatar", "USA",
+                "Canada"
+            ]
+        )
+        self.assertEqual(len(response["channels"]), len(requested) - 1)
+
+    def test_tv_response_excludes_unwanted_world_regions(self) -> None:
+        scraped = [match("2026-07-28")]
+        scraped[0]["channels"] = [
+            "France TV", "Tunisia TV", "USA TV", "Japan TV", "Brazil TV",
+            "Australia TV", "South Africa TV"
+        ]
+        scraped[0]["channelCountries"] = {
+            "France TV": ["France"],
+            "Tunisia TV": ["Tunisia"],
+            "USA TV": ["USA"],
+            "Japan TV": ["Japan"],
+            "Brazil TV": ["Brazil"],
+            "Australia TV": ["Australia"],
+            "South Africa TV": ["South Africa"]
+        }
+
+        with patch.object(main, "get_matches_cached", return_value=scraped):
+            response = main.get_tv_channels("Home", "Away", "2026-07-28")
+
+        self.assertEqual(
+            [group["country"] for group in response["channels"]],
+            ["France", "Tunisia", "USA"]
+        )
+
+    def test_bein_mena_countries_are_collapsed_into_one_group(self) -> None:
+        scraped = [match("2026-07-28")]
+        scraped[0]["channels"] = ["beIN SPORTS 1", "beIN SPORTS France"]
+        scraped[0]["channelCountries"] = {
+            "beIN SPORTS 1": ["Algeria", "Qatar", "Tunisia"],
+            "beIN SPORTS France": ["France"]
+        }
+
+        with patch.object(main, "get_matches_cached", return_value=scraped):
+            response = main.get_tv_channels("Home", "Away", "2026-07-28")
+
+        self.assertEqual(response["channels"], [
+            {"country": "MENA (Middle East)", "channels": ["beIN SPORTS 1"]},
+            {"country": "France", "channels": ["beIN SPORTS France"]}
+        ])
+
+    def test_country_aliases_are_merged(self) -> None:
+        scraped = [match("2026-07-28")]
+        scraped[0]["channels"] = ["English One", "English Two"]
+        scraped[0]["channelCountries"] = {
+            "English One": ["England"],
+            "English Two": ["United Kingdom"]
+        }
+
+        with patch.object(main, "get_matches_cached", return_value=scraped):
+            response = main.get_tv_channels("Home", "Away", "2026-07-28")
+
+        self.assertEqual(response["channels"], [{
+            "country": "United Kingdom",
+            "channels": ["English One", "English Two"]
+        }])
 
     def test_requested_european_channel_mappings(self) -> None:
         self.assertEqual(main.get_channel_country("Polsat Sport 1"), "Poland")
@@ -278,6 +586,15 @@ class DailyCacheTests(unittest.TestCase):
         self.assertEqual(main.get_channel_country("Sportdigital FUSSBALL"), "Germany")
         self.assertEqual(main.get_channel_country("DAZN Germany"), "Germany")
         self.assertEqual(main.get_channel_country("Inter TV"), "Italy")
+        self.assertEqual(main.get_channel_country("Alkass Sports"), "Qatar")
+        self.assertEqual(main.get_channel_country("TSN 1"), "Canada")
+        self.assertEqual(main.get_channel_country("beIN Sports Premium 1"), "MENA (Middle East)")
+        self.assertEqual(main.get_channel_country("Canal 5 Televisa"), "Mexico")
+        self.assertEqual(main.get_channel_country("MUTV"), "United Kingdom & Ireland")
+        self.assertEqual(main.get_channel_country("myCANAL"), "France")
+        self.assertEqual(main.get_channel_country("STC TV"), "MENA (Middle East)")
+        self.assertEqual(main.get_channel_country("VG+"), "Norway")
+        self.assertEqual(main.get_channel_country("Sport Bladet Play"), "Sweden")
 
     def test_schedule_response_contains_utc_kickoff(self) -> None:
         scraped = [match("2026-07-28")]
