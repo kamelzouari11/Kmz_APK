@@ -9,7 +9,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.SilenceMediaSource
 import com.kmz.shazamplayer.model.Track
 import com.kmz.shazamplayer.network.MusicMetadataManager
 import com.kmz.shazamplayer.network.SoundCloudManager
@@ -302,27 +304,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
     }
 
-    /**
-     * Exposes a small, circular Media3 timeline while YouTube provides the actual audio.
-     *
-     * MBUX hides its standard previous/next controls when the MediaSession timeline is empty. The
-     * placeholder items are never prepared or played by ExoPlayer; CustomForwardingPlayer routes
-     * the car controls back to [playPrevious] and [playNext]. Keeping only three items also avoids
-     * sending a potentially very large CSV playlist through the Bluetooth media session.
-     */
+    /** Publishes the complete playlist to MediaSession while YouTube provides the actual audio. */
+    @androidx.annotation.OptIn(UnstableApi::class)
     private fun syncYouTubeQueue(currentIndex: Int) {
         if (currentIndex !in filteredTracks.indices) return
 
-        val trackCount = filteredTracks.size
-        val queueIndices =
-                listOf(
-                        (currentIndex - 1 + trackCount) % trackCount,
-                        currentIndex,
-                        (currentIndex + 1) % trackCount
-                )
-        val queueItems =
-                queueIndices.mapIndexed { slot, trackIndex ->
-                    val track = filteredTracks[trackIndex]
+        val queueSources =
+                filteredTracks.mapIndexed { trackIndex, track ->
                     val metadata =
                             MediaMetadata.Builder()
                                     .setTitle(track.title)
@@ -334,17 +322,29 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                                 ?.let { setArtworkUri(Uri.parse(it)) }
                                     }
                                     .build()
+                    val mediaItem =
+                            MediaItem.Builder()
+                                    .setMediaId("shazam-queue:$trackIndex")
+                                    .setUri(Uri.EMPTY)
+                                    .setMediaMetadata(metadata)
+                                    .build()
+                    val durationUs =
+                            (track.officialDurationMs ?: DEFAULT_QUEUE_ITEM_DURATION_MS)
+                                    .coerceAtLeast(1L) * 1_000L
 
-                    MediaItem.Builder()
-                            .setMediaId("shazam-queue:$trackIndex:$slot")
-                            // A URI lets ExoPlayer create its placeholder timeline. It is never
-                            // prepared because YouTube remains the active playback engine.
-                            .setUri("https://localhost.invalid/shazam-queue/$trackIndex.mp3")
-                            .setMediaMetadata(metadata)
-                            .build()
+                    SilenceMediaSource.Factory()
+                            .setDurationUs(durationUs)
+                            .createMediaSource()
+                            .also { it.updateMediaItem(mediaItem) }
                 }
 
-        exoPlayer?.setMediaItems(queueItems, /* startIndex= */ 1, /* startPositionMs= */ 0L)
+        exoPlayer?.apply {
+            setMediaSources(queueSources, currentIndex, /* startPositionMs= */ 0L)
+            // A prepared timeline is required for legacy Bluetooth/AVRCP clients such as MBUX.
+            // The player remains paused; only the official YouTube player produces audio.
+            prepare()
+            pause()
+        }
     }
 
     /** Preserved rollback path. It performs no request while SOUNDCLOUD_FALLBACK_ENABLED is false. */
@@ -687,5 +687,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     companion object {
         private const val SOUNDCLOUD_FALLBACK_ENABLED = false
+        private const val DEFAULT_QUEUE_ITEM_DURATION_MS = 3 * 60_000L
     }
 }
