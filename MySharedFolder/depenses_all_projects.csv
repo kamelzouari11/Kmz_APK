@@ -3,6 +3,7 @@ PROJET,Gammarth,,,,,,
 PROJET,ennasr,,,,,,
 CHAPITRE,Gammarth,,Divers ,,,,
 CHAPITRE,ennasr,,aluminium ,,,,
+CHAPITRE,Gammarth,,climatisation ,,,,
 CHAPITRE,Gammarth,,commission ,,,,
 CHAPITRE,Gammarth,,cuisine ,,,,
 CHAPITRE,Gammarth,,peinture ,,,,
@@ -24,6 +25,10 @@ BENEFICIAIRE,Gammarth,,,issam khlif,,,
 BENEFICIAIRE,Gammarth,,,moez trigui ,,,
 BENEFICIAIRE,Gammarth,,,skander zghal,,,
 BENEFICIAIRE,Gammarth,,,yassine oualha ,,,
+DEPENSE,Gammarth,2026-08-07,peinture ,yassine oualha ,1000,ESPC,solde travaux
+DEPENSE,Gammarth,2026-08-07,commission ,moez trigui ,2500,ESPC,4eme avance
+DEPENSE,Gammarth,2026-08-04,électricité ,issam khlif,150,ESPC,solde de main d'œuvre
+DEPENSE,Gammarth,2026-08-04,climatisation ,Ahmed souissi,1200,ESPC,mise au point climatisation
 DEPENSE,Gammarth,2026-07-29,Divers ,Ahmed souissi,400,ESPC,"bouton chasse , entretien clim"
 DEPENSE,Gammarth,2026-07-28,peinture ,yassine oualha ,1000,ESPC,2eme avance
 DEPENSE,Gammarth,2026-07-15,Divers ,Divers ,6,ESPC,enduit peinture
