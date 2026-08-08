@@ -3,40 +3,52 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withInputStream { localProperties.load(it) }
+}
+def youtubeApiKey = localProperties.getProperty('YOUTUBE_API_KEY', '')
+
 android {
-    namespace 'com.kmz.shazamplayer'
-    compileSdk 34
+    namespace = 'com.kmz.shazamplayer'
+    compileSdk = 34
 
     defaultConfig {
-        applicationId "com.kmz.shazamplayer"
-        minSdk 24
-        targetSdk 34
-        versionCode 1
-        versionName "1.0"
+        applicationId = "com.kmz.shazamplayer"
+        minSdk = 24
+        targetSdk = 34
+        versionCode = 1
+        versionName = "1.0"
+
+        // Keep the key out of the Kotlin sources. Restrict it to the YouTube Data API
+        // and to this Android application in Google Cloud Console.
+        buildConfigField "String", "YOUTUBE_API_KEY", "\"${youtubeApiKey}\""
 
         vectorDrawables {
-            useSupportLibrary true
+            useSupportLibrary = true
         }
     }
 
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled = false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = '1.8'
+        jvmTarget = '17'
     }
     buildFeatures {
-        compose true
+        compose = true
+        buildConfig = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion '1.5.8'
+        kotlinCompilerExtensionVersion = '1.5.8'
     }
     packagingOptions {
         resources {

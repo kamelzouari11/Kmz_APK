@@ -24,6 +24,7 @@ import com.kmz.shazamplayer.model.Track
 fun PlayerBottomBar(
         track: Track,
         isPlaying: Boolean,
+        artworkUrl: String? = track.artworkUrl,
         onTogglePlay: () -> Unit,
         onClick: () -> Unit
 ) {
@@ -36,7 +37,7 @@ fun PlayerBottomBar(
                 verticalAlignment = Alignment.CenterVertically
         ) {
             AsyncImage(
-                    model = track.artworkUrl,
+                    model = artworkUrl,
                     contentDescription = null,
                     modifier =
                             Modifier.size(75.dp) // Augmenté pour rester proportionnel

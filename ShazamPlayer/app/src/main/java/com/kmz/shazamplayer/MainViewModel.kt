@@ -9,14 +9,23 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.SilenceMediaSource
 import com.kmz.shazamplayer.model.Track
+import com.kmz.shazamplayer.network.MusicMetadataManager
 import com.kmz.shazamplayer.network.SoundCloudManager
 import com.kmz.shazamplayer.network.SoundCloudPlaylist
 import com.kmz.shazamplayer.network.SoundCloudResult
 import com.kmz.shazamplayer.network.SpotifyManager
+import com.kmz.shazamplayer.network.YouTubeApiException
+import com.kmz.shazamplayer.network.YouTubeManager
+import com.kmz.shazamplayer.network.YouTubeResult
+import com.kmz.shazamplayer.ui.components.YouTubePlayerAction
+import com.kmz.shazamplayer.ui.components.YouTubePlayerCommand
 import com.kmz.shazamplayer.util.CsvParser
 import kotlin.random.Random
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -29,7 +38,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var exoPlayer: ExoPlayer? = null
     private var spotifyManager: SpotifyManager? = null
     private var soundCloudManager: SoundCloudManager? = null
+    private var youtubeManager: YouTubeManager? = null
+    private val metadataManager = MusicMetadataManager()
     private var onExit: (() -> Unit)? = null
+    private var playbackSearchJob: Job? = null
+    private var youtubeCommandId = 0L
 
     // Navigation State
     var currentLevel by mutableStateOf(NavLevel.HOME)
@@ -50,6 +63,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var isShuffle by mutableStateOf(false)
     var isRepeat by mutableStateOf(false)
     var isUsingSpotify by mutableStateOf(false)
+    var isUsingYouTube by mutableStateOf(false)
+    var youtubeVideoId by mutableStateOf<String?>(null)
+    var youtubeChannel by mutableStateOf<String?>(null)
+    var youtubeResults by mutableStateOf(emptyList<YouTubeResult>())
+    var currentYoutubeResultIndex by mutableIntStateOf(-1)
+    var youtubeCommand by mutableStateOf<YouTubePlayerCommand?>(null)
+    var currentArtworkUrl by mutableStateOf<String?>(null)
+        private set
+    var isTrackLoading by mutableStateOf(false)
+    var playbackError by mutableStateOf<String?>(null)
 
     // Progress State
     var currentPosition by mutableLongStateOf(0L)
@@ -83,11 +106,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun init(
             player: ExoPlayer,
             scClientId: String,
+            youtubeApiKey: String,
             spotify: SpotifyManager,
             exitCallback: () -> Unit
     ) {
         this.exoPlayer = player
-        this.soundCloudManager = SoundCloudManager(scClientId)
+        // SoundCloud remains available in the project for a possible rollback, but no request is
+        // made while the YouTube trial is active.
+        this.soundCloudManager =
+                if (SOUNDCLOUD_FALLBACK_ENABLED) SoundCloudManager(scClientId) else null
+        this.youtubeManager = YouTubeManager(context, youtubeApiKey)
         this.spotifyManager = spotify
         this.onExit = exitCallback
 
@@ -95,11 +123,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         player.addListener(
                 object : androidx.media3.common.Player.Listener {
                     override fun onIsPlayingChanged(isPlaying: Boolean) {
-                        isActuallyPlaying = isPlaying
+                        if (!isUsingYouTube) isActuallyPlaying = isPlaying
                     }
                     override fun onPlaybackStateChanged(state: Int) {
-                        if (state == androidx.media3.common.Player.STATE_ENDED) playNext()
-                        if (state == androidx.media3.common.Player.STATE_READY) {
+                        if (!isUsingYouTube && state == androidx.media3.common.Player.STATE_ENDED) {
+                            playNext()
+                        }
+                        if (!isUsingYouTube && state == androidx.media3.common.Player.STATE_READY) {
                             duration = player.duration.coerceAtLeast(0L)
                         }
                     }
@@ -112,7 +142,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 if (isActuallyPlaying) {
                     if (isUsingSpotify) {
                         // Spotify progress is handled via subscription
-                    } else {
+                    } else if (!isUsingYouTube) {
                         currentPosition = exoPlayer?.currentPosition ?: 0L
                         duration = (exoPlayer?.duration ?: 0L).coerceAtLeast(0L)
                     }
@@ -188,82 +218,227 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun playTrack(index: Int, streamIdx: Int = 0) {
         if (filteredTracks.isEmpty() || index !in filteredTracks.indices) return
+        if (SOUNDCLOUD_FALLBACK_ENABLED) {
+            playTrackFromSoundCloud(index, streamIdx)
+            return
+        }
 
+        playbackSearchJob?.cancel()
         currentTrackIndexInFiltered = index
         val track = filteredTracks[index]
+        currentArtworkUrl = track.officialCoverHD ?: track.artworkUrl
+        currentLevel = NavLevel.PLAYER
+        exoPlayer?.pause()
+        spotifyManager?.pause()
+        isUsingSpotify = false
+        isUsingYouTube = true
+        syncYouTubeQueue(index)
+        isActuallyPlaying = false
+        youtubeVideoId = null
+        youtubeChannel = null
+        youtubeResults = emptyList()
+        currentYoutubeResultIndex = -1
+        youtubeCommand = null
+        currentPosition = 0L
+        duration = 0L
+        playbackError = null
+        isTrackLoading = true
 
-        viewModelScope.launch {
-            // 1. Tenter Spotify en premier
-            spotifyManager?.let { sm ->
-                if (sm.isConnected()) {
-                    val spotifyResult = sm.searchTrack(track.artist, track.title)
-                    if (spotifyResult != null) {
-                        exoPlayer?.pause()
-                        isUsingSpotify = true
-                        sm.play(spotifyResult.uri)
-                        spotifyResult.artworkUrl?.let { track.artworkUrl = it }
-                        enrichMetadata(track)
-                        return@launch
+        track.youtubeVideoId?.takeIf { it.isNotBlank() }?.let { videoId ->
+            youtubeResults =
+                    listOf(
+                            YouTubeResult(
+                                    videoId = videoId,
+                                    title = track.title,
+                                    channelTitle = track.youtubeChannel ?: track.artist,
+                                    artworkUrl = currentArtworkUrl,
+                                    durationMs = track.officialDurationMs ?: 0L,
+                                    score = Int.MAX_VALUE
+                            )
+                    )
+            applyYouTubeResult(0)
+            isTrackLoading = false
+            return
+        }
+
+        playbackSearchJob =
+                viewModelScope.launch {
+                    try {
+                        val metadata = metadataManager.getOfficialMetadata(track.artist, track.title)
+                        if (currentTrackIndexInFiltered != index) return@launch
+
+                        metadata?.let { meta ->
+                            track.officialDurationMs = meta.durationMs
+                            track.officialAlbum = meta.album
+                            track.officialCoverHD = meta.coverUrlHD
+                            track.metadataSource = meta.source
+                            track.artworkUrl = meta.coverUrlHD ?: meta.coverUrl ?: track.artworkUrl
+                            currentArtworkUrl = track.artworkUrl
+                            syncYouTubeQueue(index)
+                        }
+
+                        val results =
+                                youtubeManager?.searchTracks(
+                                        artist = track.artist,
+                                        title = track.title,
+                                        expectedDurationMs = track.officialDurationMs
+                                ) ?: emptyList()
+                        if (currentTrackIndexInFiltered != index) return@launch
+
+                        if (results.isEmpty()) {
+                            playbackError = "Aucun résultat YouTube compatible trouvé."
+                        } else {
+                            youtubeResults = results
+                            val selectedIndex = streamIdx.coerceIn(0, results.lastIndex)
+                            applyYouTubeResult(selectedIndex)
+                        }
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (error: YouTubeApiException) {
+                        playbackError = error.message
+                    } catch (error: Exception) {
+                        playbackError = "Recherche impossible : ${error.localizedMessage ?: "erreur réseau"}"
+                    } finally {
+                        if (currentTrackIndexInFiltered == index) isTrackLoading = false
                     }
                 }
-            }
+    }
 
-            // 2. Fallback SoundCloud
-            val results = soundCloudManager?.searchTracks(track.artist, track.title) ?: emptyList()
-            if (results.isNotEmpty()) {
-                alternateStreams = results
-                currentStreamIndex = streamIdx % results.size
-                val selected = results[currentStreamIndex]
+    /** Publishes the complete playlist to MediaSession while YouTube provides the actual audio. */
+    @androidx.annotation.OptIn(UnstableApi::class)
+    private fun syncYouTubeQueue(currentIndex: Int) {
+        if (currentIndex !in filteredTracks.indices) return
 
-                enrichMetadata(track)
+        val queueSources =
+                filteredTracks.mapIndexed { trackIndex, track ->
+                    val metadata =
+                            MediaMetadata.Builder()
+                                    .setTitle(track.title)
+                                    .setArtist(track.artist)
+                                    .setAlbumTitle(track.officialAlbum)
+                                    .apply {
+                                        (track.officialCoverHD ?: track.artworkUrl)
+                                                ?.takeIf { it.isNotBlank() }
+                                                ?.let { setArtworkUri(Uri.parse(it)) }
+                                    }
+                                    .build()
+                    val mediaItem =
+                            MediaItem.Builder()
+                                    .setMediaId("shazam-queue:$trackIndex")
+                                    .setUri(Uri.EMPTY)
+                                    .setMediaMetadata(metadata)
+                                    .build()
+                    val durationUs =
+                            (track.officialDurationMs ?: DEFAULT_QUEUE_ITEM_DURATION_MS)
+                                    .coerceAtLeast(1L) * 1_000L
 
-                track.streamUrl = selected.streamUrl
-                isUsingSpotify = false
-                track.artworkUrl = track.officialCoverHD ?: selected.artworkUrl
-
-                val mediaMetadata =
-                        MediaMetadata.Builder()
-                                .setTitle(track.title)
-                                .setArtist(track.artist)
-                                .setArtworkUri(track.artworkUrl?.let { Uri.parse(it) })
-                                .build()
-
-                val mediaItem =
-                        MediaItem.Builder()
-                                .setUri(Uri.parse(selected.streamUrl))
-                                .setMediaMetadata(mediaMetadata)
-                                .build()
-
-                exoPlayer?.let { p ->
-                    p.setMediaItem(mediaItem)
-                    p.prepare()
-                    p.play()
+                    SilenceMediaSource.Factory()
+                            .setDurationUs(durationUs)
+                            .createMediaSource()
+                            .also { it.updateMediaItem(mediaItem) }
                 }
-            } else {
-                Toast.makeText(context, "Non trouvé: ${track.title}", Toast.LENGTH_SHORT).show()
-                if (!isRepeat) playTrack(index + 1)
-            }
+
+        exoPlayer?.apply {
+            setMediaSources(queueSources, currentIndex, /* startPositionMs= */ 0L)
+            // A prepared timeline is required for legacy Bluetooth/AVRCP clients such as MBUX.
+            // The player remains paused; only the official YouTube player produces audio.
+            prepare()
+            pause()
         }
     }
 
-    private suspend fun enrichMetadata(track: Track) {
-        soundCloudManager?.getOfficialMetadata(track.artist, track.title)?.let { meta ->
-            track.officialDurationMs = meta.durationMs
-            track.officialAlbum = meta.album
-            track.officialCoverHD = meta.coverUrlHD
-            track.metadataSource = meta.source
-            if (isUsingSpotify && track.artworkUrl == null) {
-                track.artworkUrl = meta.coverUrlHD
-            }
+    /** Preserved rollback path. It performs no request while SOUNDCLOUD_FALLBACK_ENABLED is false. */
+    private fun playTrackFromSoundCloud(index: Int, streamIdx: Int) {
+        playbackSearchJob?.cancel()
+        currentTrackIndexInFiltered = index
+        val track = filteredTracks[index]
+        currentArtworkUrl = track.officialCoverHD ?: track.artworkUrl
+        currentLevel = NavLevel.PLAYER
+        youtubeVideoId = null
+        youtubeChannel = null
+        isUsingYouTube = false
+        isUsingSpotify = false
+        isActuallyPlaying = false
+        playbackError = null
+        isTrackLoading = true
+
+        playbackSearchJob =
+                viewModelScope.launch {
+                    try {
+                        val metadata = metadataManager.getOfficialMetadata(track.artist, track.title)
+                        metadata?.let { meta ->
+                            track.officialDurationMs = meta.durationMs
+                            track.officialAlbum = meta.album
+                            track.officialCoverHD = meta.coverUrlHD
+                            track.metadataSource = meta.source
+                        }
+
+                        val results =
+                                soundCloudManager?.searchTracks(track.artist, track.title)
+                                        ?: emptyList()
+                        if (currentTrackIndexInFiltered != index) return@launch
+
+                        if (results.isEmpty()) {
+                            playbackError = "Aucun flux SoundCloud trouvé."
+                            return@launch
+                        }
+
+                        alternateStreams = results
+                        currentStreamIndex = streamIdx % results.size
+                        val selected = results[currentStreamIndex]
+                        track.streamUrl = selected.streamUrl
+                        track.artworkUrl =
+                                track.officialCoverHD ?: selected.artworkUrl ?: track.artworkUrl
+                        currentArtworkUrl = track.artworkUrl
+
+                        val mediaMetadata =
+                                MediaMetadata.Builder()
+                                        .setTitle(track.title)
+                                        .setArtist(track.artist)
+                                        .setArtworkUri(track.artworkUrl?.let { Uri.parse(it) })
+                                        .build()
+                        val mediaItem =
+                                MediaItem.Builder()
+                                        .setUri(Uri.parse(selected.streamUrl))
+                                        .setMediaMetadata(mediaMetadata)
+                                        .build()
+                        exoPlayer?.apply {
+                            setMediaItem(mediaItem)
+                            prepare()
+                            play()
+                        }
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (error: Exception) {
+                        playbackError =
+                                "SoundCloud indisponible : ${error.localizedMessage ?: "erreur réseau"}"
+                    } finally {
+                        if (currentTrackIndexInFiltered == index) isTrackLoading = false
+                    }
+                }
+    }
+
+    private fun applyYouTubeResult(index: Int) {
+        val result = youtubeResults.getOrNull(index) ?: return
+        currentYoutubeResultIndex = index
+        youtubeChannel = result.channelTitle
+        currentTrack?.let { track ->
+            val youtubeThumbnail =
+                    result.artworkUrl
+                            ?: "https://i.ytimg.com/vi/${result.videoId}/hqdefault.jpg"
+            track.artworkUrl = track.officialCoverHD ?: youtubeThumbnail
+            currentArtworkUrl = track.artworkUrl
         }
+        duration = result.durationMs
+        currentPosition = 0L
+        playbackError = null
+        youtubeCommand = null
+        youtubeVideoId = result.videoId
     }
 
     fun playNext() {
         if (isRepeat) {
-            exoPlayer?.let {
-                it.seekTo(0)
-                it.play()
-            }
+            seekTo(0L)
         } else if (isShuffle && filteredTracks.isNotEmpty()) {
             playTrack(Random.nextInt(filteredTracks.size))
         } else {
@@ -274,10 +449,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun playPrevious() {
         if (isRepeat) {
-            exoPlayer?.let {
-                it.seekTo(0)
-                it.play()
-            }
+            seekTo(0L)
         } else {
             val prev = currentTrackIndexInFiltered - 1
             if (prev >= 0) playTrack(prev)
@@ -286,16 +458,61 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun openArtistRadio(artist: String) {
+        val requestedArtist = artist.trim()
+        if (requestedArtist.isEmpty() || isSearchingPlaylists) return
+
         viewModelScope.launch {
             isSearchingPlaylists = true
-            val playlists = soundCloudManager?.searchArtistPlaylists(artist) ?: emptyList()
-            artistPlaylists = playlists
-            isSearchingPlaylists = false
-            if (playlists.isNotEmpty()) {
-                showPlaylistSelection = true
-            } else {
-                Toast.makeText(context, "Aucune playlist trouvée pour $artist", Toast.LENGTH_SHORT)
+            try {
+                val results = youtubeManager?.searchArtistTopTracks(requestedArtist).orEmpty()
+                if (results.isEmpty()) {
+                    Toast.makeText(
+                                    context,
+                                    "Aucun titre populaire trouvé pour $requestedArtist",
+                                    Toast.LENGTH_SHORT
+                            )
+                            .show()
+                    return@launch
+                }
+
+                val tracks =
+                        results.mapIndexed { index, result ->
+                            Track(
+                                    index = (index + 1).toString(),
+                                    tagTime = "",
+                                    title = result.title,
+                                    artist = requestedArtist,
+                                    shazamUrl = "",
+                                    trackKey = "youtube:${result.videoId}",
+                                    artworkUrl = result.artworkUrl,
+                                    officialDurationMs = result.durationMs,
+                                    officialCoverHD = result.artworkUrl,
+                                    metadataSource = "youtube",
+                                    youtubeVideoId = result.videoId,
+                                    youtubeChannel = result.channelTitle
+                            )
+                        }
+
+                discoveryTracks = tracks
+                filteredTracks = tracks
+                isDiscoveryMode = true
+                discoveryCreator = requestedArtist
+                discoveryCreatorId = 0L
+                showPlaylistSelection = false
+                currentTrackIndexInFiltered = 0
+                playTrack(0)
+                currentLevel = NavLevel.PLAYER
+            } catch (error: YouTubeApiException) {
+                Toast.makeText(context, error.message, Toast.LENGTH_LONG).show()
+            } catch (error: Exception) {
+                Toast.makeText(
+                                context,
+                                "Radio artiste indisponible : ${error.localizedMessage ?: "erreur réseau"}",
+                                Toast.LENGTH_LONG
+                        )
                         .show()
+            } finally {
+                isSearchingPlaylists = false
             }
         }
     }
@@ -351,19 +568,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    @Suppress("UNUSED_PARAMETER")
     fun openUserRadio(userId: Long, userName: String) {
-        viewModelScope.launch {
-            isSearchingPlaylists = true
-            val playlists = soundCloudManager?.searchUserPlaylists(userId) ?: emptyList()
-            artistPlaylists = playlists
-            isSearchingPlaylists = false
-            if (playlists.isNotEmpty()) {
-                showPlaylistSelection = true
-            } else {
-                Toast.makeText(context, "Aucune autre playlist pour $userName", Toast.LENGTH_SHORT)
-                        .show()
-            }
-        }
+        openArtistRadio(userName)
     }
 
     fun startSleepTimer(minutes: Int) {
@@ -382,18 +589,104 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun exitApp() {
+        onExit?.invoke()
+    }
+
     fun togglePlay() {
-        exoPlayer?.let { if (it.isPlaying) it.pause() else it.play() }
+        if (isUsingYouTube) {
+            issueYouTubeCommand(
+                    if (isActuallyPlaying) YouTubePlayerAction.PAUSE else YouTubePlayerAction.PLAY
+            )
+        } else {
+            exoPlayer?.let { if (it.isPlaying) it.pause() else it.play() }
+        }
     }
 
     fun seekTo(position: Long) {
-        exoPlayer?.seekTo(position)
+        if (isUsingYouTube) {
+            issueYouTubeCommand(YouTubePlayerAction.SEEK, position)
+        } else {
+            exoPlayer?.seekTo(position)
+        }
     }
 
     fun cycleStream() {
-        if (alternateStreams.size > 1) {
-            val nextIdx = (currentStreamIndex + 1) % alternateStreams.size
-            playTrack(currentTrackIndexInFiltered, nextIdx)
+        if (!isUsingYouTube && alternateStreams.size > 1) {
+            val nextIndex = (currentStreamIndex + 1) % alternateStreams.size
+            playTrackFromSoundCloud(currentTrackIndexInFiltered, nextIndex)
+        } else if (youtubeResults.size > 1) {
+            val nextIndex = (currentYoutubeResultIndex + 1) % youtubeResults.size
+            isActuallyPlaying = false
+            applyYouTubeResult(nextIndex)
+            Toast.makeText(
+                            context,
+                            "Résultat ${nextIndex + 1}/${youtubeResults.size}",
+                            Toast.LENGTH_SHORT
+                    )
+                    .show()
+        } else {
+            Toast.makeText(context, "Aucun autre résultat en cache.", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    fun pauseYouTube() {
+        if (isUsingYouTube && youtubeVideoId != null) {
+            issueYouTubeCommand(YouTubePlayerAction.PAUSE)
+            isActuallyPlaying = false
+        }
+    }
+
+    fun onYouTubeReady(playerDurationMs: Long) {
+        if (playerDurationMs > 0) duration = playerDurationMs
+    }
+
+    fun onYouTubeStateChanged(state: Int) {
+        when (state) {
+            0 -> {
+                isActuallyPlaying = false
+                if (isRepeat) seekTo(0L) else playNext()
+            }
+            1 -> isActuallyPlaying = true
+            2, 5 -> isActuallyPlaying = false
+        }
+    }
+
+    fun onYouTubeProgress(positionMs: Long, playerDurationMs: Long) {
+        currentPosition = positionMs.coerceAtLeast(0L)
+        if (playerDurationMs > 0) duration = playerDurationMs
+    }
+
+    fun onYouTubeError(code: Int) {
+        isActuallyPlaying = false
+        val message =
+                when (code) {
+                    2 -> "Identifiant YouTube incorrect."
+                    5 -> "Cette vidéo ne peut pas être lue sur cet appareil."
+                    100 -> "Cette vidéo a été supprimée ou rendue privée."
+                    101, 150 -> "Le propriétaire interdit la lecture intégrée."
+                    153 -> "YouTube n'a pas pu identifier l'application."
+                    else -> "Erreur du lecteur YouTube ($code)."
+                }
+        val nextIndex = currentYoutubeResultIndex + 1
+        if (nextIndex in youtubeResults.indices) {
+            Toast.makeText(context, "$message Essai du résultat suivant…", Toast.LENGTH_SHORT)
+                    .show()
+            applyYouTubeResult(nextIndex)
+        } else {
+            currentTrack?.let { youtubeManager?.clearCachedTrack(it.artist, it.title) }
+            youtubeVideoId = null
+            playbackError = message
+        }
+    }
+
+    private fun issueYouTubeCommand(action: YouTubePlayerAction, positionMs: Long = 0L) {
+        youtubeCommandId++
+        youtubeCommand = YouTubePlayerCommand(youtubeCommandId, action, positionMs)
+    }
+
+    companion object {
+        private const val SOUNDCLOUD_FALLBACK_ENABLED = false
+        private const val DEFAULT_QUEUE_ITEM_DURATION_MS = 3 * 60_000L
     }
 }

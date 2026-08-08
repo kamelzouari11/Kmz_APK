@@ -13,5 +13,8 @@ data class Track(
         var officialDurationMs: Long? = null,
         var officialAlbum: String? = null,
         var officialCoverHD: String? = null,
-        var metadataSource: String? = null // "deezer" ou "itunes"
+        var metadataSource: String? = null, // "deezer", "itunes" ou "youtube"
+        // Résolution directe utilisée par la radio artiste YouTube.
+        var youtubeVideoId: String? = null,
+        var youtubeChannel: String? = null
 )
