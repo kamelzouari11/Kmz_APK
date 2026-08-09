@@ -130,7 +130,41 @@ class DailyCacheTests(unittest.TestCase):
         self.assertEqual(matches[0]["channels"], ["Sport One"])
         self.assertEqual(matches[0]["channelCountries"], {"Sport One": ["Sweden"]})
 
+    def test_live_soccertv_schedule_exposes_live_half_time_and_scores(self) -> None:
+        markdown = """
+▴[Club Friendly](https://example.test/competition)
+11:30am 47'[Olympique Marseille 2 - 1 Athletic Club](https://example.test/live)
+1:00pm HT[Home HT 1 - 1 Away HT](https://example.test/half-time)
+9:00am FT[Home FT 3 - 0 Away FT](https://example.test/finished)
+"""
+
+        class Response:
+            text = markdown
+
+            @staticmethod
+            def raise_for_status() -> None:
+                return None
+
+        class Session:
+            headers = {}
+
+            @staticmethod
+            def get(*args, **kwargs):
+                return Response()
+
+        with patch.object(main, "get_http_session", return_value=Session()):
+            matches = main.scrape_live_soccertv("2026-08-09")
+
+        self.assertEqual(matches[0]["status"], "LIVE")
+        self.assertEqual(matches[0]["minute"], 47)
+        self.assertEqual(matches[0]["homeScore"], 2)
+        self.assertEqual(matches[0]["awayScore"], 1)
+        self.assertEqual(matches[1]["status"], "HALF_TIME")
+        self.assertEqual(matches[1]["statusLabel"], "Mi-temps")
+        self.assertEqual(matches[2]["status"], "FINISHED")
+
     def test_live_soccertv_requests_only_the_daily_schedule_table(self) -> None:
+        future_date = (datetime.now().date() + timedelta(days=1)).isoformat()
         markdown = """
 ▴[League](https://example.test/competition)
 3:00pm[Home vs Away](https://example.test/match "Home vs Away")
@@ -155,10 +189,10 @@ class DailyCacheTests(unittest.TestCase):
                 return Response()
 
         with patch.object(main, "get_http_session", return_value=Session()):
-            matches = main.scrape_live_soccertv("2026-08-09")
+            matches = main.scrape_live_soccertv(future_date)
 
         self.assertEqual(len(matches), 1)
-        self.assertTrue(captured["url"].endswith("/2026-08-09/"))
+        self.assertTrue(captured["url"].endswith(f"/{future_date}/"))
         self.assertEqual(
             captured["headers"]["X-Target-Selector"],
             "table.schedules"
@@ -673,12 +707,13 @@ Assist: A. Soubeir
     def test_schedule_response_contains_utc_kickoff(self) -> None:
         scraped = [match("2026-07-28")]
         scraped[0]["time"] = "3:00pm"
+        scraped[0]["source"] = "LiveSoccerTV"
 
         with patch.object(main, "get_matches_cached", return_value=scraped):
             response = main.get_schedule("2026-07-28")
 
         self.assertEqual(response["date"], "2026-07-28")
-        self.assertEqual(response["matches"][0]["utcDate"], "2026-07-28T19:00:00Z")
+        self.assertEqual(response["matches"][0]["utcDate"], "2026-07-28T15:00:00Z")
 
 
 if __name__ == "__main__":

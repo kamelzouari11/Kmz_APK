@@ -601,13 +601,15 @@ def enrich_live_soccertv_match(match: Dict) -> Dict:
         response.text
     )
     events_snapshot = extract_live_soccertv_events_snapshot(response.text)
-    if not channels and not events_snapshot:
+    events = parse_live_soccertv_events(response.text)
+    if not channels and not events_snapshot and not events:
         return match
 
     return {
         **match,
         "channels": channels or match.get("channels") or [],
         "channelCountries": channel_countries or match.get("channelCountries") or {},
+        "events": events,
         "eventsSnapshot": events_snapshot,
         "source": "LiveSoccerTV",
         "sourceUrl": source_url.split("#", 1)[0],
@@ -682,8 +684,8 @@ def scrape_live_soccertv(target_date: Optional[str] = None) -> List[Dict]:
             continue
 
         match_line = re.match(
-            r'^(?:Live\s+)?(?P<time>\d{1,2}:\d{2}\s*(?:am|pm))'
-            r"(?:\s+(?:\d{1,3}(?:\+\d+)?'|HT|FT|AET|PEN|LIVE))*\s*"
+            r'^(?P<live>Live\s+)?(?P<time>\d{1,2}:\d{2}\s*(?:am|pm))'
+            r"(?P<state>(?:\s+(?:\d{1,3}(?:\+\d+)?'|HT|FT|AET|PEN|LIVE))*)\s*"
             r'\[(?P<teams>[^\]]+)\]\('
             r'(?P<url>https?://[^\s\)]+)(?:\s+"[^"]*")?\)'
             r'(?P<rest>.*)$',
@@ -709,23 +711,41 @@ def scrape_live_soccertv(target_date: Optional[str] = None) -> List[Dict]:
             continue
 
         teams_text = match_line.group('teams').strip()
-        teams = re.split(r'\s+v[s]?\s+', teams_text, flags=re.I)
-        if len(teams) < 2:
-            live_score_teams = re.match(
-                r'^(.*?)\s+\d+\s*-\s*\d+\s+(.*?)$',
-                teams_text
-            )
-            if live_score_teams:
-                teams = [
-                    live_score_teams.group(1),
-                    live_score_teams.group(2)
-                ]
+        home_score = None
+        away_score = None
+        live_score_teams = re.match(
+            r'^(.*?)\s+(\d+)\s*-\s*(\d+)\s+(.*?)$',
+            teams_text
+        )
+        if live_score_teams:
+            teams = [
+                live_score_teams.group(1),
+                live_score_teams.group(4)
+            ]
+            home_score = int(live_score_teams.group(2))
+            away_score = int(live_score_teams.group(3))
+        else:
+            teams = re.split(r'\s+v[s]?\s+', teams_text, flags=re.I)
         if len(teams) < 2:
             continue
 
         home_team = teams[0].strip()
         away_team = teams[1].strip()
         kickoff_time = match_line.group('time').strip()
+        state_text = (match_line.group('state') or '').strip().upper()
+        minute_match = re.search(r"(\d{1,3})(?:\+\d+)?'", state_text)
+        if any(token in state_text.split() for token in ("FT", "AET", "PEN")):
+            match_status = "FINISHED"
+            status_label = "Terminé"
+        elif "HT" in state_text.split():
+            match_status = "HALF_TIME"
+            status_label = "Mi-temps"
+        elif match_line.group('live') or "LIVE" in state_text.split() or minute_match:
+            match_status = "LIVE"
+            status_label = "Live"
+        else:
+            match_status = "SCHEDULED"
+            status_label = "À venir"
 
         channel_links = extract_markdown_channels(match_line.group('rest'))
         channels = [channel for channel, _countries in channel_links]
@@ -740,6 +760,11 @@ def scrape_live_soccertv(target_date: Optional[str] = None) -> List[Dict]:
             "home": home_team,
             "away": away_team,
             "time": kickoff_time,
+            "status": match_status,
+            "statusLabel": status_label,
+            "minute": int(minute_match.group(1)) if minute_match else None,
+            "homeScore": home_score,
+            "awayScore": away_score,
             "channels": channels,
             "channelCountries": channel_countries,
             "source": "LiveSoccerTV",
@@ -1197,17 +1222,22 @@ def get_matches_cached(target_date: str) -> List[Dict]:
 
 
 def scraped_match_utc_date(match: Dict) -> Optional[str]:
-    """Convert the US-Eastern time exposed by the Jina schedule to UTC."""
+    """Convert a scraped kickoff to UTC without shifting Jina's UTC values twice."""
     raw_date = match.get("date")
     raw_time = (match.get("time") or "").replace(" ", "").upper()
     if not raw_date or not raw_time or raw_time == "UNKNOWN":
         return None
     for time_format in ("%I:%M%p", "%H:%M"):
         try:
+            source_timezone = (
+                ZoneInfo("UTC")
+                if match.get("source") == "LiveSoccerTV"
+                else ZoneInfo("America/New_York")
+            )
             local = datetime.strptime(
                 f"{raw_date} {raw_time}",
                 f"%Y-%m-%d {time_format}"
-            ).replace(tzinfo=ZoneInfo("America/New_York"))
+            ).replace(tzinfo=source_timezone)
             return local.astimezone(ZoneInfo("UTC")).isoformat().replace("+00:00", "Z")
         except ValueError:
             continue
