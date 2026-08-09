@@ -385,8 +385,201 @@ def parse_live_soccertv_international_coverage(text: str) -> tuple:
     return channels, channel_countries
 
 
+def extract_live_soccertv_events_snapshot(text: str) -> Optional[str]:
+    """Return the Events block in source order, without semantic parsing."""
+    snapshot_lines: List[str] = []
+    in_events = False
+    markdown_link_re = re.compile(
+        r'\[([^\]]+)\]\(https?://[^\s\)]+(?:\s+"[^"]*")?\)'
+    )
+
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if line == "## Events":
+            in_events = True
+            continue
+        if not in_events:
+            continue
+        if line.startswith("## "):
+            break
+        if line.startswith("#### "):
+            continue
+
+        # Keep LiveSoccerTV's text and ordering; only hide Markdown link targets.
+        line = markdown_link_re.sub(lambda found: found.group(1), line)
+        line = line.replace("\u00a0", " ").strip()
+        if line:
+            snapshot_lines.append(line)
+
+    return "\n".join(snapshot_lines) or None
+
+
+def parse_live_soccertv_events(text: str) -> List[Dict]:
+    """Parse the timeline exposed in a LiveSoccerTV match page."""
+    section_lines: List[str] = []
+    in_events = False
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if line == "## Events":
+            in_events = True
+            continue
+        if not in_events:
+            continue
+        if line.startswith("## "):
+            break
+        if line and not line.startswith("#### "):
+            section_lines.append(line)
+
+    player_re = re.compile(r'\[([^\]]+)\]\(https?://[^\s\)]+(?:\s+"[^"]*")?\)')
+    minute_re = re.compile(r"(?<!\d)(\d{1,3})(?:\+(\d{1,2}))?\s*['’]")
+    score_re = re.compile(r'\((\d+)\s*-\s*(\d+)\)')
+
+    def event_minute(line: str) -> tuple:
+        found = minute_re.search(line)
+        if not found:
+            return None, None
+        return int(found.group(1)), int(found.group(2)) if found.group(2) else None
+
+    def clean_player_name(name: str) -> str:
+        return re.sub(
+            r'\s*\((?:pen\.?|penalty)\)\s*$',
+            '',
+            name.replace("\\", "").strip(),
+            flags=re.I
+        ).strip()
+
+    def player_names(line: str) -> List[str]:
+        return [clean_player_name(name) for name in player_re.findall(line)]
+
+    def visible_text(line: str) -> str:
+        return player_re.sub(lambda found: found.group(1), line).replace("\u00a0", " ")
+
+    def event_fragment_name(fragment: str) -> str:
+        fragment = minute_re.sub('', fragment)
+        fragment = score_re.sub('', fragment)
+        fragment = re.sub(r'^\s*Assist:\s*', '', fragment, flags=re.I)
+        return clean_player_name(fragment.strip(" |:-\t"))
+
+    def visual_side(line: str) -> str:
+        """LiveSoccerTV places home events left (minute last), away events right."""
+        minute = minute_re.search(line)
+        first_player = line.find("[")
+        if minute and first_player >= 0 and minute.start() < first_player:
+            return "away"
+        return "home"
+
+    events: List[Dict] = []
+    pending_goal: Optional[Dict] = None
+    previous_home_score = 0
+    previous_away_score = 0
+
+    def flush_pending_goal() -> None:
+        nonlocal pending_goal
+        if pending_goal is not None and pending_goal.get("elapsed") is not None:
+            events.append(pending_goal)
+        pending_goal = None
+
+    for line in section_lines:
+        score = score_re.search(line)
+        names = player_names(line)
+
+        if score and names:
+            flush_pending_goal()
+            home_score = int(score.group(1))
+            away_score = int(score.group(2))
+            if home_score > previous_home_score:
+                team_side = "home"
+            elif away_score > previous_away_score:
+                team_side = "away"
+            else:
+                team_side = visual_side(line)
+            previous_home_score = home_score
+            previous_away_score = away_score
+            elapsed, extra = event_minute(line)
+            lower_line = line.casefold()
+            detail = (
+                "Penalty" if "penalty" in lower_line or "pen." in lower_line else
+                "Own Goal" if "own goal" in lower_line else
+                "Goal"
+            )
+            pending_goal = {
+                "elapsed": elapsed,
+                "extra": extra,
+                "teamSide": team_side,
+                "type": "Goal",
+                "detail": detail,
+                "player": names[0],
+                "assist": None
+            }
+            inline_assist = re.search(
+                r'Assist:\s*(.+?)(?:(?:\d{1,3})(?:\+\d{1,2})?\s*[\'’])?(?:\s*\|.*)?$',
+                visible_text(line),
+                flags=re.I
+            )
+            if inline_assist:
+                pending_goal["assist"] = event_fragment_name(inline_assist.group(1)) or None
+            continue
+
+        if pending_goal is not None and line.casefold().startswith("assist:"):
+            assist_name = names[0] if names else event_fragment_name(visible_text(line))
+            if assist_name:
+                pending_goal["assist"] = assist_name
+            elapsed, extra = event_minute(line)
+            if pending_goal.get("elapsed") is None and elapsed is not None:
+                pending_goal["elapsed"] = elapsed
+                pending_goal["extra"] = extra
+            flush_pending_goal()
+            continue
+
+        flush_pending_goal()
+        elapsed, extra = event_minute(line)
+        if elapsed is None:
+            continue
+
+        readable_line = visible_text(line)
+        if re.search(r'\s/\s', readable_line):
+            substitution_parts = re.split(r'\s/\s', readable_line, maxsplit=1)
+            incoming = event_fragment_name(substitution_parts[0])
+            outgoing = event_fragment_name(substitution_parts[1])
+            if not incoming or not outgoing:
+                continue
+            events.append({
+                "elapsed": elapsed,
+                "extra": extra,
+                "teamSide": visual_side(line),
+                "type": "subst",
+                "detail": "Substitution",
+                # LiveSoccerTV displays the incoming player before the outgoing one.
+                "player": outgoing,
+                "assist": incoming
+            })
+            continue
+
+        lower_line = line.casefold()
+        detail = (
+            "Red Card" if "red" in lower_line else
+            "Yellow Card" if "yellow" in lower_line else
+            "Card"
+        )
+        card_player = names[0] if names else event_fragment_name(readable_line)
+        if not card_player:
+            continue
+        events.append({
+            "elapsed": elapsed,
+            "extra": extra,
+            "teamSide": visual_side(line),
+            "type": "Card",
+            "detail": detail,
+            "player": card_player,
+            "assist": None
+        })
+
+    flush_pending_goal()
+    return events
+
+
 def enrich_live_soccertv_match(match: Dict) -> Dict:
-    """Load a match page to obtain complete, explicit coverage by country."""
+    """Load a match page to obtain coverage and its raw events snapshot."""
     source_url = match.get("sourceUrl") or ""
     path_match = re.search(
         r'https?://(?:www\.)?livesoccertv\.com(?P<path>/match/[^?#\s]+)',
@@ -407,13 +600,15 @@ def enrich_live_soccertv_match(match: Dict) -> Dict:
     channels, channel_countries = parse_live_soccertv_international_coverage(
         response.text
     )
-    if not channels:
+    events_snapshot = extract_live_soccertv_events_snapshot(response.text)
+    if not channels and not events_snapshot:
         return match
 
     return {
         **match,
-        "channels": channels,
-        "channelCountries": channel_countries,
+        "channels": channels or match.get("channels") or [],
+        "channelCountries": channel_countries or match.get("channelCountries") or {},
+        "eventsSnapshot": events_snapshot,
         "source": "LiveSoccerTV",
         "sourceUrl": source_url.split("#", 1)[0],
         "verifiedAt": datetime.now(ZoneInfo("UTC")).isoformat(timespec="seconds")
@@ -1128,7 +1323,9 @@ def get_tv_channels(
             "source": None,
             "sourceUrl": None,
             "verifiedAt": verified_at,
-            "channels": []
+            "channels": [],
+            "events": [],
+            "eventsSnapshot": None
         }
         
     # Group channels by country/region
@@ -1169,6 +1366,28 @@ def get_tv_channels(
             )
         )
     ]
+
+    events = target_match.get("events") or []
+    direct_order = (
+        match_teams(home, target_match.get("home", "")) and
+        match_teams(away, target_match.get("away", ""))
+    )
+    reversed_order = (
+        match_teams(home, target_match.get("away", "")) and
+        match_teams(away, target_match.get("home", ""))
+    )
+    if reversed_order and not direct_order:
+        events = [
+            {
+                **event,
+                "teamSide": (
+                    "away" if event.get("teamSide") == "home" else
+                    "home" if event.get("teamSide") == "away" else
+                    event.get("teamSide")
+                )
+            }
+            for event in events
+        ]
     
     return {
         "match": f"{target_match['home']} vs {target_match['away']}",
@@ -1177,7 +1396,9 @@ def get_tv_channels(
         "source": target_match.get("source") or "TV listings",
         "sourceUrl": target_match.get("sourceUrl"),
         "verifiedAt": target_match.get("verifiedAt") or verified_at,
-        "channels": channel_groups
+        "channels": channel_groups,
+        "events": events,
+        "eventsSnapshot": target_match.get("eventsSnapshot")
     }
 
 if __name__ == "__main__":

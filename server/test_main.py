@@ -327,6 +327,58 @@ San Marino[Sky Sport Calcio](https://www.livesoccertv.com/channels/sky-sport-ser
         self.assertEqual(countries["DAZN Italia"], ["Italy"])
         self.assertEqual(countries["Sky Sport Calcio"], ["Italy", "San Marino"])
 
+    def test_live_soccertv_events_parse_goals_substitutions_and_cards(self) -> None:
+        markdown = """
+## Events
+#### Arsenal vs Real Betis Match Events
+9'[R. Riquelme](https://www.livesoccertv.com/players/riquelme/) (0 - 1)
+Assist: [P. Fornals](https://www.livesoccertv.com/players/fornals/)
+[P. Hincapie](https://www.livesoccertv.com/players/hincapie/) (1 - 1)
+Assist: [C. Tzolis](https://www.livesoccertv.com/players/tzolis/)32'
+[M. Salmon](https://www.livesoccertv.com/players/salmon/) / [C. Mosquera](https://www.livesoccertv.com/players/mosquera/)46'
+46'[Isco](https://www.livesoccertv.com/players/isco/) / [G. Bouare](https://www.livesoccertv.com/players/bouare/)
+[M. Salmon](https://www.livesoccertv.com/players/salmon/)61'
+63'O. Konate / [M. Abline](https://www.livesoccertv.com/players/abline/)
+88'[P. Brunner (pen.)](https://www.livesoccertv.com/players/brunner/) (2 - 2)
+Assist: A. Soubeir
+90+1'O. Konate
+## Lineups
+"""
+
+        events = main.parse_live_soccertv_events(markdown)
+        snapshot = main.extract_live_soccertv_events_snapshot(markdown)
+
+        self.assertIn("R. Riquelme", snapshot)
+        self.assertIn("Assist: A. Soubeir", snapshot)
+        self.assertIn("90+1'O. Konate", snapshot)
+        self.assertNotIn("https://", snapshot)
+        self.assertEqual(events[0], {
+            "elapsed": 9,
+            "extra": None,
+            "teamSide": "away",
+            "type": "Goal",
+            "detail": "Goal",
+            "player": "R. Riquelme",
+            "assist": "P. Fornals"
+        })
+        self.assertEqual(events[1]["elapsed"], 32)
+        self.assertEqual(events[1]["teamSide"], "home")
+        self.assertEqual(events[2]["teamSide"], "home")
+        self.assertEqual(events[2]["player"], "C. Mosquera")
+        self.assertEqual(events[2]["assist"], "M. Salmon")
+        self.assertEqual(events[3]["teamSide"], "away")
+        self.assertEqual(events[4]["type"], "Card")
+        self.assertEqual(events[4]["elapsed"], 61)
+        self.assertEqual(events[5]["type"], "subst")
+        self.assertEqual(events[5]["assist"], "O. Konate")
+        self.assertEqual(events[5]["player"], "M. Abline")
+        self.assertEqual(events[6]["detail"], "Penalty")
+        self.assertEqual(events[6]["player"], "P. Brunner")
+        self.assertEqual(events[6]["assist"], "A. Soubeir")
+        self.assertEqual(events[7]["elapsed"], 90)
+        self.assertEqual(events[7]["extra"], 1)
+        self.assertEqual(events[7]["player"], "O. Konate")
+
     def test_tv_response_exposes_confirmed_source_metadata(self) -> None:
         scraped = match(
             "2026-08-01", "Manchester City", "Internazionale"
@@ -339,6 +391,16 @@ San Marino[Sky Sport Calcio](https://www.livesoccertv.com/channels/sky-sport-ser
             **scraped,
             "channels": ["Sky Sport Calcio"],
             "channelCountries": {"Sky Sport Calcio": ["Italy"]},
+            "events": [{
+                "elapsed": 9,
+                "extra": None,
+                "teamSide": "away",
+                "type": "Goal",
+                "detail": "Goal",
+                "player": "R. Riquelme",
+                "assist": "P. Fornals"
+            }],
+            "eventsSnapshot": "9' R. Riquelme (0 - 1)\nAssist: P. Fornals",
             "verifiedAt": "2026-08-01T12:35:00+00:00"
         }
 
@@ -353,6 +415,8 @@ San Marino[Sky Sport Calcio](https://www.livesoccertv.com/channels/sky-sport-ser
 
         self.assertEqual(response["status"], "confirmed")
         self.assertEqual(response["source"], "LiveSoccerTV")
+        self.assertEqual(response["events"], enriched["events"])
+        self.assertEqual(response["eventsSnapshot"], enriched["eventsSnapshot"])
         self.assertEqual(
             response["channels"],
             [{"country": "Italy", "channels": ["Sky Sport Calcio"]}]
@@ -363,6 +427,15 @@ San Marino[Sky Sport Calcio](https://www.livesoccertv.com/channels/sky-sport-ser
             "2026-07-26", home="Roma", away="Cannes"
         )
         reversed_match["channels"] = ["DAZN Italia"]
+        reversed_match["events"] = [{
+            "elapsed": 12,
+            "extra": None,
+            "teamSide": "home",
+            "type": "Goal",
+            "detail": "Goal",
+            "player": "Player",
+            "assist": None
+        }]
 
         with patch.object(
             main, "get_matches_cached", return_value=[reversed_match]
@@ -379,6 +452,7 @@ San Marino[Sky Sport Calcio](https://www.livesoccertv.com/channels/sky-sport-ser
             response["channels"][0]["channels"],
             ["DAZN Italia"]
         )
+        self.assertEqual(response["events"][0]["teamSide"], "away")
 
     def test_empty_tv_result_forces_a_fresh_scrape(self) -> None:
         cached = match("2026-07-26", "Roma", "Cannes")
