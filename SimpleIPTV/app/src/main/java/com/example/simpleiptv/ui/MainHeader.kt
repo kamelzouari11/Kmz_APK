@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -102,6 +103,84 @@ fun MainHeader(
         }
 
         val popupOffsetY = with(density) { 62.dp.roundToPx() }
+
+        // --- Confirmation Import/Export pour éviter les fausses manœuvres ---
+        var pendingAction by remember { mutableStateOf<String?>(null) } // "import" | "export" | null
+        if (pendingAction != null) {
+            val isImport = pendingAction == "import"
+            val title = if (isImport) "Confirmer l'import" else "Confirmer l'export"
+            val message = if (isImport)
+                "Cela va télécharger la sauvegarde depuis GitHub et REMPLACER les données locales. Continuer ?"
+            else
+                "Cela va envoyer la sauvegarde actuelle vers GitHub et écraser la précédente. Continuer ?"
+            val confirmLabel = if (isImport) "Importer" else "Exporter"
+
+            AlertDialog(
+                onDismissRequest = { pendingAction = null },
+                title = {
+                    Text(
+                        title,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = Color.White
+                    )
+                },
+                text = {
+                    Text(
+                        message,
+                        color = Color.White.copy(alpha = 0.8f),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                },
+                containerColor = Color(0xFF1E1E1E),
+                confirmButton = {
+                    var isFocused by remember { mutableStateOf(false) }
+                    val requester = remember { FocusRequester() }
+                    LaunchedEffect(Unit) {
+                        try { requester.requestFocus() } catch (e: Exception) {}
+                    }
+                    Box(
+                        modifier = Modifier
+                            .focusRequester(requester)
+                            .onFocusChanged { isFocused = it.isFocused }
+                            .clickable {
+                                val action = pendingAction
+                                pendingAction = null
+                                if (action == "import") onRestore() else onSave()
+                            }
+                            .focusable()
+                            .background(
+                                if (isFocused) Color.White.copy(alpha = 0.2f) else Color.Transparent,
+                                RoundedCornerShape(12.dp)
+                            )
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            confirmLabel,
+                            color = if (isFocused) Color.White else Color(0xFFBB86FC)
+                        )
+                    }
+                },
+                dismissButton = {
+                    var isFocused by remember { mutableStateOf(false) }
+                    Box(
+                        modifier = Modifier
+                            .onFocusChanged { isFocused = it.isFocused }
+                            .clickable { pendingAction = null }
+                            .focusable()
+                            .background(
+                                if (isFocused) Color.White.copy(alpha = 0.2f) else Color.Transparent,
+                                RoundedCornerShape(12.dp)
+                            )
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            "Annuler",
+                            color = if (isFocused) Color.White else Color.Gray
+                        )
+                    }
+                }
+            )
+        }
 
         @Composable
         fun HistoryPopup() {
@@ -263,8 +342,8 @@ fun MainHeader(
                                         Spacer(modifier = Modifier.width(16.dp))
 
                                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                            HeaderIconButton(Icons.Default.CloudDownload, "Import", onRestore)
-                                            HeaderIconButton(Icons.Default.CloudUpload, "Export", onSave)
+                                            HeaderIconButton(Icons.Default.CloudDownload, "Import", { pendingAction = "import" })
+                                            HeaderIconButton(Icons.Default.CloudUpload, "Export", { pendingAction = "export" })
                                         }
 
                                         Spacer(modifier = Modifier.width(24.dp))

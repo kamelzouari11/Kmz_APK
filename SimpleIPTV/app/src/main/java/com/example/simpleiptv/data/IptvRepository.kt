@@ -49,11 +49,11 @@ class IptvRepository(private val dao: IptvDao) {
         fun getFavoriteLists(
                 profileId: Int,
                 type: String = "LIVE"
-        ): Flow<List<FavoriteListEntity>> = dao.getAllFavoriteLists(profileId, type)
+        ): Flow<List<FavoriteListEntity>> = dao.getAllFavoriteLists(type)
         fun getAllFavoriteListsIncludingGlobal(
                 profileId: Int,
                 type: String = "LIVE"
-        ): Flow<List<FavoriteListEntity>> = dao.getAllFavoriteListsIncludingGlobal(profileId, type)
+        ): Flow<List<FavoriteListEntity>> = dao.getAllFavoriteListsIncludingGlobal(type)
         fun getChannelsByFavoriteList(
                 listId: Int,
                 profileId: Int,
@@ -120,6 +120,8 @@ class IptvRepository(private val dao: IptvDao) {
                 dao.getChannelCount(profileId, type)
         suspend fun getCategoryCount(profileId: Int, type: String = "LIVE"): Int =
                 dao.getCategoryCount(profileId, type)
+        suspend fun getCategoryIdForChannel(channel: ChannelEntity): String? =
+                dao.getCategoryIdForChannel(channel.stream_id, channel.profileId, channel.type)
 
         fun searchChannels(
                 query: String,
@@ -210,11 +212,19 @@ class IptvRepository(private val dao: IptvDao) {
         suspend fun clearSearchHistory() = dao.clearSearchHistory()
 
         // --- Favorites Logic ---
-        suspend fun addFavoriteList(name: String, profileId: Int?, type: String = "LIVE") =
+        suspend fun addFavoriteList(name: String, profileId: Int?, type: String = "LIVE"): FavoriteListEntity? {
+                val cleanName = name.trim()
+                if (cleanName.isEmpty()) return null
+                dao.findFavoriteList(cleanName, type)?.let { return it }
                 dao.insertFavoriteList(
-                        FavoriteListEntity(name = name, profileId = profileId, type = type)
+                        FavoriteListEntity(name = cleanName, profileId = null, type = type)
                 )
-        suspend fun removeFavoriteList(list: FavoriteListEntity) = dao.deleteFavoriteList(list)
+                return dao.findFavoriteList(cleanName, type)
+        }
+        suspend fun removeFavoriteList(list: FavoriteListEntity) {
+                dao.deleteFavoritesForList(list.id)
+                dao.deleteFavoriteList(list)
+        }
         suspend fun addChannelToFavoriteList(
                 streamId: String,
                 listId: Int,
@@ -259,32 +269,39 @@ class IptvRepository(private val dao: IptvDao) {
                 dao.insertRecent(
                         RecentChannelEntity(channelId, System.currentTimeMillis(), profileId, type)
                 )
-                dao.trimRecents(profileId, type)
+                dao.trimRecents(type)
         }
 
         suspend fun clearRecents(profileId: Int, type: String = "LIVE") =
                 dao.clearRecents(profileId, type)
 
+        suspend fun clearAllRecents(type: String = "LIVE") =
+                dao.clearAllRecents(type)
+
         // --- Profiles Logic ---
         val allProfiles: Flow<List<ProfileEntity>> = dao.getAllProfiles()
         val loadedProfileIds: Flow<List<Int>> = dao.getLoadedProfileIdsFlow()
         suspend fun getSelectedProfile(): ProfileEntity? = dao.getSelectedProfile()
+        suspend fun getProfileById(profileId: Int): ProfileEntity? = dao.getProfileById(profileId)
+        suspend fun getChannelById(
+                streamId: String,
+                profileId: Int,
+                type: String
+        ): ChannelEntity? = dao.getChannelById(streamId, profileId, type)
         suspend fun addProfile(profile: ProfileEntity) = dao.insertProfile(profile)
         suspend fun updateProfile(profile: ProfileEntity) = dao.updateProfile(profile)
         suspend fun deleteProfile(profile: ProfileEntity) {
                 // Nettoyage LIVE
+                dao.clearChannelFavorites(profile.id, "LIVE")
                 dao.clearCategories(profile.id, "LIVE")
                 dao.clearChannels(profile.id, "LIVE")
                 dao.clearChannelCategoryLinks(profile.id, "LIVE")
-                dao.clearFavoriteLists(profile.id, "LIVE")
-                dao.clearChannelFavorites(profile.id, "LIVE")
                 dao.clearRecents(profile.id, "LIVE")
                 // Nettoyage VOD
+                dao.clearChannelFavorites(profile.id, "VOD")
                 dao.clearCategories(profile.id, "VOD")
                 dao.clearChannels(profile.id, "VOD")
                 dao.clearChannelCategoryLinks(profile.id, "VOD")
-                dao.clearFavoriteLists(profile.id, "VOD")
-                dao.clearChannelFavorites(profile.id, "VOD")
                 dao.clearRecents(profile.id, "VOD")
                 dao.deleteProfile(profile)
         }
@@ -300,11 +317,17 @@ class IptvRepository(private val dao: IptvDao) {
 
         // --- Delegated to SyncService ---
         suspend fun refreshDatabase(profile: ProfileEntity) = syncService.refreshDatabase(profile)
+        suspend fun canAccessChannelList(profile: ProfileEntity): Boolean =
+                syncService.canAccessChannelList(profile)
 
         // --- Delegated to StreamService ---
         suspend fun getStreamUrl(profile: ProfileEntity, channel: ChannelEntity): String {
         return streamService.getStreamUrl(profile, channel)
         }
+        suspend fun isChannelWorking(profile: ProfileEntity, channel: ChannelEntity): Boolean =
+                streamService.isChannelWorking(profile, channel)
+        fun invalidateChannelTests(profileId: Int) =
+                streamService.invalidateChannelTests(profileId)
 
         // --- Delegated to BackupService ---
         suspend fun exportFavoritesToJson(profileId: Int): String =

@@ -4,6 +4,7 @@ import android.content.ComponentName
 import android.content.pm.ActivityInfo
 import android.os.Bundle
 import android.view.WindowManager
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -133,10 +134,22 @@ class MainActivity : ComponentActivity() {
                                                                                         this@MainActivity
                                                                                 )
                                                                 if (json != null) {
-                                                                        iptvRepository!!
-                                                                                .importDatabaseFromJson(
-                                                                                        json
-                                                                                )
+                                                                        try {
+                                                                                viewModel!!.importDatabaseFromJson(json)
+                                                                                exoPlayerState?.stop()
+                                                                                exoPlayerState?.clearMediaItems()
+                                                                                Toast.makeText(
+                                                                                        this@MainActivity,
+                                                                                        "Données locales remplacées !",
+                                                                                        Toast.LENGTH_LONG
+                                                                                ).show()
+                                                                        } catch (e: Exception) {
+                                                                                Toast.makeText(
+                                                                                        this@MainActivity,
+                                                                                        "Restauration refusée : ${e.localizedMessage}",
+                                                                                        Toast.LENGTH_LONG
+                                                                                ).show()
+                                                                        }
                                                                 }
                                                         }
                                                 },

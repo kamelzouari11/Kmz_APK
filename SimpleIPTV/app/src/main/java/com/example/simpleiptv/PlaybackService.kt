@@ -9,30 +9,111 @@ import androidx.annotation.OptIn
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.audio.AudioCapabilities
-import androidx.media3.exoplayer.audio.AudioSink
-import androidx.media3.exoplayer.audio.DefaultAudioSink
-import androidx.media3.exoplayer.trackselection.AdaptiveTrackSelection
-import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import com.example.simpleiptv.data.IptvRepository
+import com.example.simpleiptv.data.local.AppDatabase
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 class PlaybackService : MediaSessionService() {
         private var mediaSession: MediaSession? = null
         private var wifiLock: WifiManager.WifiLock? = null
         private var wakeLock: PowerManager.WakeLock? = null
+        private lateinit var repository: IptvRepository
+        private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
-        // Retry logic
+        // Reconnexion automatique : continue pour le Live, limitée pour la VOD.
         private var retryCount = 0
-        private val maxRetries = 3
+        private val maxVodRetries = 3
         private val retryHandler = android.os.Handler(android.os.Looper.getMainLooper())
         private var retryRunnable: Runnable? = null
+        private var reconnectJob: Job? = null
+        private var currentMediaId: String? = null
+
+        private fun isLiveItem(item: MediaItem?): Boolean =
+                item?.mediaId?.startsWith("LIVE:") == true
+
+        private fun cancelPendingRetry() {
+                retryRunnable?.let { retryHandler.removeCallbacks(it) }
+                retryRunnable = null
+                reconnectJob?.cancel()
+                reconnectJob = null
+        }
+
+        private suspend fun rebuildLiveMediaItem(mediaItem: MediaItem): MediaItem {
+                val parts = mediaItem.mediaId.split(":", limit = 3)
+                if (parts.size != 3 || parts[0] != "LIVE") return mediaItem
+                val profileId = parts[1].toIntOrNull() ?: return mediaItem
+                val streamId = parts[2]
+                val profile = repository.getProfileById(profileId) ?: return mediaItem
+                val channel = repository.getChannelById(streamId, profileId, "LIVE") ?: return mediaItem
+                val refreshedUrl = repository.getStreamUrl(profile, channel)
+                if (refreshedUrl.isBlank()) throw IllegalStateException("Empty refreshed stream URL")
+                return mediaItem.buildUpon().setUri(refreshedUrl).build()
+        }
+
+        private fun scheduleReconnect(player: Player) {
+                if (retryRunnable != null || reconnectJob?.isActive == true) return
+                val mediaItem = player.currentMediaItem ?: return
+                val isLive = isLiveItem(mediaItem)
+                if (!isLive && retryCount >= maxVodRetries) {
+                        retryCount = 0
+                        return
+                }
+
+                if (isLive) {
+                        if (wifiLock?.isHeld == false) wifiLock?.acquire()
+                        if (wakeLock?.isHeld == false) wakeLock?.acquire()
+                }
+
+                val expectedMediaId = mediaItem.mediaId
+                val delayMs = if (isLive) {
+                        minOf(2_000L * (1L shl retryCount.coerceAtMost(3)), 15_000L)
+                } else {
+                        2_000L
+                }
+
+                retryRunnable = Runnable {
+                        retryRunnable = null
+                        val currentItem = player.currentMediaItem
+                        if (currentItem?.mediaId != expectedMediaId) return@Runnable
+
+                        reconnectJob = serviceScope.launch {
+                                var retryAfterFailure = false
+                                try {
+                                        retryCount++
+                                        if (isLive) {
+                                                // Régénère notamment les liens Stalker temporaires.
+                                                player.setMediaItem(rebuildLiveMediaItem(currentItem))
+                                        }
+                                        player.prepare()
+                                        player.play()
+                                } catch (e: CancellationException) {
+                                        throw e
+                                } catch (e: Exception) {
+                                        retryAfterFailure = true
+                                } finally {
+                                        reconnectJob = null
+                                }
+                                if (retryAfterFailure && player.currentMediaItem?.mediaId == expectedMediaId) {
+                                        scheduleReconnect(player)
+                                }
+                        }
+                }
+                retryHandler.postDelayed(retryRunnable!!, delayMs)
+        }
 
         @OptIn(UnstableApi::class)
         override fun onCreate() {
                 super.onCreate()
+                repository = IptvRepository(AppDatabase.getDatabase(applicationContext).iptvDao())
                 val httpDataSourceFactory =
                         androidx.media3.datasource.DefaultHttpDataSource.Factory()
                                 .setUserAgent(
@@ -40,66 +121,14 @@ class PlaybackService : MediaSessionService() {
                                 )
                                 .setAllowCrossProtocolRedirects(true)
 
-                // Optimize buffering for IPTV (high bitrate/unstable network)
-                // Optimized for Fast Zapping
-                val loadControl =
-                        androidx.media3.exoplayer.DefaultLoadControl.Builder()
-                                .setBufferDurationsMs(
-                                        10_000, // minBufferMs: Reduced for faster start
-                                        30_000, // maxBufferMs: Allow up to 30s of cache
-                                        1_000, // bufferForPlaybackMs: Wait for 1s before start
-                                        2_000 // bufferForPlaybackAfterRebufferMs: Less cautious
-                                        // when resuming
-                                        )
-                                .setPrioritizeTimeOverSizeThresholds(true)
-                                .build()
-
-                // Configure TrackSelection to be aggressive for IPTV
-                // Higher duration for increase (don't rush to 4K/HD)
-                // Lower duration for decrease (Drop to SD fast if buffer is low)
-                val trackSelectionFactory =
-                        AdaptiveTrackSelection.Factory(
-                                20_000, // minDurationForQualityIncreaseMs: Wait 20s of stability
-                                // before going HD
-                                3_000, // maxDurationForQualityDecreaseMs: Drop to SD in 3s if it
-                                // lags
-                                10_000, // minDurationToRetainAfterDiscardMs
-                                AdaptiveTrackSelection.DEFAULT_BANDWIDTH_FRACTION
-                        )
-                val trackSelector = DefaultTrackSelector(this, trackSelectionFactory)
-
-                // Force software decoding of AC3/E-AC3 to stereo PCM.
-                // DEFAULT_AUDIO_CAPABILITIES = PCM only → no passthrough → downmix happens
-                // inside the decoder instead of being sent raw to HDMI/Bluetooth where
-                // the receiving device may not support Dolby formats.
-                val renderersFactory = object : DefaultRenderersFactory(this) {
-                        override fun buildAudioSink(
-                                context: Context,
-                                enableFloatOutput: Boolean,
-                                enableAudioTrackPlaybackParams: Boolean
-                        ): AudioSink {
-                                @Suppress("DEPRECATION")
-                                return DefaultAudioSink.Builder(context)
-                                        .setAudioCapabilities(AudioCapabilities.DEFAULT_AUDIO_CAPABILITIES)
-                                        .setEnableFloatOutput(enableFloatOutput)
-                                        .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
-                                        .build()
-                        }
-                }.apply {
-                        setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
-                        setEnableDecoderFallback(true)
-                }
-
                 val player =
-                        ExoPlayer.Builder(this, renderersFactory)
+                        ExoPlayer.Builder(this)
                                 .setMediaSourceFactory(
                                         androidx.media3.exoplayer.source.DefaultMediaSourceFactory(
                                                         this
                                                 )
                                                 .setDataSourceFactory(httpDataSourceFactory)
                                 )
-                                .setTrackSelector(trackSelector)
-                                .setLoadControl(loadControl)
                                 .setAudioAttributes(
                                         androidx.media3.common.AudioAttributes.DEFAULT,
                                         true
@@ -107,8 +136,6 @@ class PlaybackService : MediaSessionService() {
                                 .setHandleAudioBecomingNoisy(true)
                                 .setWakeMode(androidx.media3.common.C.WAKE_MODE_NETWORK)
                                 .build()
-
-                player.repeatMode = Player.REPEAT_MODE_ONE
 
                 val wifiManager =
                         applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
@@ -160,9 +187,10 @@ class PlaybackService : MediaSessionService() {
                                 override fun onIsPlayingChanged(isPlaying: Boolean) {
                                         if (isPlaying) {
                                                 retryCount = 0
+                                                cancelPendingRetry()
                                                 if (wifiLock?.isHeld == false) wifiLock?.acquire()
-                                                if (wakeLock?.isHeld == false) wakeLock?.acquire(30 * 60 * 1000L)
-                                        } else {
+                                                if (wakeLock?.isHeld == false) wakeLock?.acquire()
+                                        } else if (!player.playWhenReady || player.currentMediaItem == null) {
                                                 if (wifiLock?.isHeld == true) wifiLock?.release()
                                                 if (wakeLock?.isHeld == true) wakeLock?.release()
                                         }
@@ -172,32 +200,26 @@ class PlaybackService : MediaSessionService() {
                                         mediaItem: MediaItem?,
                                         reason: Int
                                 ) {
-                                        retryCount = 0
-                                        retryRunnable?.let { retryHandler.removeCallbacks(it) }
-                                        if (wifiLock?.isHeld == false) wifiLock?.acquire()
-                                        if (wakeLock?.isHeld == false) wakeLock?.acquire(30 * 60 * 1000L)
+                                        if (mediaItem?.mediaId != currentMediaId) {
+                                                currentMediaId = mediaItem?.mediaId
+                                                retryCount = 0
+                                                cancelPendingRetry()
+                                        }
+                                        if (mediaItem == null) {
+                                                if (wifiLock?.isHeld == true) wifiLock?.release()
+                                                if (wakeLock?.isHeld == true) wakeLock?.release()
+                                        }
+                                }
+
+                                override fun onPlaybackStateChanged(playbackState: Int) {
+                                        if (playbackState == Player.STATE_ENDED &&
+                                                isLiveItem(player.currentMediaItem)) {
+                                                scheduleReconnect(player)
+                                        }
                                 }
 
                                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                                        if (retryCount >= maxRetries) {
-                                                retryCount = 0
-                                                return
-                                        }
-                                        val currentItem = player.currentMediaItem
-                                        val delay = 4000L * (retryCount + 1)
-                                        retryRunnable?.let { retryHandler.removeCallbacks(it) }
-                                        retryRunnable = Runnable {
-                                                try {
-                                                        if (player.currentMediaItem == currentItem &&
-                                                            player.playbackState != Player.STATE_READY) {
-                                                                player.seekToDefaultPosition()
-                                                                player.prepare()
-                                                                player.play()
-                                                                retryCount++
-                                                        }
-                                                } catch(e: Exception) {}
-                                        }
-                                        retryHandler.postDelayed(retryRunnable!!, delay)
+                                        scheduleReconnect(player)
                                 }
                         }
                 )
@@ -205,12 +227,9 @@ class PlaybackService : MediaSessionService() {
 
         override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
                 super.onStartCommand(intent, flags, startId)
-                // START_NOT_STICKY : le service NE redémarre PAS tout seul après être tué.
-                // Avant c'était START_STICKY ce qui causait la lecture continue même app fermée.
                 return START_NOT_STICKY
         }
 
-        /** Stoppe la lecture et ferme le service proprement. Appelé depuis MainActivity. */
         fun stopPlayback() {
                 mediaSession?.player?.let { player ->
                         player.stop()
@@ -224,8 +243,8 @@ class PlaybackService : MediaSessionService() {
         }
 
         override fun onDestroy() {
-                retryRunnable?.let { retryHandler.removeCallbacks(it) }
-                retryRunnable = null
+                cancelPendingRetry()
+                serviceScope.cancel()
                 mediaSession?.run {
                         if (player.isPlaying) player.pause()
                         player.release()

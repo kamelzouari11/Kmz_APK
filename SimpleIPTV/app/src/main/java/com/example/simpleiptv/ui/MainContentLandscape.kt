@@ -114,10 +114,8 @@ private fun CategorySidebar(
         item {
             RecentsSection(
                 isSelected = viewModel.uiState.lastGeneratorType == GeneratorType.RECENTS,
-                recentScope = viewModel.uiState.recentScope,
                 onShowRecents = { viewModel.showRecents() },
                 onClearRecents = { viewModel.clearRecents() },
-                onToggleRecentScope = { viewModel.toggleRecentScope() },
                 upFocusRequester = playerReturnFocusRequester
             )
         }
@@ -125,9 +123,7 @@ private fun CategorySidebar(
             FavoritesHeader(
                 isSelected = viewModel.uiState.lastGeneratorType == GeneratorType.FAVORITES,
                 favoriteScope = viewModel.uiState.favoriteScope,
-                favoriteListScope = viewModel.uiState.favoriteListScope,
                 onToggleFavoriteScope = { viewModel.toggleFavoriteScope() },
-                onToggleFavoriteListScope = { viewModel.toggleFavoriteListScope() },
                 onShowAddListDialog = { viewModel.showAddListDialog() }
             )
         }
@@ -205,14 +201,28 @@ private fun GlobalSearchList(
             item {
                 Box(Modifier.fillMaxWidth().padding(top = 32.dp), contentAlignment = Alignment.Center) {
                     Text(
-                            text = if (viewModel.uiState.searchQuery.isBlank()) "Entrez plusieurs mots pour une recherche globale"
-                                   else "Aucune chaîne trouvée pour « ${viewModel.uiState.searchQuery} »",
+                            text = when {
+                                viewModel.uiState.isTestingSearchResults ->
+                                    "Vérification : ${viewModel.uiState.searchTestedCount}/${viewModel.uiState.searchTestTotal}"
+                                viewModel.uiState.searchQuery.isBlank() ->
+                                    "Entrez plusieurs mots pour une recherche globale"
+                                else -> "Aucune chaîne fonctionnelle trouvée pour « ${viewModel.uiState.searchQuery} »"
+                            },
                             color = Color.Gray,
                             style = MaterialTheme.typography.bodyMedium
                     )
                 }
             }
         } else {
+            if (viewModel.uiState.isTestingSearchResults) {
+                item {
+                    Text(
+                            "Vérification : ${viewModel.uiState.searchTestedCount}/${viewModel.uiState.searchTestTotal}",
+                            color = Color.Gray,
+                            modifier = Modifier.padding(8.dp)
+                    )
+                }
+            }
             items(viewModel.uiState.globalSearchResults, key = { "${it.profileId}_${it.stream_id}" }, contentType = { "global_result" }) { item ->
                 val isPlaying = viewModel.uiState.playingChannel?.stream_id == item.stream_id &&
                                 viewModel.uiState.activeProfileId == item.profileId
@@ -288,6 +298,15 @@ private fun LiveChannelList(
             modifier = modifier.fillMaxHeight().padding(4.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        if (viewModel.uiState.isTestingSearchResults) {
+            item {
+                Text(
+                        "Vérification : ${viewModel.uiState.searchTestedCount}/${viewModel.uiState.searchTestTotal}",
+                        color = Color.Gray,
+                        modifier = Modifier.padding(8.dp)
+                )
+            }
+        }
         items(viewModel.uiState.channels, key = { "${it.profileId}_${it.stream_id}" }, contentType = { "channel" }) { channel ->
             val isPlaying = viewModel.uiState.playingChannel?.stream_id == channel.stream_id
             val isFav = viewModel.uiState.allFavoriteIds.contains("${channel.profileId}_${channel.stream_id}")

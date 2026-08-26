@@ -48,6 +48,9 @@ class ProfileUseCase(private val repository: IptvRepository) {
         repository.refreshDatabase(profile)
     }
 
+    suspend fun canAccessChannelList(profile: ProfileEntity): Boolean =
+        repository.canAccessChannelList(profile)
+
     suspend fun deleteProfile(profile: ProfileEntity) {
         repository.deleteProfile(profile)
     }
@@ -62,12 +65,18 @@ class ProfileUseCase(private val repository: IptvRepository) {
 
     fun observeProfiles(): Flow<List<ProfileEntity>> = repository.allProfiles
 
-    suspend fun purgeProfiles(profiles: List<ProfileEntity>) {
+    suspend fun purgeProfiles(
+        profiles: List<ProfileEntity>,
+        preferredProfileId: Int? = null
+    ): List<ProfileEntity> {
         val toDelete = mutableListOf<ProfileEntity>()
+        val retained = mutableListOf<ProfileEntity>()
         val seenXtream = mutableSetOf<String>()
         val seenStalker = mutableSetOf<String>()
 
-        profiles.forEach { profile ->
+        // En cas de doublon, conserver en priorité le profil actuellement actif.
+        val orderedProfiles = profiles.sortedBy { if (it.id == preferredProfileId) 0 else 1 }
+        orderedProfiles.forEach { profile ->
             val key = if (profile.type == "xtream") {
                 "${profile.url}|${profile.username}|${profile.password}"
             } else {
@@ -80,9 +89,11 @@ class ProfileUseCase(private val repository: IptvRepository) {
                 toDelete.add(profile)
             } else {
                 seenSet.add(key)
+                retained.add(profile)
             }
         }
 
         toDelete.forEach { repository.deleteProfile(it) }
+        return retained
     }
 }

@@ -3,6 +3,7 @@ package com.example.simpleiptv.ui.dialogs
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Save
@@ -15,6 +16,8 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.example.simpleiptv.data.local.entities.ProfileEntity
 import com.example.simpleiptv.ui.components.TvInput
 
@@ -36,115 +39,152 @@ fun ProfileFormDialog(
     var m3uUrlInput by remember { mutableStateOf("") }
     var isSaveFocused by remember { mutableStateOf(false) }
 
-    AlertDialog(
+    Dialog(
             onDismissRequest = onDismiss,
-            title = { Text(if (profile == null) "Ajouter un profil" else "Modifier le profil") },
-            text = {
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        BoxWithConstraints(
+                modifier =
+                        Modifier.fillMaxSize()
+                                .imePadding()
+                                .navigationBarsPadding()
+                                .padding(horizontal = 12.dp, vertical = 16.dp)
+        ) {
+            val compactPortrait = maxWidth < 420.dp
+            val dialogHorizontalPadding = if (compactPortrait) 16.dp else 24.dp
+            val dialogVerticalPadding = if (compactPortrait) 16.dp else 22.dp
+            val fieldSpacing = if (compactPortrait) 6.dp else 8.dp
+            val maxDialogHeight = maxHeight * 0.92f
+
+            Surface(
+                    modifier =
+                            Modifier.fillMaxWidth()
+                                    .widthIn(max = 560.dp)
+                                    .heightIn(max = maxDialogHeight)
+                                    .align(Alignment.Center),
+                    shape = RoundedCornerShape(20.dp),
+                    color = Color(0xFF1E1E1E),
+                    tonalElevation = 6.dp
+            ) {
                 Column(
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.verticalScroll(rememberScrollState())
+                        modifier =
+                                Modifier.fillMaxWidth()
+                                        .padding(
+                                                horizontal = dialogHorizontalPadding,
+                                                vertical = dialogVerticalPadding
+                                        ),
+                        verticalArrangement = Arrangement.spacedBy(fieldSpacing)
                 ) {
-                    TvInput(
-                            value = name,
-                            onValueChange = { text -> name = text },
-                            label = "Nom du profil",
-                            focusManager = focusManager
+                    Text(
+                            if (profile == null) "Ajouter un profil" else "Modifier le profil",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = Color.White
                     )
 
-                    Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+                    Column(
+                            verticalArrangement = Arrangement.spacedBy(fieldSpacing),
+                            modifier =
+                                    Modifier.weight(1f, fill = false)
+                                            .verticalScroll(rememberScrollState())
+                                            .padding(top = 6.dp, bottom = 10.dp)
                     ) {
-                        Text("Protocole: ", color = Color.Gray)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            RadioButton(selected = type == "xtream", onClick = { type = "xtream" })
-                            Text("Xtream")
-                            Spacer(modifier = Modifier.width(16.dp))
-                            RadioButton(
-                                    selected = type == "stalker",
-                                    onClick = { type = "stalker" }
-                            )
-                            Text("Stalker / MAC")
-                        }
-                    }
+                        TvInput(
+                                value = name,
+                                onValueChange = { text -> name = text },
+                                label = "Nom du profil",
+                                focusManager = focusManager
+                        )
 
-                    if (type == "xtream") {
-                        if (profile == null) {
-                            Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-                            ) {
-                                Text("Utiliser URL M3U", modifier = Modifier.weight(1f))
-                                Switch(checked = isM3uMode, onCheckedChange = { isM3uMode = it })
+                        ProtocolSelector(
+                                type = type,
+                                compact = compactPortrait,
+                                onTypeChange = { type = it }
+                        )
+
+                        if (type == "xtream") {
+                            if (profile == null) {
+                                Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.fillMaxWidth().padding(top = 2.dp)
+                                ) {
+                                    Text(
+                                            "Utiliser URL M3U",
+                                            color = Color.White.copy(alpha = 0.86f),
+                                            modifier = Modifier.weight(1f)
+                                    )
+                                    Switch(
+                                            checked = isM3uMode,
+                                            onCheckedChange = { isM3uMode = it }
+                                    )
+                                }
+                            }
+
+                            if (isM3uMode) {
+                                TvInput(
+                                        value = m3uUrlInput,
+                                        onValueChange = { input ->
+                                            m3uUrlInput = input
+                                            Regex("username=([^&]+)").find(input)?.let {
+                                                user = it.groupValues[1]
+                                            }
+                                            Regex("password=([^&]+)").find(input)?.let {
+                                                pass = it.groupValues[1]
+                                            }
+                                            Regex("^(https?://[^/?]+)").find(input)?.let {
+                                                url = it.groupValues[1] + "/"
+                                            }
+                                        },
+                                        label = "Lien M3U",
+                                        focusManager = focusManager
+                                )
                             }
                         }
 
-                        if (isM3uMode) {
+                        TvInput(
+                                value = url,
+                                onValueChange = { text -> url = text },
+                                label =
+                                        if (type == "stalker") "URL Portal (http://...)"
+                                        else "URL Serveur",
+                                focusManager = focusManager
+                        )
+
+                        if (type == "xtream") {
                             TvInput(
-                                    value = m3uUrlInput,
-                                    onValueChange = { input ->
-                                        m3uUrlInput = input
-                                        Regex("username=([^&]+)").find(input)?.let {
-                                            user = it.groupValues[1]
-                                        }
-                                        Regex("password=([^&]+)").find(input)?.let {
-                                            pass = it.groupValues[1]
-                                        }
-                                        Regex("^(https?://[^/?]+)").find(input)?.let {
-                                            url = it.groupValues[1] + "/"
-                                        }
-                                    },
-                                    label = "Lien M3U",
+                                    value = user,
+                                    onValueChange = { text -> user = text },
+                                    label = "Utilisateur",
+                                    focusManager = focusManager
+                            )
+                            TvInput(
+                                    value = pass,
+                                    onValueChange = { text -> pass = text },
+                                    label = "Mot de passe",
+                                    isPassword = false,
+                                    focusManager = focusManager
+                            )
+                        } else {
+                            TvInput(
+                                    value = mac,
+                                    onValueChange = { text -> mac = text },
+                                    label = "MAC Address (00:1A:79:...)",
                                     focusManager = focusManager
                             )
                         }
                     }
 
-                    TvInput(
-                            value = url,
-                            onValueChange = { text -> url = text },
-                            label =
-                                    if (type == "stalker") "URL Portal (http://...)"
-                                    else "URL Serveur",
-                            focusManager = focusManager
-                    )
-
-                    if (type == "xtream") {
-                        TvInput(
-                                value = user,
-                                onValueChange = { text -> user = text },
-                                label = "Utilisateur",
-                                focusManager = focusManager
-                        )
-                        TvInput(
-                                value = pass,
-                                onValueChange = { text -> pass = text },
-                                label = "Mot de passe",
-                                isPassword = false,
-                                focusManager = focusManager
-                        )
-                    } else {
-                        TvInput(
-                                value = mac,
-                                onValueChange = { text -> mac = text },
-                                label = "MAC Address (00:1A:79:...)",
-                                focusManager = focusManager
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
                     Button(
                             onClick = { onSave(name, url, user, pass, mac, type) },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isSaveFocused) Color.White else MaterialTheme.colorScheme.primary,
-                                contentColor = if (isSaveFocused) Color.Black else Color.White
+                                    containerColor =
+                                            if (isSaveFocused) Color.White
+                                            else MaterialTheme.colorScheme.primary,
+                                    contentColor = if (isSaveFocused) Color.Black else Color.White
                             ),
                             modifier =
                                     Modifier.fillMaxWidth()
                                             .onFocusChanged { isSaveFocused = it.isFocused }
-                                            .scale(if (isSaveFocused) 1.05f else 1f)
+                                            .scale(if (isSaveFocused) 1.02f else 1f)
                                             .background(
                                                     if (isSaveFocused)
                                                             Color.White
@@ -155,11 +195,50 @@ fun ProfileFormDialog(
                     ) {
                         Icon(Icons.Default.Save, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
-                        Text("Enregistrer le Profil")
+                        Text("Enregistrer le profil")
+                    }
+
+                    TextButton(
+                            onClick = onDismiss,
+                            modifier = Modifier.align(Alignment.End)
+                    ) {
+                        Text("Annuler")
                     }
                 }
-            },
-            confirmButton = {},
-            dismissButton = { TextButton(onClick = onDismiss) { Text("Annuler") } }
-    )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProtocolSelector(
+        type: String,
+        compact: Boolean,
+        onTypeChange: (String) -> Unit
+) {
+    val optionContent: @Composable (String, String) -> Unit = { value, label ->
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            RadioButton(selected = type == value, onClick = { onTypeChange(value) })
+            Text(label, color = Color.White.copy(alpha = 0.88f))
+        }
+    }
+
+    Column(modifier = Modifier.fillMaxWidth().padding(top = 2.dp)) {
+        Text("Protocole", color = Color.Gray, style = MaterialTheme.typography.labelMedium)
+        if (compact) {
+            Column(
+                    verticalArrangement = Arrangement.spacedBy(0.dp),
+                    modifier = Modifier.fillMaxWidth()
+            ) {
+                optionContent("xtream", "Xtream")
+                optionContent("stalker", "Stalker / MAC")
+            }
+        } else {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                optionContent("xtream", "Xtream")
+                Spacer(modifier = Modifier.width(16.dp))
+                optionContent("stalker", "Stalker / MAC")
+            }
+        }
+    }
 }

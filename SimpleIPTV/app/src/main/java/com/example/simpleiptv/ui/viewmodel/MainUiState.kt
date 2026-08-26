@@ -25,11 +25,6 @@ enum class MediaMode {
     VOD
 }
 
-enum class FavoriteListScope {
-    ALL_LISTS,
-    PROFILE_ONLY
-}
-
 data class DialogState(
     val showProfileManager: Boolean = false,
     val showAddProfileDialog: Boolean = false,
@@ -66,7 +61,6 @@ class MainUiState {
     var searchScope by mutableStateOf(SearchScope.ALL_PROFILES)
     var recentScope by mutableStateOf(SearchScope.ALL_PROFILES)
     var favoriteScope by mutableStateOf(SearchScope.ALL_PROFILES)
-    var favoriteListScope by mutableStateOf(FavoriteListScope.ALL_LISTS)
     var selectedCategoryId by mutableStateOf<String?>(null)
     var selectedFavoriteListId by mutableIntStateOf(-1)
     // Meta
@@ -77,6 +71,17 @@ class MainUiState {
     // Erreurs
     var syncError by mutableStateOf<String?>(null)
     var failedProfileToReload by mutableStateOf<ProfileEntity?>(null)
+    var inaccessibleProfileDuringPurge by mutableStateOf<ProfileEntity?>(null)
+    var isPurgingProfiles by mutableStateOf(false)
+    var purgeCurrentIndex by mutableIntStateOf(0)
+    var purgeTotal by mutableIntStateOf(0)
+    var isLoadingAllProfiles by mutableStateOf(false)
+    var loadAllCurrentIndex by mutableIntStateOf(0)
+    var loadAllTotal by mutableIntStateOf(0)
+    var loadAllCurrentProfileId by mutableIntStateOf(-1)
+    var isTestingSearchResults by mutableStateOf(false)
+    var searchTestedCount by mutableIntStateOf(0)
+    var searchTestTotal by mutableIntStateOf(0)
 
     // Pagination
     var pageOffset by mutableIntStateOf(0)
@@ -88,13 +93,7 @@ class MainUiState {
         categories.filter { !it.category_name.startsWith("-") }
     }
 
-    val filteredFavoriteLists: List<FavoriteListEntity> by derivedStateOf {
-        if (favoriteListScope == FavoriteListScope.ALL_LISTS) {
-            favoriteLists
-        } else {
-            favoriteLists.filter { it.profileId == activeProfileId || it.profileId == null }
-        }
-    }
+    val filteredFavoriteLists: List<FavoriteListEntity> by derivedStateOf { favoriteLists }
 
     val lastList: List<ChannelEntity> by derivedStateOf {
         if (lastGeneratorType == GeneratorType.GLOBAL_SEARCH) {
@@ -106,18 +105,14 @@ class MainUiState {
 
     val lastListLabel: String by derivedStateOf {
         when (lastGeneratorType) {
-            GeneratorType.RECENTS -> {
-                val scopeLabel = if (recentScope == SearchScope.ALL_PROFILES) "global" else "profil"
-                "Récents $scopeLabel"
-            }
+            GeneratorType.RECENTS -> "Récents global"
             GeneratorType.SEARCH, GeneratorType.GLOBAL_SEARCH -> {
                 val scopeLabel = if (searchScope == SearchScope.ALL_PROFILES) "globale" else "profil"
                 "Recherche $scopeLabel : $searchQuery"
             }
             GeneratorType.FAVORITES -> {
                 val listName = favoriteLists.find { it.id == selectedFavoriteListId }?.name ?: "Favoris"
-                val scopeLabel = if (favoriteScope == SearchScope.ALL_PROFILES ||
-                    favoriteLists.find { it.id == selectedFavoriteListId }?.profileId == null) "global" else "profil"
+                val scopeLabel = if (favoriteScope == SearchScope.ALL_PROFILES) "global" else "profil"
                 "$listName ($scopeLabel)"
             }
             GeneratorType.CATEGORY -> filteredCategories.find { it.category_id == selectedCategoryId }?.category_name ?: "Catégorie"

@@ -5,6 +5,6 @@ import com.squareup.moshi.JsonClass
 
 @JsonClass(generateAdapter = true)
 data class LiveCategory(
-        @Json(name = "category_id") val category_id: String?,
+        @param:Json(name = "category_id") val category_id: String?,
         val category_name: String
 )

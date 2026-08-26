@@ -14,6 +14,8 @@ import com.example.simpleiptv.data.usecase.SearchUseCase
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 class MainViewModel(private val repository: IptvRepository) : ViewModel() {
@@ -35,6 +37,9 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
     private var channelsJob: kotlinx.coroutines.Job? = null
     private var categoriesJob: kotlinx.coroutines.Job? = null
     private var favoritesJob: kotlinx.coroutines.Job? = null
+    private var purgeJob: Job? = null
+    private var purgeDecision: CompletableDeferred<Boolean>? = null
+    private var loadAllProfilesJob: Job? = null
 
     init {
         observeProfiles()
@@ -189,11 +194,116 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
     }
 
     fun updateProfile(profile: ProfileEntity) {
+        searchUseCase.invalidateProfile(profile.id)
         viewModelScope.launch { repository.updateProfile(profile) }
     }
 
     fun purgeProfiles() {
-        viewModelScope.launch { profileUseCase.purgeProfiles(uiState.profiles) }
+        if (purgeJob?.isActive == true || loadAllProfilesJob?.isActive == true) return
+
+        purgeJob = viewModelScope.launch {
+            updateUiState {
+                isPurgingProfiles = true
+                purgeCurrentIndex = 0
+                purgeTotal = profiles.size
+                inaccessibleProfileDuringPurge = null
+            }
+
+            try {
+                // La fonction historique du bouton reste active : supprimer les doublons.
+                val profilesToCheck = profileUseCase.purgeProfiles(
+                    uiState.profiles,
+                    preferredProfileId = uiState.activeProfileId
+                )
+                updateUiState { purgeTotal = profilesToCheck.size }
+
+                profilesToCheck.forEachIndexed { index, profile ->
+                    updateUiState {
+                        purgeCurrentIndex = index + 1
+                        loadingProfileId = profile.id
+                    }
+
+                    if (!profileUseCase.canAccessChannelList(profile)) {
+                        val decision = CompletableDeferred<Boolean>()
+                        purgeDecision = decision
+                        updateUiState { inaccessibleProfileDuringPurge = profile }
+
+                        val shouldDelete = decision.await()
+                        updateUiState { inaccessibleProfileDuringPurge = null }
+                        purgeDecision = null
+
+                        if (shouldDelete) {
+                            if (profile.id == uiState.activeProfileId) {
+                                updateUiState { activeProfileId = -1 }
+                            }
+                            profileUseCase.deleteProfile(profile)
+                        }
+                    }
+                }
+            } finally {
+                purgeDecision?.cancel()
+                purgeDecision = null
+                updateUiState {
+                    inaccessibleProfileDuringPurge = null
+                    isPurgingProfiles = false
+                    purgeCurrentIndex = 0
+                    purgeTotal = 0
+                    loadingProfileId = -1
+                }
+            }
+        }
+    }
+
+    fun keepInaccessibleProfile() {
+        purgeDecision?.complete(false)
+    }
+
+    fun deleteInaccessibleProfile() {
+        purgeDecision?.complete(true)
+    }
+
+    fun loadAllProfiles() {
+        if (loadAllProfilesJob?.isActive == true || purgeJob?.isActive == true) return
+
+        val profilesToLoad = uiState.profiles.filterNot { it.id in uiState.loadedProfileIds }
+        loadAllProfilesJob = viewModelScope.launch {
+            updateUiState {
+                isLoadingAllProfiles = true
+                loadAllCurrentIndex = 0
+                loadAllTotal = profilesToLoad.size
+                loadAllCurrentProfileId = -1
+            }
+
+            try {
+                profilesToLoad.forEachIndexed { index, profile ->
+                    // Le profil a pu être chargé entre-temps par une autre action.
+                    if (profile.id in uiState.loadedProfileIds) return@forEachIndexed
+
+                    updateUiState {
+                        loadAllCurrentIndex = index + 1
+                        loadAllCurrentProfileId = profile.id
+                    }
+                    try {
+                        profileUseCase.refreshDatabase(profile)
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        android.util.Log.w(
+                            "MainViewModel",
+                            "Load All failed for profile '${profile.profileName}'",
+                            e
+                        )
+                    }
+                }
+            } finally {
+                updateUiState {
+                    isLoadingAllProfiles = false
+                    loadAllCurrentIndex = 0
+                    loadAllTotal = 0
+                    loadAllCurrentProfileId = -1
+                }
+            }
+        }
     }
 
     // --- Actions: Channel List Navigation ---
@@ -224,6 +334,7 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
                 selectedCategoryId = null
                 selectedFavoriteListId = -1
                 searchQuery = ""
+                recentScope = SearchScope.ALL_PROFILES
             }
         resetPaginationAndRefresh()
     }
@@ -266,18 +377,6 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
         if (uiState.lastGeneratorType == GeneratorType.FAVORITES) refreshChannels()
     }
 
-    fun toggleFavoriteListScope() {
-        val newScope = if (uiState.favoriteListScope == FavoriteListScope.ALL_LISTS) {
-            FavoriteListScope.PROFILE_ONLY
-        } else {
-            FavoriteListScope.ALL_LISTS
-        }
-        updateUiState {
-                favoriteListScope = newScope
-            }
-        if (uiState.lastGeneratorType == GeneratorType.FAVORITES) refreshChannels()
-    }
-
     /** Réinitialise la pagination et rafraîchit la liste. */
     private fun resetPaginationAndRefresh() {
         updateUiState {
@@ -291,6 +390,7 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
     // --- Actions: Search ---
 
     private var searchDebounceJob: kotlinx.coroutines.Job? = null
+    private var searchRequestId = 0
 
     fun setSearchQuery(query: String) {
         updateUiState {
@@ -321,27 +421,67 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
     }
 
     private suspend fun executeRefresh() {
+        val requestId = ++searchRequestId
         if (uiState.searchQuery.isBlank()) {
+            updateUiState {
+                isTestingSearchResults = false
+                searchTestedCount = 0
+                searchTestTotal = 0
+            }
             executeNormalRefresh()
             return
         }
 
-        if (uiState.searchScope == SearchScope.ALL_PROFILES) {
-            updateUiState {
-                lastGeneratorType = GeneratorType.GLOBAL_SEARCH
-                globalSearchResults = emptyList()
-            }
-            searchUseCase.searchGlobal(uiState.searchQuery, uiState.currentMediaMode.name)
-                .collect { updateUiState { globalSearchResults = it } }
-        } else {
-            updateUiState {
-                lastGeneratorType = GeneratorType.SEARCH
-                globalSearchResults = emptyList()
-            }
-            searchUseCase.searchLocal(uiState.searchQuery, uiState.activeProfileId, uiState.currentMediaMode.name)
-                .collect {
-                    updateUiState { channels = it }
+        updateUiState {
+            isTestingSearchResults = true
+            searchTestedCount = 0
+            searchTestTotal = 0
+        }
+
+        try {
+            if (uiState.searchScope == SearchScope.ALL_PROFILES) {
+                updateUiState {
+                    lastGeneratorType = GeneratorType.GLOBAL_SEARCH
+                    globalSearchResults = emptyList()
                 }
+                searchUseCase.searchWorkingGlobal(
+                    uiState.searchQuery,
+                    uiState.currentMediaMode.name,
+                    uiState.profiles
+                ) { working, checked, total ->
+                    if (requestId == searchRequestId) {
+                        updateUiState {
+                            globalSearchResults = working
+                            searchTestedCount = checked
+                            searchTestTotal = total
+                        }
+                    }
+                }
+            } else {
+                updateUiState {
+                    lastGeneratorType = GeneratorType.SEARCH
+                    globalSearchResults = emptyList()
+                    channels = emptyList()
+                }
+                searchUseCase.searchWorkingLocal(
+                    uiState.searchQuery,
+                    uiState.activeProfileId,
+                    uiState.currentMediaMode.name,
+                    uiState.profiles
+                ) { working, checked, total ->
+                    if (requestId == searchRequestId) {
+                        updateUiState {
+                            channels = working
+                            searchTestedCount = checked
+                            searchTestTotal = total
+                        }
+                    }
+                }
+            }
+        } finally {
+            if (requestId == searchRequestId) {
+                updateUiState { isTestingSearchResults = false }
+            }
         }
     }
 
@@ -380,6 +520,8 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
     /** Charge plus de chaînes pour le chargement infini. */
     fun loadMoreChannels() {
         if (!uiState.hasMore || uiState.isLoadingMore || uiState.activeProfileId == -1) return
+        if (uiState.lastGeneratorType == GeneratorType.SEARCH ||
+            uiState.lastGeneratorType == GeneratorType.GLOBAL_SEARCH) return
 
         updateUiState {
             isLoadingMore = true
@@ -432,7 +574,9 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
 
     fun initFavoriteAction(channel: ChannelEntity) {
         viewModelScope.launch {
-            val targetLists = repository.getFavoriteLists(channel.profileId, uiState.currentMediaMode.name).first()
+            val targetLists =
+                    repository.getAllFavoriteListsIncludingGlobal(channel.profileId, channel.type)
+                            .first()
             updateUiState {
                 dialogState = dialogState.copy(
                     channelToFavorite = channel,
@@ -442,10 +586,9 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
         }
     }
 
-    fun addFavoriteList(name: String, isGlobal: Boolean) {
+    fun addFavoriteList(name: String) {
         viewModelScope.launch {
-            val targetProfileId = if (isGlobal) null else uiState.activeProfileId
-            repository.addFavoriteList(name, targetProfileId, uiState.currentMediaMode.name)
+            repository.addFavoriteList(name, null, uiState.currentMediaMode.name)
         }
     }
 
@@ -487,19 +630,19 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
 
     fun addChannelToFavoriteList(channel: ChannelEntity, listId: Int) {
         viewModelScope.launch {
-            favoriteUseCase.addChannelToFavoriteList(channel, listId, channel.profileId, uiState.currentMediaMode.name)
+            favoriteUseCase.addChannelToFavoriteList(channel, listId, channel.profileId, channel.type)
         }
     }
 
-    fun addToRecents(streamId: String) {
+    fun addToRecents(channel: ChannelEntity) {
         viewModelScope.launch {
-            repository.addToRecents(streamId, uiState.activeProfileId, uiState.currentMediaMode.name)
+            repository.addToRecents(channel.stream_id, channel.profileId, channel.type)
         }
     }
 
     fun clearRecents() {
         viewModelScope.launch {
-            repository.clearRecents(uiState.activeProfileId, uiState.currentMediaMode.name)
+            repository.clearAllRecents(uiState.currentMediaMode.name)
             if (uiState.lastGeneratorType == GeneratorType.RECENTS) refreshChannels()
         }
     }
@@ -589,6 +732,7 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
             }
         try {
             profileUseCase.refreshDatabase(profile)
+            searchUseCase.invalidateProfile(profile.id)
         } catch (e: Exception) {
             updateUiState {
                 failedProfileToReload = profile
@@ -604,6 +748,29 @@ class MainViewModel(private val repository: IptvRepository) : ViewModel() {
 
     suspend fun importDatabaseFromJson(json: String) {
         repository.importDatabaseFromJson(json)
+        channelsJob?.cancel()
+        categoriesJob?.cancel()
+        favoritesJob?.cancel()
+        searchDebounceJob?.cancel()
+        val restoredProfiles = repository.allProfiles.first()
+        updateUiState {
+            profiles = restoredProfiles
+            activeProfileId = -1
+            categories = emptyList()
+            channels = emptyList()
+            favoriteLists = emptyList()
+            globalSearchResults = emptyList()
+            loadedProfileIds = emptySet()
+            playingChannel = null
+            isFullScreenPlayer = false
+            searchQuery = ""
+            selectedCategoryId = null
+            selectedFavoriteListId = -1
+            lastGeneratorType = GeneratorType.RECENTS
+        }
         loadSearchHistory()
+        restoredProfiles.firstOrNull { it.isSelected }
+            ?.let { selectProfile(it.id) }
+            ?: restoredProfiles.firstOrNull()?.let { selectProfile(it.id) }
     }
 }

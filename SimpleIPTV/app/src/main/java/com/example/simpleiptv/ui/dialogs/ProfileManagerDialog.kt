@@ -31,7 +31,15 @@ fun ProfileManagerDialog(
         onDeleteProfile: (ProfileEntity) -> Unit,
         onAdd: () -> Unit,
         onPurge: () -> Unit,
-        loadedProfileIds: Set<Int> = emptySet()
+        onLoadAll: () -> Unit,
+        loadedProfileIds: Set<Int> = emptySet(),
+        isPurging: Boolean = false,
+        purgeCurrentIndex: Int = 0,
+        purgeTotal: Int = 0,
+        isLoadingAll: Boolean = false,
+        loadAllCurrentIndex: Int = 0,
+        loadAllTotal: Int = 0,
+        loadAllCurrentProfileId: Int = -1
 ) {
         var profileToDelete by remember { mutableStateOf<ProfileEntity?>(null) }
 
@@ -79,7 +87,14 @@ fun ProfileManagerDialog(
             containerColor = Color(0xFF1E1E1E),
             confirmButton = {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FocusableTextButton("Purger", onClick = onPurge)
+                        FocusableTextButton(
+                            if (isPurging) "Contrôle $purgeCurrentIndex/$purgeTotal" else "Purger",
+                            onClick = { if (!isPurging && !isLoadingAll) onPurge() }
+                        )
+                        FocusableTextButton(
+                            if (isLoadingAll) "Load $loadAllCurrentIndex/$loadAllTotal" else "Load All",
+                            onClick = { if (!isLoadingAll && !isPurging) onLoadAll() }
+                        )
                         FocusableTextButton("Nouveau Profil", onClick = onAdd)
                     }
             },
@@ -92,6 +107,7 @@ fun ProfileManagerDialog(
                             ProfileRow(
                                     profile = profile,
                                     isLoaded = loadedProfileIds.contains(profile.id),
+                                    isLoading = loadAllCurrentProfileId == profile.id,
                                     onSelect = { onSelectProfile(profile) },
                                     onEdit = { onEdit(profile) },
                                     onDelete = { profileToDelete = profile }
@@ -107,6 +123,7 @@ fun ProfileManagerDialog(
 private fun ProfileRow(
         profile: ProfileEntity,
         isLoaded: Boolean,
+        isLoading: Boolean,
         onSelect: () -> Unit,
         onEdit: () -> Unit,
         onDelete: () -> Unit
@@ -156,7 +173,14 @@ private fun ProfileRow(
                                                      else -> Color.White.copy(alpha = 0.9f)
                                                  }
                                          )
-                                         if (isLoaded) {
+                                         if (isLoading) {
+                                                 Spacer(Modifier.width(8.dp))
+                                                 Text(
+                                                     "(LOADING)",
+                                                     style = MaterialTheme.typography.labelSmall,
+                                                     color = if (isSelectFocused) Color.Black else Color(0xFFFFC107)
+                                                 )
+                                         } else if (isLoaded) {
                                                  Spacer(Modifier.width(8.dp))
                                                  Text(
                                                      "(LOADED)",
@@ -220,4 +244,3 @@ private fun ProfileRow(
                 Icon(icon, desc, tint = if (isFocusedState) Color.Black else tintNormal)
         }
     }
-

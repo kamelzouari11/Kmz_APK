@@ -1,6 +1,6 @@
 [versions]
-agp = "8.13.2"
-kotlin = "2.0.21"
+agp = "9.3.1"
+kotlin = "2.2.10"
 coreKtx = "1.10.1"
 appcompat = "1.6.1"
 composeBom = "2024.09.00"
@@ -8,8 +8,8 @@ tvFoundation = "1.0.0-alpha07"
 tvMaterial = "1.0.0-alpha07"
 lifecycleRuntimeKtx = "2.6.1"
 activityCompose = "1.8.0"
-room = "2.6.1"
-ksp = "2.0.21-1.0.28"
+room = "2.8.4"
+ksp = "2.3.6"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -31,6 +31,5 @@ androidx-room-compiler = { group = "androidx.room", name = "room-compiler", vers
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }

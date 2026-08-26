@@ -61,11 +61,17 @@ data class ChannelCategoryCrossRef(
 )
 
 @Immutable
-@Entity(tableName = "favorite_lists", indices = [Index(value = ["profileId"])])
+@Entity(
+        tableName = "favorite_lists",
+        indices = [
+                Index(value = ["profileId"]),
+                Index(value = ["name", "type"], unique = true)
+        ]
+)
 data class FavoriteListEntity(
         @PrimaryKey(autoGenerate = true) val id: Int = 0,
         val name: String,
-        val profileId: Int?,  // null = liste multi-profils, sinon liée à un profil spécifique
+        val profileId: Int? = null,  // Toujours null : les listes sont globales.
         val type: String = "LIVE" // Which type of media this list is for
 )
 

@@ -12,6 +12,67 @@ import kotlinx.coroutines.coroutineScope
 
 class SyncService(private val dao: IptvDao) {
 
+    /**
+     * Vérifie que le serveur accepte les identifiants du profil et donne accès à
+     * sa liste de chaînes LIVE, sans modifier les données déjà enregistrées.
+     */
+    suspend fun canAccessChannelList(profile: ProfileEntity): Boolean {
+        if (profile.url.isBlank()) return false
+
+        return try {
+            if (profile.type == "stalker") {
+                canAccessStalkerChannelList(profile)
+            } else {
+                if (profile.username.isBlank() || profile.password.isBlank()) return false
+                XtreamClient.create(profile.url)
+                    .getLiveStreams(profile.username, profile.password)
+                true
+            }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w("SyncService", "Profile '${profile.profileName}' is inaccessible", e)
+            false
+        }
+    }
+
+    private suspend fun canAccessStalkerChannelList(profile: ProfileEntity): Boolean {
+        val mac = profile.macAddress?.trim()?.uppercase()
+            ?.takeIf { it.isNotBlank() } ?: return false
+        val api = StalkerClient.create(profile.url, mac)
+        val tokenValue = api.handshake(mac).js.token.takeIf { it.isNotBlank() } ?: return false
+        val token = "Bearer $tokenValue"
+
+        try {
+            if (isChannelListPayload(api.getAllChannels(token).js)) return true
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w("SyncService", "Global Stalker channel check failed", e)
+        }
+
+        val genres = api.getGenres(token).js
+        for (genre in genres) {
+            try {
+                if (isChannelListPayload(api.getChannels(token, genre.id).js)) return true
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w("SyncService", "Stalker channel check failed for genre ${genre.id}", e)
+            }
+        }
+        return false
+    }
+
+    private fun isChannelListPayload(payload: Any?): Boolean = when (payload) {
+        is List<*> -> true
+        is Map<*, *> -> {
+            payload["data"] is List<*> ||
+                (payload.isNotEmpty() && payload.values.all { it is Map<*, *> })
+        }
+        else -> false
+    }
+
     suspend fun refreshDatabase(profile: ProfileEntity) {
         if (profile.type == "stalker") {
             refreshStalker(profile)

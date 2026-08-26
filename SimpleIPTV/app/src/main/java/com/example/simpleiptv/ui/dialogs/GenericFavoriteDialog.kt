@@ -6,7 +6,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
@@ -17,12 +16,9 @@ import com.example.simpleiptv.ui.components.TvInput
 fun GenericFavoriteDialog(
     title: String,
     onDismiss: () -> Unit,
-    onConfirm: (name: String, isGlobal: Boolean) -> Unit,
-    showGlobalToggle: Boolean = false,
-    defaultIsGlobal: Boolean = false
+    onConfirm: (name: String) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
-    var isGlobal by remember { mutableStateOf(defaultIsGlobal) }
     val focusManager = LocalFocusManager.current
     AlertDialog(
             onDismissRequest = onDismiss,
@@ -36,22 +32,12 @@ fun GenericFavoriteDialog(
                             focusManager = focusManager,
                             modifier = Modifier.fillMaxWidth()
                     )
-                    if (showGlobalToggle) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.clickable { isGlobal = !isGlobal }.padding(8.dp)
-                        ) {
-                            Checkbox(checked = isGlobal, onCheckedChange = { isGlobal = it })
-                            Text(if (isGlobal) "Liste globale (tous profils)" else "Liste du profil actif")
-                        }
-                    }
                 }
             },
             confirmButton = {
                 Button(onClick = { 
                     if (name.isNotBlank()) {
-                        onConfirm(name, isGlobal)
+                        onConfirm(name)
                     }
                 }) { Text("Ajouter") }
             },

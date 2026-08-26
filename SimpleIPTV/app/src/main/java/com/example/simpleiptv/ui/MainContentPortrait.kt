@@ -42,7 +42,10 @@ enum class PortraitNavigationState {
 fun MainContentPortrait(
     viewModel: MainViewModel,
     onChannelClick: (ChannelEntity) -> Unit,
-    channelScrollState: LazyListState, playerReturnFocusRequester: FocusRequester
+    channelScrollState: LazyListState,
+    playerReturnFocusRequester: FocusRequester,
+    navState: PortraitNavigationState,
+    onNavStateChange: (PortraitNavigationState) -> Unit
 ) {
     val pagerState = rememberPagerState(pageCount = { 3 })
     val scope = rememberCoroutineScope()
@@ -79,7 +82,14 @@ fun MainContentPortrait(
             modifier = Modifier.weight(1f)
         ) { page ->
             when (page) {
-                0 -> LiveTvTab(viewModel, onChannelClick, channelScrollState, playerReturnFocusRequester)
+                0 -> LiveTvTab(
+                    viewModel,
+                    onChannelClick,
+                    channelScrollState,
+                    playerReturnFocusRequester,
+                    navState,
+                    onNavStateChange
+                )
                 1 -> VodTab(viewModel, onChannelClick)
                 2 -> FavoritesTab(viewModel, onChannelClick, channelScrollState, playerReturnFocusRequester)
             }
@@ -92,16 +102,16 @@ private fun LiveTvTab(
     viewModel: MainViewModel,
     onChannelClick: (ChannelEntity) -> Unit,
     scrollState: LazyListState,
-    playerReturnFocusRequester: FocusRequester
+    playerReturnFocusRequester: FocusRequester,
+    navState: PortraitNavigationState,
+    onNavStateChange: (PortraitNavigationState) -> Unit
 ) {
-    var navState by remember { mutableStateOf(PortraitNavigationState.CATEGORIES) }
-
     BackHandler(enabled = navState != PortraitNavigationState.CATEGORIES) {
-        navState = when (navState) {
+        onNavStateChange(when (navState) {
             PortraitNavigationState.CHANNELS -> PortraitNavigationState.CATEGORIES
             PortraitNavigationState.SEARCH_RESULTS -> PortraitNavigationState.CATEGORIES
             else -> navState
-        }
+        })
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -115,7 +125,7 @@ private fun LiveTvTab(
                         selectedCategory = viewModel.uiState.selectedCategoryId,
                         onCategorySelected = {
                             viewModel.selectCategory(it)
-                            navState = PortraitNavigationState.CHANNELS
+                            onNavStateChange(PortraitNavigationState.CHANNELS)
                         }
                     )
                 }
@@ -189,6 +199,16 @@ private fun SearchResultListPortrait(
             )
         }
 
+        if (viewModel.uiState.isTestingSearchResults) {
+            item {
+                Text(
+                    text = "Vérification : ${viewModel.uiState.searchTestedCount}/${viewModel.uiState.searchTestTotal}",
+                    color = Color.Gray,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+            }
+        }
+
         val channelsToDisplay = if (viewModel.uiState.lastGeneratorType == GeneratorType.GLOBAL_SEARCH) {
             viewModel.uiState.globalSearchResults.map { it.toChannelEntity() }
         } else {
@@ -236,10 +256,9 @@ private fun LiveChannelListPortrait(
             item {
                 RecentsSection(
                     isSelected = viewModel.uiState.lastGeneratorType == GeneratorType.RECENTS,
-                    recentScope = viewModel.uiState.recentScope,
                     onShowRecents = { viewModel.showRecents() },
                     onClearRecents = { viewModel.clearRecents() },
-                    onToggleRecentScope = { viewModel.toggleRecentScope() }, upFocusRequester = playerReturnFocusRequester
+                    upFocusRequester = playerReturnFocusRequester
                 )
             }
         }

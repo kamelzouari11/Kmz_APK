@@ -21,11 +21,15 @@ data class BackupFavoriteList(
 
 @JsonClass(generateAdapter = true)
 data class FullDatabaseBackup(
-        val version: Int = 2,
+        val version: Int = 3,
         val date: Long = System.currentTimeMillis(),
         val profileBackups: List<ProfileBackup>,
-        val searchHistory: List<String> = emptyList()
+        val searchHistory: List<String> = emptyList(),
+        val globalFavoriteGroups: List<BackupFavoriteGroup> = emptyList()
 )
 
 @JsonClass(generateAdapter = true)
 data class ProfileBackup(val profile: ProfileEntity, val favoriteLists: List<BackupFavoriteList>)
+
+@JsonClass(generateAdapter = true)
+data class BackupFavoriteGroup(val name: String, val type: String = "LIVE")

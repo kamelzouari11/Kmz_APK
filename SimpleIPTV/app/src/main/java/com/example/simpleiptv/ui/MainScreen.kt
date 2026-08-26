@@ -11,8 +11,11 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalConfiguration
@@ -43,6 +46,7 @@ fun MainScreen(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val playerReturnFocusRequester = remember { FocusRequester() }
+    var portraitNavState by remember { mutableStateOf(PortraitNavigationState.CATEGORIES) }
 
     // Pull-to-refresh state (simple version using Material3)
     val isRefreshing = viewModel.uiState.isLoading
@@ -52,6 +56,7 @@ fun MainScreen(
     val mainChannelScrollState = rememberLazyListState()
 
     val onChannelClick: (ChannelEntity) -> Unit = { channel ->
+        portraitNavState = PortraitNavigationState.CHANNELS
         viewModel.setPlayingChannel(channel)
         viewModel.setFullScreenPlayer(true)
         exoPlayer?.let { player ->
@@ -67,7 +72,11 @@ fun MainScreen(
                                         .setArtworkUri(channel.stream_icon?.toUri())
                                         .build()
                         val mediaItem =
-                                MediaItem.Builder().setUri(streamUrl).setMediaMetadata(meta).build()
+                                MediaItem.Builder()
+                                        .setMediaId("${channel.type}:${channel.profileId}:${channel.stream_id}")
+                                        .setUri(streamUrl)
+                                        .setMediaMetadata(meta)
+                                        .build()
                         player.clearMediaItems()
                         player.setMediaItem(mediaItem)
                         player.prepare()
@@ -86,7 +95,7 @@ fun MainScreen(
                 }
             }
         }
-        viewModel.addToRecents(channel.stream_id)
+        viewModel.addToRecents(channel)
     }
 
     // Auto-go to player if playing
@@ -108,6 +117,9 @@ fun MainScreen(
         when {
             viewModel.uiState.isFullScreenPlayer -> {
                 viewModel.setFullScreenPlayer(false)
+                if (!isLandscape) {
+                    portraitNavState = PortraitNavigationState.CHANNELS
+                }
             }
         }
     }
@@ -126,6 +138,9 @@ fun MainScreen(
                     },
                     onBack = {
                         viewModel.setFullScreenPlayer(false)
+                        if (!isLandscape) {
+                            portraitNavState = PortraitNavigationState.CHANNELS
+                        }
                     },
                     onFavoriteClick = { channel -> viewModel.initFavoriteAction(channel) },
                     allFavoriteIds = viewModel.uiState.allFavoriteIds,
@@ -209,7 +224,9 @@ fun MainScreen(
                                     viewModel = viewModel,
                                     onChannelClick = onChannelClick,
                                     channelScrollState = mainChannelScrollState,
-                                    playerReturnFocusRequester = playerReturnFocusRequester
+                                    playerReturnFocusRequester = playerReturnFocusRequester,
+                                    navState = portraitNavState,
+                                    onNavStateChange = { portraitNavState = it }
                             )
                         }
 

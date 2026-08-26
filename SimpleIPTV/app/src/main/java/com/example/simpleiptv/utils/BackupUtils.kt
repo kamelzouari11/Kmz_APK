@@ -28,7 +28,7 @@ object BackupUtils {
 
                 val bodyJson =
                         JSONObject().apply {
-                            put("message", "Mise à jour du backup SimpleIPTV")
+                            put("message", "Remplacement complet du backup SimpleIPTV")
                             put("content", base64Content)
                             if (sha != null) put("sha", sha)
                         }
@@ -46,7 +46,7 @@ object BackupUtils {
 
                 client.newCall(request).execute().use { response ->
                     if (response.isSuccessful) {
-                        showToast(context, "Upload to Github réussi !")
+                        showToast(context, "Backup GitHub remplacé par les données locales !")
                     } else {
                         throw Exception("Erreur GitHub (${response.code})")
                     }
@@ -74,7 +74,7 @@ object BackupUtils {
                         val contentRelay = jsonResponse.getString("content")
                         val cleanContent = contentRelay.replace("\n", "").replace("\r", "")
                         val decodedBytes = Base64.decode(cleanContent, Base64.DEFAULT)
-                        showToast(context, "Download from Github réussi !")
+                        showToast(context, "Sauvegarde GitHub téléchargée !")
                         return@withContext String(decodedBytes)
                     } else if (response.code == 404) {
                         throw Exception("Aucun backup trouvé sur GitHub")

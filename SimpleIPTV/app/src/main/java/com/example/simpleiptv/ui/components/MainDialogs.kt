@@ -32,7 +32,45 @@ fun MainDialogs(viewModel: MainViewModel) {
                     viewModel.showAddProfileDialog(profile)
                 },
                 onPurge = { viewModel.purgeProfiles() },
-                loadedProfileIds = viewModel.uiState.loadedProfileIds
+                onLoadAll = { viewModel.loadAllProfiles() },
+                loadedProfileIds = viewModel.uiState.loadedProfileIds,
+                isPurging = viewModel.uiState.isPurgingProfiles,
+                purgeCurrentIndex = viewModel.uiState.purgeCurrentIndex,
+                purgeTotal = viewModel.uiState.purgeTotal,
+                isLoadingAll = viewModel.uiState.isLoadingAllProfiles,
+                loadAllCurrentIndex = viewModel.uiState.loadAllCurrentIndex,
+                loadAllTotal = viewModel.uiState.loadAllTotal,
+                loadAllCurrentProfileId = viewModel.uiState.loadAllCurrentProfileId
+        )
+    }
+
+    viewModel.uiState.inaccessibleProfileDuringPurge?.let { profile ->
+        AlertDialog(
+                onDismissRequest = { viewModel.keepInaccessibleProfile() },
+                title = {
+                    Text(
+                            "Profil inaccessible",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = Color.White
+                    )
+                },
+                text = {
+                    Text(
+                            "Le profil '${profile.profileName}' ne peut pas accéder à la liste des chaînes du serveur. Voulez-vous le garder ou le supprimer ?",
+                            color = Color.White.copy(alpha = 0.7f),
+                            style = MaterialTheme.typography.bodyMedium
+                    )
+                },
+                containerColor = Color(0xFF1E1E1E),
+                confirmButton = {
+                    FocusableTextButton("Garder", onClick = { viewModel.keepInaccessibleProfile() })
+                },
+                dismissButton = {
+                    FocusableDestructiveButton(
+                            "Supprimer",
+                            onClick = { viewModel.deleteInaccessibleProfile() }
+                    )
+                }
         )
     }
 
@@ -66,11 +104,10 @@ fun MainDialogs(viewModel: MainViewModel) {
         GenericFavoriteDialog(
                 title = "Nouveau dossier de favoris",
                 onDismiss = { viewModel.hideAddListDialog() },
-                onConfirm = { name: String, isGlobal: Boolean ->
-                    viewModel.addFavoriteList(name, isGlobal)
+                onConfirm = { name: String ->
+                    viewModel.addFavoriteList(name)
                     viewModel.hideAddListDialog()
-                },
-                showGlobalToggle = true
+                }
         )
     }
 

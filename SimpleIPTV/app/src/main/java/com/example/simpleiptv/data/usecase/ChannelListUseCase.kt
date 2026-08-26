@@ -22,11 +22,7 @@ class ChannelListUseCase(private val repository: IptvRepository) {
     ): Flow<List<ChannelEntity>> {
         return when (type) {
             GeneratorType.RECENTS -> {
-                if (recentScope == SearchScope.ALL_PROFILES) {
-                    repository.getAllRecentChannels(mediaMode)
-                } else {
-                    repository.getRecentChannels(profileId, mediaMode)
-                }
+                repository.getAllRecentChannels(mediaMode)
             }
             GeneratorType.CATEGORY -> {
                 repository.getChannelsByCategory(
@@ -36,10 +32,7 @@ class ChannelListUseCase(private val repository: IptvRepository) {
                 )
             }
             GeneratorType.FAVORITES -> {
-                val selectedList = favoriteLists.find { it.id == favoriteListId }
-                val isGlobalList = selectedList?.profileId == null
-
-                if (isGlobalList || favoriteScope == SearchScope.ALL_PROFILES) {
+                if (favoriteScope == SearchScope.ALL_PROFILES) {
                     repository.getAllProfileChannelsByFavoriteList(favoriteListId, mediaMode)
                 } else {
                     repository.getChannelsByFavoriteList(favoriteListId, profileId, mediaMode)
@@ -67,11 +60,7 @@ class ChannelListUseCase(private val repository: IptvRepository) {
     ): Flow<List<ChannelEntity>> {
         return when (type) {
             GeneratorType.RECENTS -> {
-                if (recentScope == SearchScope.ALL_PROFILES) {
-                    repository.getAllRecentChannelsPaginated(mediaMode, offset, limit)
-                } else {
-                    repository.getRecentChannelsPaginated(profileId, mediaMode, offset, limit)
-                }
+                repository.getAllRecentChannelsPaginated(mediaMode, offset, limit)
             }
             GeneratorType.CATEGORY -> {
                 repository.getChannelsByCategoryPaginated(
@@ -83,10 +72,7 @@ class ChannelListUseCase(private val repository: IptvRepository) {
                 )
             }
             GeneratorType.FAVORITES -> {
-                val selectedList = favoriteLists.find { it.id == favoriteListId }
-                val isGlobalList = selectedList?.profileId == null
-
-                if (isGlobalList || favoriteScope == SearchScope.ALL_PROFILES) {
+                if (favoriteScope == SearchScope.ALL_PROFILES) {
                     repository.getAllProfileChannelsByFavoriteListPaginated(favoriteListId, mediaMode, offset, limit)
                 } else {
                     repository.getChannelsByFavoriteListPaginated(favoriteListId, profileId, mediaMode, offset, limit)
@@ -109,4 +95,3 @@ class ChannelListUseCase(private val repository: IptvRepository) {
     }
 
 }
-

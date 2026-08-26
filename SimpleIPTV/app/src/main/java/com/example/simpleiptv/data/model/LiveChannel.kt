@@ -7,6 +7,6 @@ import com.squareup.moshi.JsonClass
 data class LiveChannel(
         val stream_id: Int,
         val name: String,
-        @Json(name = "category_id") val category_id: String?,
+        @param:Json(name = "category_id") val category_id: String?,
         val stream_icon: String?
 )
