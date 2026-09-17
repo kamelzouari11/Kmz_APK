@@ -1,0 +1,5672 @@
+[
+  {
+    "fixture": {
+      "id": 1582817,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T04:00:00+01:00",
+      "timestamp": 1786417200,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": "MFF Football Centre",
+        "city": "Ulaanbaatar"
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 1132,
+      "name": "AFC Challenge League",
+      "country": "World",
+      "logo": "https://media.api-sports.io/football/leagues/1132.png",
+      "flag": null,
+      "season": 2026,
+      "round": "Preliminary Round",
+      "standings": false
+    },
+    "teams": {
+      "home": {
+        "id": 22067,
+        "name": "Central Stallions",
+        "logo": "https://media.api-sports.io/football/teams/22067.png",
+        "winner": null
+      },
+      "away": {
+        "id": 12543,
+        "name": "Tainan City",
+        "logo": "https://media.api-sports.io/football/teams/12543.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1553773,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T09:00:00+01:00",
+      "timestamp": 1786435200,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": "MFF Football Centre",
+        "city": "Ulaanbaatar"
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 1132,
+      "name": "AFC Challenge League",
+      "country": "World",
+      "logo": "https://media.api-sports.io/football/leagues/1132.png",
+      "flag": null,
+      "season": 2026,
+      "round": "Preliminary Round",
+      "standings": false
+    },
+    "teams": {
+      "home": {
+        "id": 16854,
+        "name": "Ulaanbaatar",
+        "logo": "https://media.api-sports.io/football/teams/16854.png",
+        "winner": null
+      },
+      "away": {
+        "id": 8028,
+        "name": "Hang Yuen",
+        "logo": "https://media.api-sports.io/football/teams/8028.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1582813,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T10:00:00+01:00",
+      "timestamp": 1786438800,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": "Muktijuddho Sriti Stadium",
+        "city": "Rajshahi"
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 1132,
+      "name": "AFC Challenge League",
+      "country": "World",
+      "logo": "https://media.api-sports.io/football/leagues/1132.png",
+      "flag": null,
+      "season": 2026,
+      "round": "Preliminary Round",
+      "standings": false
+    },
+    "teams": {
+      "home": {
+        "id": 20780,
+        "name": "Fortis",
+        "logo": "https://media.api-sports.io/football/teams/20780.png",
+        "winner": null
+      },
+      "away": {
+        "id": 21167,
+        "name": "Muras United",
+        "logo": "https://media.api-sports.io/football/teams/21167.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1567326,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T10:30:00+01:00",
+      "timestamp": 1786440600,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": "Coopers Stadium",
+        "city": "Adelaide"
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 17,
+      "name": "AFC Champions League Elite",
+      "country": "World",
+      "logo": "https://media.api-sports.io/football/leagues/17.png",
+      "flag": null,
+      "season": 2026,
+      "round": "1st Preliminary Round",
+      "standings": false
+    },
+    "teams": {
+      "home": {
+        "id": 948,
+        "name": "Adelaide United",
+        "logo": "https://media.api-sports.io/football/teams/948.png",
+        "winner": null
+      },
+      "away": {
+        "id": 16400,
+        "name": "Công An Nhân Dân",
+        "logo": "https://media.api-sports.io/football/teams/16400.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1542351,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T11:00:00+01:00",
+      "timestamp": 1786442400,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": "Optus Stadium",
+        "city": "Perth"
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 667,
+      "name": "Friendlies Clubs",
+      "country": "World",
+      "logo": "https://media.api-sports.io/football/leagues/667.png",
+      "flag": null,
+      "season": 2026,
+      "round": "Club Friendlies",
+      "standings": false
+    },
+    "teams": {
+      "home": {
+        "id": 496,
+        "name": "Juventus",
+        "logo": "https://media.api-sports.io/football/teams/496.png",
+        "winner": null
+      },
+      "away": {
+        "id": 522,
+        "name": "Palermo",
+        "logo": "https://media.api-sports.io/football/teams/522.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1582815,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T11:00:00+01:00",
+      "timestamp": 1786442400,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": "National Stadium",
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 1132,
+      "name": "AFC Challenge League",
+      "country": "World",
+      "logo": "https://media.api-sports.io/football/leagues/1132.png",
+      "flag": null,
+      "season": 2026,
+      "round": "Preliminary Round",
+      "standings": false
+    },
+    "teams": {
+      "home": {
+        "id": 8044,
+        "name": "Maziya",
+        "logo": "https://media.api-sports.io/football/teams/8044.png",
+        "winner": null
+      },
+      "away": {
+        "id": 12268,
+        "name": "Regar-TadAZ",
+        "logo": "https://media.api-sports.io/football/teams/12268.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1567328,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T11:30:00+01:00",
+      "timestamp": 1786444200,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": "Chuncheon Songam Stadium",
+        "city": "Chuncheon"
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 17,
+      "name": "AFC Champions League Elite",
+      "country": "World",
+      "logo": "https://media.api-sports.io/football/leagues/17.png",
+      "flag": null,
+      "season": 2026,
+      "round": "1st Preliminary Round",
+      "standings": false
+    },
+    "teams": {
+      "home": {
+        "id": 2746,
+        "name": "Gangwon FC",
+        "logo": "https://media.api-sports.io/football/teams/2746.png",
+        "winner": null
+      },
+      "away": {
+        "id": 293,
+        "name": "Gamba Osaka",
+        "logo": "https://media.api-sports.io/football/teams/293.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1582816,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T13:00:00+01:00",
+      "timestamp": 1786449600,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": "Changlimithang Stadium",
+        "city": "Thimphu"
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 1132,
+      "name": "AFC Challenge League",
+      "country": "World",
+      "logo": "https://media.api-sports.io/football/leagues/1132.png",
+      "flag": null,
+      "season": 2026,
+      "round": "Preliminary Round",
+      "standings": false
+    },
+    "teams": {
+      "home": {
+        "id": 9426,
+        "name": "Paro",
+        "logo": "https://media.api-sports.io/football/teams/9426.png",
+        "winner": null
+      },
+      "away": {
+        "id": 26358,
+        "name": "Abu Muslim",
+        "logo": "https://media.api-sports.io/football/teams/26358.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1589329,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T13:00:00+01:00",
+      "timestamp": 1786449600,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 667,
+      "name": "Friendlies Clubs",
+      "country": "World",
+      "logo": "https://media.api-sports.io/football/leagues/667.png",
+      "flag": null,
+      "season": 2026,
+      "round": "Club Friendlies",
+      "standings": false
+    },
+    "teams": {
+      "home": {
+        "id": 22173,
+        "name": "Fleetwood Town U21",
+        "logo": "https://media.api-sports.io/football/teams/22173.png",
+        "winner": null
+      },
+      "away": {
+        "id": 24848,
+        "name": "Preston North End U21",
+        "logo": "https://media.api-sports.io/football/teams/24848.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1607288,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T13:00:00+01:00",
+      "timestamp": 1786449600,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 667,
+      "name": "Friendlies Clubs",
+      "country": "World",
+      "logo": "https://media.api-sports.io/football/leagues/667.png",
+      "flag": null,
+      "season": 2026,
+      "round": "Club Friendlies",
+      "standings": false
+    },
+    "teams": {
+      "home": {
+        "id": 8592,
+        "name": "Graničar Đurđevac",
+        "logo": "https://media.api-sports.io/football/teams/8592.png",
+        "winner": null
+      },
+      "away": {
+        "id": 6250,
+        "name": "Slavonija Požega",
+        "logo": "https://media.api-sports.io/football/teams/6250.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1582811,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T15:00:00+01:00",
+      "timestamp": 1786456800,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": "Dolen Omurzakov Stadium",
+        "city": "Bishkek"
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 1132,
+      "name": "AFC Challenge League",
+      "country": "World",
+      "logo": "https://media.api-sports.io/football/leagues/1132.png",
+      "flag": null,
+      "season": 2026,
+      "round": "Preliminary Round",
+      "standings": false
+    },
+    "teams": {
+      "home": {
+        "id": 8026,
+        "name": "Dordoi Bishkek",
+        "logo": "https://media.api-sports.io/football/teams/8026.png",
+        "winner": null
+      },
+      "away": {
+        "id": 9118,
+        "name": "Wathba",
+        "logo": "https://media.api-sports.io/football/teams/9118.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1619466,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T15:00:00+01:00",
+      "timestamp": 1786456800,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": "Victoria Park",
+        "city": "Hartlepool"
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 1156,
+      "name": "National League Cup",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/1156.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Group Stage",
+      "standings": false
+    },
+    "teams": {
+      "home": {
+        "id": 1366,
+        "name": "Hartlepool",
+        "logo": "https://media.api-sports.io/football/teams/1366.png",
+        "winner": null
+      },
+      "away": {
+        "id": 11910,
+        "name": "Middlesbrough U21",
+        "logo": "https://media.api-sports.io/football/teams/11910.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1567329,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T16:00:00+01:00",
+      "timestamp": 1786460400,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": "Pakhtakor Central Stadium",
+        "city": "Tashkent"
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 17,
+      "name": "AFC Champions League Elite",
+      "country": "World",
+      "logo": "https://media.api-sports.io/football/leagues/17.png",
+      "flag": null,
+      "season": 2026,
+      "round": "1st Preliminary Round",
+      "standings": false
+    },
+    "teams": {
+      "home": {
+        "id": 4220,
+        "name": "Pakhtakor",
+        "logo": "https://media.api-sports.io/football/teams/4220.png",
+        "winner": null
+      },
+      "away": {
+        "id": 4532,
+        "name": "Al Hussein",
+        "logo": "https://media.api-sports.io/football/teams/4532.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1607170,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T16:00:00+01:00",
+      "timestamp": 1786460400,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": "Turkestan Arena",
+        "city": "Turkestan"
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 2,
+      "name": "UEFA Champions League",
+      "country": "World",
+      "logo": "https://media.api-sports.io/football/leagues/2.png",
+      "flag": null,
+      "season": 2026,
+      "round": "3rd Qualifying Round",
+      "standings": false
+    },
+    "teams": {
+      "home": {
+        "id": 664,
+        "name": "Kairat Almaty",
+        "logo": "https://media.api-sports.io/football/teams/664.png",
+        "winner": null
+      },
+      "away": {
+        "id": 646,
+        "name": "Levski Sofia",
+        "logo": "https://media.api-sports.io/football/teams/646.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1567327,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T17:00:00+01:00",
+      "timestamp": 1786464000,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": "Mohammed Bin Zayed Stadium",
+        "city": "Abu Dhabi"
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 17,
+      "name": "AFC Champions League Elite",
+      "country": "World",
+      "logo": "https://media.api-sports.io/football/leagues/17.png",
+      "flag": null,
+      "season": 2026,
+      "round": "1st Preliminary Round",
+      "standings": false
+    },
+    "teams": {
+      "home": {
+        "id": 2871,
+        "name": "Al-Jazira",
+        "logo": "https://media.api-sports.io/football/teams/2871.png",
+        "winner": null
+      },
+      "away": {
+        "id": 2938,
+        "name": "Al-Ittihad FC",
+        "logo": "https://media.api-sports.io/football/teams/2938.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1598827,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T17:00:00+01:00",
+      "timestamp": 1786464000,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": "Aspmyra Stadion",
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 2,
+      "name": "UEFA Champions League",
+      "country": "World",
+      "logo": "https://media.api-sports.io/football/leagues/2.png",
+      "flag": null,
+      "season": 2026,
+      "round": "3rd Qualifying Round",
+      "standings": false
+    },
+    "teams": {
+      "home": {
+        "id": 327,
+        "name": "Bodo/Glimt",
+        "logo": "https://media.api-sports.io/football/teams/327.png",
+        "winner": null
+      },
+      "away": {
+        "id": 1393,
+        "name": "Union St. Gilloise",
+        "logo": "https://media.api-sports.io/football/teams/1393.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1607172,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T17:00:00+01:00",
+      "timestamp": 1786464000,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": "Bank Respublika Arena",
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 2,
+      "name": "UEFA Champions League",
+      "country": "World",
+      "logo": "https://media.api-sports.io/football/leagues/2.png",
+      "flag": null,
+      "season": 2026,
+      "round": "3rd Qualifying Round",
+      "standings": false
+    },
+    "teams": {
+      "home": {
+        "id": 13976,
+        "name": "Sabah FA",
+        "logo": "https://media.api-sports.io/football/teams/13976.png",
+        "winner": null
+      },
+      "away": {
+        "id": 406,
+        "name": "Aarhus",
+        "logo": "https://media.api-sports.io/football/teams/406.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1607180,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T17:00:00+01:00",
+      "timestamp": 1786464000,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": "Mikheil Meskhi Stadium",
+        "city": "Tbilisi"
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 3,
+      "name": "UEFA Europa League",
+      "country": "World",
+      "logo": "https://media.api-sports.io/football/leagues/3.png",
+      "flag": null,
+      "season": 2026,
+      "round": "3rd Qualifying Round",
+      "standings": false
+    },
+    "teams": {
+      "home": {
+        "id": 3502,
+        "name": "Saburtalo",
+        "logo": "https://media.api-sports.io/football/teams/3502.png",
+        "winner": null
+      },
+      "away": {
+        "id": 5354,
+        "name": "Larne",
+        "logo": "https://media.api-sports.io/football/teams/5354.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1582386,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T17:30:00+01:00",
+      "timestamp": 1786465800,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 753,
+      "name": "Oberliga - Baden-Württemberg",
+      "country": "Germany",
+      "logo": "https://media.api-sports.io/football/leagues/753.png",
+      "flag": "https://media.api-sports.io/flags/de.svg",
+      "season": 2026,
+      "round": "Baden-Württemberg - 3",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 9359,
+        "name": "Bahlinger SC",
+        "logo": "https://media.api-sports.io/football/teams/9359.png",
+        "winner": null
+      },
+      "away": {
+        "id": 26166,
+        "name": "Karlsruhe II",
+        "logo": "https://media.api-sports.io/football/teams/26166.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1582810,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T18:00:00+01:00",
+      "timestamp": 1786467600,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": "Aleppo International Stadium",
+        "city": "Aleppo"
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 1132,
+      "name": "AFC Challenge League",
+      "country": "World",
+      "logo": "https://media.api-sports.io/football/leagues/1132.png",
+      "flag": null,
+      "season": 2026,
+      "round": "Preliminary Round",
+      "standings": false
+    },
+    "teams": {
+      "home": {
+        "id": 8019,
+        "name": "Al Ittihad",
+        "logo": "https://media.api-sports.io/football/teams/8019.png",
+        "winner": null
+      },
+      "away": {
+        "id": 10106,
+        "name": "Bangladesh Police",
+        "logo": "https://media.api-sports.io/football/teams/10106.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1586506,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T18:00:00+01:00",
+      "timestamp": 1786467600,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": "Lubeck"
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 84,
+      "name": "Regionalliga - Nord",
+      "country": "Germany",
+      "logo": "https://media.api-sports.io/football/leagues/84.png",
+      "flag": "https://media.api-sports.io/flags/de.svg",
+      "season": 2026,
+      "round": "North - 3",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 1625,
+        "name": "VfB Lübeck",
+        "logo": "https://media.api-sports.io/football/teams/1625.png",
+        "winner": null
+      },
+      "away": {
+        "id": 9347,
+        "name": "VfB Oldenburg",
+        "logo": "https://media.api-sports.io/football/teams/9347.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1586800,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T18:00:00+01:00",
+      "timestamp": 1786467600,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 85,
+      "name": "Regionalliga - Nordost",
+      "country": "Germany",
+      "logo": "https://media.api-sports.io/football/leagues/85.png",
+      "flag": "https://media.api-sports.io/flags/de.svg",
+      "season": 2026,
+      "round": "Nordost - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 9349,
+        "name": "Altglienicke",
+        "logo": "https://media.api-sports.io/football/teams/9349.png",
+        "winner": null
+      },
+      "away": {
+        "id": 9353,
+        "name": "Hertha BSC II",
+        "logo": "https://media.api-sports.io/football/teams/9353.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1586822,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T18:00:00+01:00",
+      "timestamp": 1786467600,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 85,
+      "name": "Regionalliga - Nordost",
+      "country": "Germany",
+      "logo": "https://media.api-sports.io/football/leagues/85.png",
+      "flag": "https://media.api-sports.io/flags/de.svg",
+      "season": 2026,
+      "round": "Nordost - 4",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 21525,
+        "name": "Magdeburg II",
+        "logo": "https://media.api-sports.io/football/teams/21525.png",
+        "winner": null
+      },
+      "away": {
+        "id": 1622,
+        "name": "SV Babelsberg 03",
+        "logo": "https://media.api-sports.io/football/teams/1622.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1604204,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T18:00:00+01:00",
+      "timestamp": 1786467600,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 749,
+      "name": "Oberliga - Bremen",
+      "country": "Germany",
+      "logo": "https://media.api-sports.io/football/leagues/749.png",
+      "flag": "https://media.api-sports.io/flags/de.svg",
+      "season": 2026,
+      "round": "Bremen - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 16094,
+        "name": "OSC Bremerhaven",
+        "logo": "https://media.api-sports.io/football/teams/16094.png",
+        "winner": null
+      },
+      "away": {
+        "id": 16097,
+        "name": "Werder Bremen III",
+        "logo": "https://media.api-sports.io/football/teams/16097.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1604205,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T18:00:00+01:00",
+      "timestamp": 1786467600,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 749,
+      "name": "Oberliga - Bremen",
+      "country": "Germany",
+      "logo": "https://media.api-sports.io/football/leagues/749.png",
+      "flag": "https://media.api-sports.io/flags/de.svg",
+      "season": 2026,
+      "round": "Bremen - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 19756,
+        "name": "Woltmershausen",
+        "logo": "https://media.api-sports.io/football/teams/19756.png",
+        "winner": null
+      },
+      "away": {
+        "id": 12745,
+        "name": "Brinkumer SV",
+        "logo": "https://media.api-sports.io/football/teams/12745.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1607171,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T18:00:00+01:00",
+      "timestamp": 1786467600,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": "Kaunas"
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 2,
+      "name": "UEFA Champions League",
+      "country": "World",
+      "logo": "https://media.api-sports.io/football/leagues/2.png",
+      "flag": null,
+      "season": 2026,
+      "round": "3rd Qualifying Round",
+      "standings": false
+    },
+    "teams": {
+      "home": {
+        "id": 3872,
+        "name": "Kauno Žalgiris",
+        "logo": "https://media.api-sports.io/football/teams/3872.png",
+        "winner": null
+      },
+      "away": {
+        "id": 620,
+        "name": "Dinamo Zagreb",
+        "logo": "https://media.api-sports.io/football/teams/620.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1607601,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T18:00:00+01:00",
+      "timestamp": 1786467600,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": "Alphamega Stadium",
+        "city": "Limassol"
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 848,
+      "name": "UEFA Europa Conference League",
+      "country": "World",
+      "logo": "https://media.api-sports.io/football/leagues/848.png",
+      "flag": null,
+      "season": 2026,
+      "round": "3rd Qualifying Round",
+      "standings": false
+    },
+    "teams": {
+      "home": {
+        "id": 602,
+        "name": "Apollon Limassol",
+        "logo": "https://media.api-sports.io/football/teams/602.png",
+        "winner": null
+      },
+      "away": {
+        "id": 319,
+        "name": "Brann",
+        "logo": "https://media.api-sports.io/football/teams/319.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1618913,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T18:00:00+01:00",
+      "timestamp": 1786467600,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 667,
+      "name": "Friendlies Clubs",
+      "country": "World",
+      "logo": "https://media.api-sports.io/football/leagues/667.png",
+      "flag": null,
+      "season": 2026,
+      "round": "Club Friendlies",
+      "standings": false
+    },
+    "teams": {
+      "home": {
+        "id": 5264,
+        "name": "Gimnástica Torrelavega",
+        "logo": "https://media.api-sports.io/football/teams/5264.png",
+        "winner": null
+      },
+      "away": {
+        "id": 9413,
+        "name": "Sestao River",
+        "logo": "https://media.api-sports.io/football/teams/9413.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1598829,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T18:30:00+01:00",
+      "timestamp": 1786469400,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": "Goffertstadion",
+        "city": "Nijmegen"
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 2,
+      "name": "UEFA Champions League",
+      "country": "World",
+      "logo": "https://media.api-sports.io/football/leagues/2.png",
+      "flag": null,
+      "season": 2026,
+      "round": "3rd Qualifying Round",
+      "standings": false
+    },
+    "teams": {
+      "home": {
+        "id": 413,
+        "name": "NEC Nijmegen",
+        "logo": "https://media.api-sports.io/football/teams/413.png",
+        "winner": null
+      },
+      "away": {
+        "id": 553,
+        "name": "Olympiakos Piraeus",
+        "logo": "https://media.api-sports.io/football/teams/553.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1607603,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T18:30:00+01:00",
+      "timestamp": 1786469400,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": "National Stadium Vasil Levski",
+        "city": "Sofia"
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 848,
+      "name": "UEFA Europa Conference League",
+      "country": "World",
+      "logo": "https://media.api-sports.io/football/leagues/848.png",
+      "flag": null,
+      "season": 2026,
+      "round": "3rd Qualifying Round",
+      "standings": false
+    },
+    "teams": {
+      "home": {
+        "id": 1426,
+        "name": "CSKA 1948",
+        "logo": "https://media.api-sports.io/football/teams/1426.png",
+        "winner": null
+      },
+      "away": {
+        "id": 617,
+        "name": "Panathinaikos",
+        "logo": "https://media.api-sports.io/football/teams/617.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1618914,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T18:30:00+01:00",
+      "timestamp": 1786469400,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 667,
+      "name": "Friendlies Clubs",
+      "country": "World",
+      "logo": "https://media.api-sports.io/football/leagues/667.png",
+      "flag": null,
+      "season": 2026,
+      "round": "Club Friendlies",
+      "standings": false
+    },
+    "teams": {
+      "home": {
+        "id": 5281,
+        "name": "Unionistas de Salamanca",
+        "logo": "https://media.api-sports.io/football/teams/5281.png",
+        "winner": null
+      },
+      "away": {
+        "id": 9827,
+        "name": "CD Coria",
+        "logo": "https://media.api-sports.io/football/teams/9827.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1607169,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:00:00+01:00",
+      "timestamp": 1786471200,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": "Stadion Rajko Mit",
+        "city": "Belgrade"
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 2,
+      "name": "UEFA Champions League",
+      "country": "World",
+      "logo": "https://media.api-sports.io/football/leagues/2.png",
+      "flag": null,
+      "season": 2026,
+      "round": "3rd Qualifying Round",
+      "standings": false
+    },
+    "teams": {
+      "home": {
+        "id": 598,
+        "name": "FK Crvena Zvezda",
+        "logo": "https://media.api-sports.io/football/teams/598.png",
+        "winner": null
+      },
+      "away": {
+        "id": 563,
+        "name": "Hapoel Beer Sheva",
+        "logo": "https://media.api-sports.io/football/teams/563.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1618915,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:00:00+01:00",
+      "timestamp": 1786471200,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 667,
+      "name": "Friendlies Clubs",
+      "country": "World",
+      "logo": "https://media.api-sports.io/football/leagues/667.png",
+      "flag": null,
+      "season": 2026,
+      "round": "Club Friendlies",
+      "standings": false
+    },
+    "teams": {
+      "home": {
+        "id": 1270,
+        "name": "Capelle",
+        "logo": "https://media.api-sports.io/football/teams/1270.png",
+        "winner": null
+      },
+      "away": {
+        "id": 1248,
+        "name": "Rijnsburgse Boys",
+        "logo": "https://media.api-sports.io/football/teams/1248.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1618916,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:00:00+01:00",
+      "timestamp": 1786471200,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 667,
+      "name": "Friendlies Clubs",
+      "country": "World",
+      "logo": "https://media.api-sports.io/football/leagues/667.png",
+      "flag": null,
+      "season": 2026,
+      "round": "Club Friendlies",
+      "standings": false
+    },
+    "teams": {
+      "home": {
+        "id": 8160,
+        "name": "Intercity",
+        "logo": "https://media.api-sports.io/football/teams/8160.png",
+        "winner": null
+      },
+      "away": {
+        "id": 9694,
+        "name": "Jove Español",
+        "logo": "https://media.api-sports.io/football/teams/9694.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1605371,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:15:00+01:00",
+      "timestamp": 1786472100,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": "Celje"
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 2,
+      "name": "UEFA Champions League",
+      "country": "World",
+      "logo": "https://media.api-sports.io/football/leagues/2.png",
+      "flag": null,
+      "season": 2026,
+      "round": "3rd Qualifying Round",
+      "standings": false
+    },
+    "teams": {
+      "home": {
+        "id": 4360,
+        "name": "Celje",
+        "logo": "https://media.api-sports.io/football/teams/4360.png",
+        "winner": null
+      },
+      "away": {
+        "id": 3683,
+        "name": "Ararat-Armenia",
+        "logo": "https://media.api-sports.io/football/teams/3683.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1607173,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:15:00+01:00",
+      "timestamp": 1786472100,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": "Bratislava"
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 2,
+      "name": "UEFA Champions League",
+      "country": "World",
+      "logo": "https://media.api-sports.io/football/leagues/2.png",
+      "flag": null,
+      "season": 2026,
+      "round": "3rd Qualifying Round",
+      "standings": false
+    },
+    "teams": {
+      "home": {
+        "id": 656,
+        "name": "Slovan Bratislava",
+        "logo": "https://media.api-sports.io/football/teams/656.png",
+        "winner": null
+      },
+      "away": {
+        "id": 2240,
+        "name": "Mjallby AIF",
+        "logo": "https://media.api-sports.io/football/teams/2240.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1597277,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:30:00+01:00",
+      "timestamp": 1786473000,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 60,
+      "name": "Non League Premier - Southern South",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/60.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 7758,
+        "name": "Wimborne Town",
+        "logo": "https://media.api-sports.io/football/teams/7758.png",
+        "winner": null
+      },
+      "away": {
+        "id": 7628,
+        "name": "Chichester City",
+        "logo": "https://media.api-sports.io/football/teams/7628.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1607174,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:30:00+01:00",
+      "timestamp": 1786473000,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": "Merkur-Arena",
+        "city": "Graz"
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 2,
+      "name": "UEFA Champions League",
+      "country": "World",
+      "logo": "https://media.api-sports.io/football/leagues/2.png",
+      "flag": null,
+      "season": 2026,
+      "round": "3rd Qualifying Round",
+      "standings": false
+    },
+    "teams": {
+      "home": {
+        "id": 637,
+        "name": "Sturm Graz",
+        "logo": "https://media.api-sports.io/football/teams/637.png",
+        "winner": null
+      },
+      "away": {
+        "id": 611,
+        "name": "Fenerbahçe",
+        "logo": "https://media.api-sports.io/football/teams/611.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1595903,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 58,
+      "name": "Non League Premier - Isthmian",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/58.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 7217,
+        "name": "Burgess Hill Town",
+        "logo": "https://media.api-sports.io/football/teams/7217.png",
+        "winner": null
+      },
+      "away": {
+        "id": 7262,
+        "name": "Whyteleafe",
+        "logo": "https://media.api-sports.io/football/teams/7262.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1595904,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 58,
+      "name": "Non League Premier - Isthmian",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/58.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 8737,
+        "name": "Chatham Town",
+        "logo": "https://media.api-sports.io/football/teams/8737.png",
+        "winner": null
+      },
+      "away": {
+        "id": 8149,
+        "name": "Dulwich Hamlet",
+        "logo": "https://media.api-sports.io/football/teams/8149.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1595905,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 58,
+      "name": "Non League Premier - Isthmian",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/58.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 7711,
+        "name": "Cray Wanderers",
+        "logo": "https://media.api-sports.io/football/teams/7711.png",
+        "winner": null
+      },
+      "away": {
+        "id": 7708,
+        "name": "Cheshunt",
+        "logo": "https://media.api-sports.io/football/teams/7708.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1595906,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 58,
+      "name": "Non League Premier - Isthmian",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/58.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 4690,
+        "name": "Dartford",
+        "logo": "https://media.api-sports.io/football/teams/4690.png",
+        "winner": null
+      },
+      "away": {
+        "id": 7216,
+        "name": "Brentwood Town",
+        "logo": "https://media.api-sports.io/football/teams/7216.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1595907,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 58,
+      "name": "Non League Premier - Isthmian",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/58.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 4704,
+        "name": "Eastbourne Borough",
+        "logo": "https://media.api-sports.io/football/teams/4704.png",
+        "winner": null
+      },
+      "away": {
+        "id": 7676,
+        "name": "Three Bridges",
+        "logo": "https://media.api-sports.io/football/teams/7676.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1595908,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 58,
+      "name": "Non League Premier - Isthmian",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/58.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 7714,
+        "name": "Enfield Town",
+        "logo": "https://media.api-sports.io/football/teams/7714.png",
+        "winner": null
+      },
+      "away": {
+        "id": 4708,
+        "name": "St Albans City",
+        "logo": "https://media.api-sports.io/football/teams/4708.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1595909,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 58,
+      "name": "Non League Premier - Isthmian",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/58.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 4696,
+        "name": "Leatherhead",
+        "logo": "https://media.api-sports.io/football/teams/4696.png",
+        "winner": null
+      },
+      "away": {
+        "id": 8664,
+        "name": "Welling United",
+        "logo": "https://media.api-sports.io/football/teams/8664.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1595910,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 58,
+      "name": "Non League Premier - Isthmian",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/58.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 7654,
+        "name": "Maldon & Tiptree",
+        "logo": "https://media.api-sports.io/football/teams/7654.png",
+        "winner": null
+      },
+      "away": {
+        "id": 7207,
+        "name": "Aveley",
+        "logo": "https://media.api-sports.io/football/teams/7207.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1595911,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 58,
+      "name": "Non League Premier - Isthmian",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/58.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 8950,
+        "name": "Stanway Rovers",
+        "logo": "https://media.api-sports.io/football/teams/8950.png",
+        "winner": null
+      },
+      "away": {
+        "id": 7665,
+        "name": "Ramsgate",
+        "logo": "https://media.api-sports.io/football/teams/7665.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1595912,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 58,
+      "name": "Non League Premier - Isthmian",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/58.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 4713,
+        "name": "Whitehawk",
+        "logo": "https://media.api-sports.io/football/teams/4713.png",
+        "winner": null
+      },
+      "away": {
+        "id": 7728,
+        "name": "Lewes",
+        "logo": "https://media.api-sports.io/football/teams/7728.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1596353,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 59,
+      "name": "Non League Premier - Northern",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/59.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 4677,
+        "name": "Alfreton Town",
+        "logo": "https://media.api-sports.io/football/teams/4677.png",
+        "winner": null
+      },
+      "away": {
+        "id": 4691,
+        "name": "Gainsborough Trinity",
+        "logo": "https://media.api-sports.io/football/teams/4691.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1596354,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 59,
+      "name": "Non League Premier - Northern",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/59.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 7695,
+        "name": "Bamber Bridge",
+        "logo": "https://media.api-sports.io/football/teams/7695.png",
+        "winner": null
+      },
+      "away": {
+        "id": 8690,
+        "name": "Avro",
+        "logo": "https://media.api-sports.io/football/teams/8690.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1596355,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": "Gigg Lane",
+        "city": "Bury"
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 59,
+      "name": "Non League Premier - Northern",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/59.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 1344,
+        "name": "Bury",
+        "logo": "https://media.api-sports.io/football/teams/1344.png",
+        "winner": null
+      },
+      "away": {
+        "id": 4703,
+        "name": "Curzon Ashton",
+        "logo": "https://media.api-sports.io/football/teams/4703.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1596356,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 59,
+      "name": "Non League Premier - Northern",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/59.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 11936,
+        "name": "AFC Emley",
+        "logo": "https://media.api-sports.io/football/teams/11936.png",
+        "winner": null
+      },
+      "away": {
+        "id": 7236,
+        "name": "Ilkeston Town",
+        "logo": "https://media.api-sports.io/football/teams/7236.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1596357,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": 5612,
+        "name": "Broadhurst Park",
+        "city": "Manchester"
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 59,
+      "name": "Non League Premier - Northern",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/59.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 7754,
+        "name": "United of Manchester",
+        "logo": "https://media.api-sports.io/football/teams/7754.png",
+        "winner": null
+      },
+      "away": {
+        "id": 7239,
+        "name": "Leek Town",
+        "logo": "https://media.api-sports.io/football/teams/7239.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1596358,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 59,
+      "name": "Non League Premier - Northern",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/59.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 7726,
+        "name": "Lancaster City",
+        "logo": "https://media.api-sports.io/football/teams/7726.png",
+        "winner": null
+      },
+      "away": {
+        "id": 8918,
+        "name": "Rylands",
+        "logo": "https://media.api-sports.io/football/teams/8918.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1596359,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 59,
+      "name": "Non League Premier - Northern",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/59.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 8903,
+        "name": "Quorn",
+        "logo": "https://media.api-sports.io/football/teams/8903.png",
+        "winner": null
+      },
+      "away": {
+        "id": 7631,
+        "name": "Cleethorpes Town",
+        "logo": "https://media.api-sports.io/football/teams/7631.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1596360,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 59,
+      "name": "Non League Premier - Northern",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/59.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 8953,
+        "name": "Stockton Town",
+        "logo": "https://media.api-sports.io/football/teams/8953.png",
+        "winner": null
+      },
+      "away": {
+        "id": 7693,
+        "name": "Ashton United",
+        "logo": "https://media.api-sports.io/football/teams/7693.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1596361,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 59,
+      "name": "Non League Premier - Northern",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/59.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 7756,
+        "name": "Warrington Town",
+        "logo": "https://media.api-sports.io/football/teams/7756.png",
+        "winner": null
+      },
+      "away": {
+        "id": 4694,
+        "name": "Hyde United",
+        "logo": "https://media.api-sports.io/football/teams/4694.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1596362,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": "Turnbull Ground",
+        "city": "Whitby"
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 59,
+      "name": "Non League Premier - Northern",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/59.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 7757,
+        "name": "Whitby Town",
+        "logo": "https://media.api-sports.io/football/teams/7757.png",
+        "winner": null
+      },
+      "away": {
+        "id": 1824,
+        "name": "Guiseley AFC",
+        "logo": "https://media.api-sports.io/football/teams/1824.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1596363,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 59,
+      "name": "Non League Premier - Northern",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/59.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 7265,
+        "name": "Workington",
+        "logo": "https://media.api-sports.io/football/teams/7265.png",
+        "winner": null
+      },
+      "away": {
+        "id": 16994,
+        "name": "Redcar Athletic",
+        "logo": "https://media.api-sports.io/football/teams/16994.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1596815,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 931,
+      "name": "Non League Premier - Southern Central",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/931.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 7692,
+        "name": "Alvechurch",
+        "logo": "https://media.api-sports.io/football/teams/7692.png",
+        "winner": null
+      },
+      "away": {
+        "id": 9010,
+        "name": "Worcester City",
+        "logo": "https://media.api-sports.io/football/teams/9010.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1596816,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 931,
+      "name": "Non League Premier - Southern Central",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/931.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 7696,
+        "name": "Banbury United",
+        "logo": "https://media.api-sports.io/football/teams/7696.png",
+        "winner": null
+      },
+      "away": {
+        "id": 8904,
+        "name": "Racing Club Warwick",
+        "logo": "https://media.api-sports.io/football/teams/8904.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1596817,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 931,
+      "name": "Non League Premier - Southern Central",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/931.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 7705,
+        "name": "Bromsgrove Sporting",
+        "logo": "https://media.api-sports.io/football/teams/7705.png",
+        "winner": null
+      },
+      "away": {
+        "id": 7743,
+        "name": "Rushall Olympic",
+        "logo": "https://media.api-sports.io/football/teams/7743.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1596819,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 931,
+      "name": "Non League Premier - Southern Central",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/931.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 4682,
+        "name": "Hitchin Town",
+        "logo": "https://media.api-sports.io/football/teams/4682.png",
+        "winner": null
+      },
+      "away": {
+        "id": 7735,
+        "name": "Needham Market",
+        "logo": "https://media.api-sports.io/football/teams/7735.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1596820,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 931,
+      "name": "Non League Premier - Southern Central",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/931.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 8656,
+        "name": "Leamington",
+        "logo": "https://media.api-sports.io/football/teams/8656.png",
+        "winner": null
+      },
+      "away": {
+        "id": 8681,
+        "name": "Anstey Nomads",
+        "logo": "https://media.api-sports.io/football/teams/8681.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1596821,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 931,
+      "name": "Non League Premier - Southern Central",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/931.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 8846,
+        "name": "Leighton Town",
+        "logo": "https://media.api-sports.io/football/teams/8846.png",
+        "winner": null
+      },
+      "away": {
+        "id": 8654,
+        "name": "Kettering Town",
+        "logo": "https://media.api-sports.io/football/teams/8654.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1596822,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 931,
+      "name": "Non League Premier - Southern Central",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/931.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 7727,
+        "name": "Leiston",
+        "logo": "https://media.api-sports.io/football/teams/7727.png",
+        "winner": null
+      },
+      "away": {
+        "id": 7701,
+        "name": "Bishop's Stortford",
+        "logo": "https://media.api-sports.io/football/teams/7701.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1596823,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 931,
+      "name": "Non League Premier - Southern Central",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/931.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 7737,
+        "name": "Peterborough Sports",
+        "logo": "https://media.api-sports.io/football/teams/7737.png",
+        "winner": null
+      },
+      "away": {
+        "id": 21712,
+        "name": "Real Bedford",
+        "logo": "https://media.api-sports.io/football/teams/21712.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1596824,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 931,
+      "name": "Non League Premier - Southern Central",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/931.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 4709,
+        "name": "Stamford",
+        "logo": "https://media.api-sports.io/football/teams/4709.png",
+        "winner": null
+      },
+      "away": {
+        "id": 7622,
+        "name": "Bury Town",
+        "logo": "https://media.api-sports.io/football/teams/7622.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1596825,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 931,
+      "name": "Non League Premier - Southern Central",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/931.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 7750,
+        "name": "Stratford Town",
+        "logo": "https://media.api-sports.io/football/teams/7750.png",
+        "winner": null
+      },
+      "away": {
+        "id": 7741,
+        "name": "Redditch United",
+        "logo": "https://media.api-sports.io/football/teams/7741.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1597278,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": "Twerton Park",
+        "city": "Bath"
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 60,
+      "name": "Non League Premier - Southern South",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/60.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 8657,
+        "name": "Bath City",
+        "logo": "https://media.api-sports.io/football/teams/8657.png",
+        "winner": null
+      },
+      "away": {
+        "id": 8899,
+        "name": "Plymouth Parkway",
+        "logo": "https://media.api-sports.io/football/teams/8899.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1597279,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 60,
+      "name": "Non League Premier - Southern South",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/60.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 7619,
+        "name": "Bracknell Town",
+        "logo": "https://media.api-sports.io/football/teams/7619.png",
+        "winner": null
+      },
+      "away": {
+        "id": 8653,
+        "name": "Gloucester City",
+        "logo": "https://media.api-sports.io/football/teams/8653.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1597280,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 60,
+      "name": "Non League Premier - Southern South",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/60.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 7627,
+        "name": "Chertsey Town",
+        "logo": "https://media.api-sports.io/football/teams/7627.png",
+        "winner": null
+      },
+      "away": {
+        "id": 7214,
+        "name": "Berkhamsted",
+        "logo": "https://media.api-sports.io/football/teams/7214.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1597281,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 60,
+      "name": "Non League Premier - Southern South",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/60.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 8147,
+        "name": "Chippenham Town",
+        "logo": "https://media.api-sports.io/football/teams/8147.png",
+        "winner": null
+      },
+      "away": {
+        "id": 7762,
+        "name": "Yate Town",
+        "logo": "https://media.api-sports.io/football/teams/7762.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1597282,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 60,
+      "name": "Non League Premier - Southern South",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/60.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 7640,
+        "name": "Evesham United",
+        "logo": "https://media.api-sports.io/football/teams/7640.png",
+        "winner": null
+      },
+      "away": {
+        "id": 7226,
+        "name": "Frome Town",
+        "logo": "https://media.api-sports.io/football/teams/7226.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1597283,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 60,
+      "name": "Non League Premier - Southern South",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/60.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 7645,
+        "name": "Hanwell Town",
+        "logo": "https://media.api-sports.io/football/teams/7645.png",
+        "winner": null
+      },
+      "away": {
+        "id": 7615,
+        "name": "Basingstoke Town",
+        "logo": "https://media.api-sports.io/football/teams/7615.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1597284,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 60,
+      "name": "Non League Premier - Southern South",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/60.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 1843,
+        "name": "Havant & Wville",
+        "logo": "https://media.api-sports.io/football/teams/1843.png",
+        "winner": null
+      },
+      "away": {
+        "id": 7257,
+        "name": "Uxbridge",
+        "logo": "https://media.api-sports.io/football/teams/7257.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1597285,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 60,
+      "name": "Non League Premier - Southern South",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/60.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 7738,
+        "name": "Poole Town",
+        "logo": "https://media.api-sports.io/football/teams/7738.png",
+        "winner": null
+      },
+      "away": {
+        "id": 7668,
+        "name": "Sholing",
+        "logo": "https://media.api-sports.io/football/teams/7668.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1597286,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T19:45:00+01:00",
+      "timestamp": 1786473900,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": null
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 60,
+      "name": "Non League Premier - Southern South",
+      "country": "England",
+      "logo": "https://media.api-sports.io/football/leagues/60.png",
+      "flag": "https://media.api-sports.io/flags/gb-eng.svg",
+      "season": 2026,
+      "round": "Regular Season - 2",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 4711,
+        "name": "Taunton Town",
+        "logo": "https://media.api-sports.io/football/teams/4711.png",
+        "winner": null
+      },
+      "away": {
+        "id": 8870,
+        "name": "Malvern Town",
+        "logo": "https://media.api-sports.io/football/teams/8870.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1598828,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T20:00:00+01:00",
+      "timestamp": 1786474800,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": "Parc Olympique Lyonnais",
+        "city": "Lyon"
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 2,
+      "name": "UEFA Champions League",
+      "country": "World",
+      "logo": "https://media.api-sports.io/football/leagues/2.png",
+      "flag": null,
+      "season": 2026,
+      "round": "3rd Qualifying Round",
+      "standings": false
+    },
+    "teams": {
+      "home": {
+        "id": 80,
+        "name": "Lyon",
+        "logo": "https://media.api-sports.io/football/teams/80.png",
+        "winner": null
+      },
+      "away": {
+        "id": 628,
+        "name": "Sparta Praha",
+        "logo": "https://media.api-sports.io/football/teams/628.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1547760,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T23:00:00+01:00",
+      "timestamp": 1786485600,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": null,
+        "city": "Rio de Janeiro"
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 13,
+      "name": "CONMEBOL Libertadores",
+      "country": "World",
+      "logo": "https://media.api-sports.io/football/leagues/13.png",
+      "flag": null,
+      "season": 2026,
+      "round": "Round of 16",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 124,
+        "name": "Fluminense",
+        "logo": "https://media.api-sports.io/football/teams/124.png",
+        "winner": null
+      },
+      "away": {
+        "id": 473,
+        "name": "Independ. Rivadavia",
+        "logo": "https://media.api-sports.io/football/teams/473.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1607648,
+      "referee": null,
+      "timezone": "Africa/Tunis",
+      "date": "2026-08-11T23:00:00+01:00",
+      "timestamp": 1786485600,
+      "periods": {
+        "first": null,
+        "second": null
+      },
+      "venue": {
+        "id": null,
+        "name": "Estadio Alberto J. Armando",
+        "city": "Buenos Aires"
+      },
+      "status": {
+        "long": "Not Started",
+        "short": "NS",
+        "elapsed": null,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 11,
+      "name": "CONMEBOL Sudamericana",
+      "country": "World",
+      "logo": "https://media.api-sports.io/football/leagues/11.png",
+      "flag": null,
+      "season": 2026,
+      "round": "Round of 16",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 451,
+        "name": "Boca Juniors",
+        "logo": "https://media.api-sports.io/football/teams/451.png",
+        "winner": null
+      },
+      "away": {
+        "id": 10476,
+        "name": "Deportivo Recoleta",
+        "logo": "https://media.api-sports.io/football/teams/10476.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": null,
+      "away": null
+    },
+    "score": {
+      "halftime": {
+        "home": null,
+        "away": null
+      },
+      "fulltime": {
+        "home": null,
+        "away": null
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  }
+]

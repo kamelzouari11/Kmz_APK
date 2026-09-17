@@ -1,0 +1,510 @@
+[
+  {
+    "country": "England",
+    "league": {
+      "id": 39,
+      "name": "Premier League",
+      "season": "2026-2027"
+    },
+    "clubs": [
+      {
+        "id": 8669,
+        "name": "AFC Liverpool"
+      },
+      {
+        "id": 42,
+        "name": "Arsenal"
+      },
+      {
+        "id": 66,
+        "name": "Aston Villa"
+      },
+      {
+        "id": 8714,
+        "name": "Bournemouth FC"
+      },
+      {
+        "id": 55,
+        "name": "Brentford"
+      },
+      {
+        "id": 51,
+        "name": "Brighton"
+      },
+      {
+        "id": 49,
+        "name": "Chelsea"
+      },
+      {
+        "id": 1346,
+        "name": "Coventry"
+      },
+      {
+        "id": 52,
+        "name": "Crystal Palace"
+      },
+      {
+        "id": 45,
+        "name": "Everton"
+      },
+      {
+        "id": 36,
+        "name": "Fulham"
+      },
+      {
+        "id": 64,
+        "name": "Hull City"
+      },
+      {
+        "id": 57,
+        "name": "Ipswich"
+      },
+      {
+        "id": 63,
+        "name": "Leeds"
+      },
+      {
+        "id": 50,
+        "name": "Manchester City"
+      },
+      {
+        "id": 33,
+        "name": "Manchester United"
+      },
+      {
+        "id": 34,
+        "name": "Newcastle"
+      },
+      {
+        "id": 65,
+        "name": "Nottingham Forest"
+      },
+      {
+        "id": 746,
+        "name": "Sunderland"
+      },
+      {
+        "id": 47,
+        "name": "Tottenham"
+      }
+    ]
+  },
+  {
+    "country": "Italy",
+    "league": {
+      "id": 135,
+      "name": "Serie A",
+      "season": "2026-2027"
+    },
+    "clubs": [
+      {
+        "id": 489,
+        "name": "AC Milan"
+      },
+      {
+        "id": 497,
+        "name": "AS Roma"
+      },
+      {
+        "id": 499,
+        "name": "Atalanta"
+      },
+      {
+        "id": 500,
+        "name": "Bologna"
+      },
+      {
+        "id": 490,
+        "name": "Cagliari"
+      },
+      {
+        "id": 895,
+        "name": "Como"
+      },
+      {
+        "id": 502,
+        "name": "Fiorentina"
+      },
+      {
+        "id": 512,
+        "name": "Frosinone"
+      },
+      {
+        "id": 495,
+        "name": "Genoa"
+      },
+      {
+        "id": 505,
+        "name": "Inter"
+      },
+      {
+        "id": 496,
+        "name": "Juventus"
+      },
+      {
+        "id": 487,
+        "name": "Lazio"
+      },
+      {
+        "id": 867,
+        "name": "Lecce"
+      },
+      {
+        "id": 1579,
+        "name": "Monza"
+      },
+      {
+        "id": 492,
+        "name": "Napoli"
+      },
+      {
+        "id": 523,
+        "name": "Parma"
+      },
+      {
+        "id": 488,
+        "name": "Sassuolo"
+      },
+      {
+        "id": 503,
+        "name": "Torino"
+      },
+      {
+        "id": 494,
+        "name": "Udinese"
+      },
+      {
+        "id": 517,
+        "name": "Venezia"
+      }
+    ]
+  },
+  {
+    "country": "France",
+    "league": {
+      "id": 61,
+      "name": "Ligue 1",
+      "season": "2026-2027"
+    },
+    "clubs": [
+      {
+        "id": 77,
+        "name": "Angers"
+      },
+      {
+        "id": 108,
+        "name": "Auxerre"
+      },
+      {
+        "id": 110,
+        "name": "Estac Troyes"
+      },
+      {
+        "id": 111,
+        "name": "Le Havre"
+      },
+      {
+        "id": 1298,
+        "name": "Le Mans"
+      },
+      {
+        "id": 116,
+        "name": "Lens"
+      },
+      {
+        "id": 79,
+        "name": "Lille"
+      },
+      {
+        "id": 97,
+        "name": "Lorient"
+      },
+      {
+        "id": 80,
+        "name": "Lyon"
+      },
+      {
+        "id": 81,
+        "name": "Marseille"
+      },
+      {
+        "id": 91,
+        "name": "Monaco"
+      },
+      {
+        "id": 84,
+        "name": "Nice"
+      },
+      {
+        "id": 114,
+        "name": "Paris FC"
+      },
+      {
+        "id": 85,
+        "name": "Paris Saint Germain"
+      },
+      {
+        "id": 94,
+        "name": "Rennes"
+      },
+      {
+        "id": 106,
+        "name": "Stade Brestois 29"
+      },
+      {
+        "id": 95,
+        "name": "Strasbourg"
+      },
+      {
+        "id": 96,
+        "name": "Toulouse"
+      }
+    ]
+  },
+  {
+    "country": "Tunisia",
+    "league": {
+      "id": 202,
+      "name": "Ligue 1",
+      "season": "2026-2027"
+    },
+    "clubs": [
+      {
+        "id": 10368,
+        "name": "AS Marsa"
+      },
+      {
+        "id": 981,
+        "name": "CA Bizertin"
+      },
+      {
+        "id": 988,
+        "name": "Club Africain"
+      },
+      {
+        "id": 1191,
+        "name": "CS Hammam-Lif"
+      },
+      {
+        "id": 983,
+        "name": "CS Sfaxien"
+      },
+      {
+        "id": 10609,
+        "name": "ES Hammam-Sousse"
+      },
+      {
+        "id": 984,
+        "name": "ES Metlaoui"
+      },
+      {
+        "id": 990,
+        "name": "ES Sahel"
+      },
+      {
+        "id": 980,
+        "name": "ES Tunis"
+      },
+      {
+        "id": 989,
+        "name": "ES Zarzis"
+      },
+      {
+        "id": 18284,
+        "name": "Jeunesse Sportive Omrane"
+      },
+      {
+        "id": 10625,
+        "name": "Olympique Béja"
+      },
+      {
+        "id": 13358,
+        "name": "Progrès Sakiet Eddaïer"
+      },
+      {
+        "id": 991,
+        "name": "Stade Tunisien"
+      },
+      {
+        "id": 986,
+        "name": "US Ben Guerdane"
+      },
+      {
+        "id": 992,
+        "name": "US Monastirienne"
+      }
+    ]
+  },
+  {
+    "country": "Germany",
+    "league": {
+      "id": 78,
+      "name": "Bundesliga",
+      "season": "2026-2027"
+    },
+    "clubs": [
+      {
+        "id": 192,
+        "name": "1. FC Köln"
+      },
+      {
+        "id": 167,
+        "name": "1899 Hoffenheim"
+      },
+      {
+        "id": 168,
+        "name": "Bayer Leverkusen"
+      },
+      {
+        "id": 157,
+        "name": "Bayern München"
+      },
+      {
+        "id": 165,
+        "name": "Borussia Dortmund"
+      },
+      {
+        "id": 163,
+        "name": "Borussia Mönchengladbach"
+      },
+      {
+        "id": 169,
+        "name": "Eintracht Frankfurt"
+      },
+      {
+        "id": 170,
+        "name": "FC Augsburg"
+      },
+      {
+        "id": 174,
+        "name": "FC Schalke 04"
+      },
+      {
+        "id": 164,
+        "name": "FSV Mainz 05"
+      },
+      {
+        "id": 175,
+        "name": "Hamburger SV"
+      },
+      {
+        "id": 173,
+        "name": "RB Leipzig"
+      },
+      {
+        "id": 160,
+        "name": "SC Freiburg"
+      },
+      {
+        "id": 185,
+        "name": "SC Paderborn 07"
+      },
+      {
+        "id": 1660,
+        "name": "SV Elversberg"
+      },
+      {
+        "id": 182,
+        "name": "Union Berlin"
+      },
+      {
+        "id": 172,
+        "name": "VfB Stuttgart"
+      },
+      {
+        "id": 162,
+        "name": "Werder Bremen"
+      }
+    ]
+  },
+  {
+    "country": "Spain",
+    "league": {
+      "id": 140,
+      "name": "La Liga",
+      "season": "2026-2027"
+    },
+    "clubs": [
+      {
+        "id": 542,
+        "name": "Alaves"
+      },
+      {
+        "id": 531,
+        "name": "Athletic Club"
+      },
+      {
+        "id": 530,
+        "name": "Atletico Madrid"
+      },
+      {
+        "id": 529,
+        "name": "Barcelona"
+      },
+      {
+        "id": 538,
+        "name": "Celta Vigo"
+      },
+      {
+        "id": 544,
+        "name": "Deportivo La Coruna"
+      },
+      {
+        "id": 797,
+        "name": "Elche"
+      },
+      {
+        "id": 540,
+        "name": "Espanyol"
+      },
+      {
+        "id": 546,
+        "name": "Getafe"
+      },
+      {
+        "id": 539,
+        "name": "Levante"
+      },
+      {
+        "id": 535,
+        "name": "Malaga"
+      },
+      {
+        "id": 727,
+        "name": "Osasuna"
+      },
+      {
+        "id": 4665,
+        "name": "Racing Santander"
+      },
+      {
+        "id": 728,
+        "name": "Rayo Vallecano"
+      },
+      {
+        "id": 543,
+        "name": "Real Betis"
+      },
+      {
+        "id": 541,
+        "name": "Real Madrid"
+      },
+      {
+        "id": 548,
+        "name": "Real Sociedad"
+      },
+      {
+        "id": 536,
+        "name": "Sevilla"
+      },
+      {
+        "id": 532,
+        "name": "Valencia"
+      },
+      {
+        "id": 533,
+        "name": "Villarreal"
+      }
+    ]
+  }
+]

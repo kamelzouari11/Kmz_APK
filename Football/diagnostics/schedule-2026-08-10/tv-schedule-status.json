@@ -1,0 +1,8 @@
+{
+  "format": "JSON",
+  "endpoint": "https://football-api-9v3x.onrender.com/schedule?date=2026-08-10",
+  "matches": null,
+  "error": "timeout",
+  "timeoutSeconds": 120,
+  "bytesReceived": 0
+}
