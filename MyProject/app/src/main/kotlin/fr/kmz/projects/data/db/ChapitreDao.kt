@@ -19,11 +19,17 @@ interface ChapitreDao {
     @Delete
     suspend fun delete(chapitre: Chapitre)
 
+    @Query("SELECT * FROM chapitres WHERE projetId = :projetId ORDER BY nom ASC")
+    fun getChapitresByProjet(projetId: Long): Flow<List<Chapitre>>
+
     @Query("SELECT * FROM chapitres ORDER BY nom ASC")
-    fun getAllChapitres(): Flow<List<Chapitre>>
+    suspend fun getAllChapitresSnapshot(): List<Chapitre>
 
     @Query("SELECT * FROM chapitres WHERE id = :id")
     suspend fun getChapitreById(id: Long): Chapitre?
+
+    @Query("DELETE FROM chapitres WHERE projetId = :projetId")
+    suspend fun clearAllForProjet(projetId: Long)
 
     @Query("DELETE FROM chapitres")
     suspend fun clearAll()

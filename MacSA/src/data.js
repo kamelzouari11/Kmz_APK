@@ -1,0 +1,5 @@
+export const FIELDS={date:'Date',amount:'Montant',type:'Type',direction:'Sens',label:'Valeur / bénéficiaire',quantity:'Quantité',price:'Cours'};
+const number=v=>Number(String(v??'').trim().replace(/\s/g,'').replace(',','.'))||0;
+export function parseCsv(text){const lines=text.replace(/^\uFEFF/,'').split(/\r?\n/).filter(Boolean);if(!lines.length)return[];const h=lines[0].split(';').map(x=>x.trim()),ix=Object.fromEntries(h.map((x,i)=>[x,i]));return lines.slice(1).map((line,i)=>{const c=line.split(';'),raw=k=>c[ix[k]]?.trim()??'',date=raw('DATELIQ');return{id:`${i}-${date}`,date,timestamp:parseDate(date),reference:raw('IDLIQ'),amount:number(raw('MTLIQ')),type:raw('TYPELIQ'),direction:raw('DCLIQ'),label:raw('LIBLIQ')||raw('IDLIQ'),quantity:number(raw('QTELIQ')),price:number(raw('COURSLIQ'))}}).filter(r=>r.date||r.amount||r.type)}
+export function parseDate(v){const m=String(v).match(/(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2}):(\d{2}))?/);return m?new Date(+m[3],+m[2]-1,+m[1],+(m[4]||0),+(m[5]||0),+(m[6]||0)).getTime():0}
+export const formatMoney=n=>new Intl.NumberFormat('fr-FR',{minimumFractionDigits:3,maximumFractionDigits:3}).format(n);

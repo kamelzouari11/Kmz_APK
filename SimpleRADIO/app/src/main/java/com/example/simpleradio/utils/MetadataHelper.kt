@@ -79,7 +79,11 @@ object MetadataHelper {
                         putString("TITLE", currentTitle.takeIf { it?.isNotBlank() == true })
                         putString("ARTIST", currentArtist.takeIf { it?.isNotBlank() == true })
                         putString("ALBUM", playingRadioName)
-                        putString("ARTWORK_URL", currentArtworkUrl ?: radioFavicon)
+                        putString(
+                                "ARTWORK_URL",
+                                currentArtworkUrl?.takeIf { it.isNotBlank() }
+                                        ?: radioFavicon?.takeIf { it.isNotBlank() }
+                        )
                     }
             try {
                 controller.sendCustomCommand(
@@ -93,10 +97,19 @@ object MetadataHelper {
         }
     }
 
-    suspend fun fetchArtwork(artist: String?, title: String?): String? {
+    suspend fun fetchCover(artist: String?, title: String?): String? {
+        if (artist.isNullOrBlank() || title.isNullOrBlank()) return null
+        return try {
+            com.example.simpleradio.data.api.CoverArtProvider.findCover(artist, title)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    suspend fun fetchArtistArtwork(artist: String?): String? {
         if (artist.isNullOrBlank()) return null
         return try {
-            com.example.simpleradio.data.api.ImageScraper.findArtwork(artist, title)
+            com.example.simpleradio.data.api.CoverArtProvider.findArtistArtwork(artist)
         } catch (_: Exception) {
             null
         }
@@ -118,9 +131,7 @@ object MetadataHelper {
                                 stationName = playingRadioName ?: "",
                                 country = playingRadioCountry ?: ""
                         )
-                if (result != null) {
-                    onMetadataFound(result.artist, result.title)
-                }
+                onMetadataFound(result?.artist, result?.title)
             }
         }
     }

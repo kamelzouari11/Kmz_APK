@@ -9,11 +9,11 @@ data class Track(
         val trackKey: String,
         var streamUrl: String? = null,
         var artworkUrl: String? = null,
-        // Métadonnées officielles (Deezer/iTunes)
+        // Métadonnées catalogue et cover validée par CoverArtProvider.
         var officialDurationMs: Long? = null,
         var officialAlbum: String? = null,
         var officialCoverHD: String? = null,
-        var metadataSource: String? = null, // "deezer", "itunes" ou "youtube"
+        var metadataSource: String? = null,
         // Résolution directe utilisée par la radio artiste YouTube.
         var youtubeVideoId: String? = null,
         var youtubeChannel: String? = null

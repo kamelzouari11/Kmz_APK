@@ -31,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import fr.kmz.projects.data.model.Beneficiaire
 import fr.kmz.projects.data.model.Chapitre
@@ -54,43 +55,31 @@ fun RapportsScreen(
     val total by viewModel.total.collectAsState()
 
     var selectedTabIndex by remember { mutableStateOf(0) }
-    val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale("fr", "FR"))
+    val dateFormat = SimpleDateFormat("dd MMM", Locale("fr", "FR"))
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Rapports") }
+    Column(modifier = Modifier.fillMaxSize()) {
+        TabRow(selectedTabIndex = selectedTabIndex) {
+            Tab(
+                text = { Text("Chapitre", style = MaterialTheme.typography.labelSmall) },
+                selected = selectedTabIndex == 0,
+                onClick = { selectedTabIndex = 0 }
+            )
+            Tab(
+                text = { Text("Bénéficiaire", style = MaterialTheme.typography.labelSmall) },
+                selected = selectedTabIndex == 1,
+                onClick = { selectedTabIndex = 1 }
+            )
+            Tab(
+                text = { Text("Récap", style = MaterialTheme.typography.labelSmall) },
+                selected = selectedTabIndex == 2,
+                onClick = { selectedTabIndex = 2 }
             )
         }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            TabRow(selectedTabIndex = selectedTabIndex) {
-                Tab(
-                    text = { Text("Par Chapitre") },
-                    selected = selectedTabIndex == 0,
-                    onClick = { selectedTabIndex = 0 }
-                )
-                Tab(
-                    text = { Text("Par Bénéficiaire") },
-                    selected = selectedTabIndex == 1,
-                    onClick = { selectedTabIndex = 1 }
-                )
-                Tab(
-                    text = { Text("Récapitulatif") },
-                    selected = selectedTabIndex == 2,
-                    onClick = { selectedTabIndex = 2 }
-                )
-            }
 
-            when (selectedTabIndex) {
-                0 -> RapportParChapitre(depensesParChapitre, dateFormat)
-                1 -> RapportParBeneficiaire(depensesParBeneficiaire, dateFormat)
-                2 -> RapportRecapitulatif(chapitres, depensesParChapitre, total)
-            }
+        when (selectedTabIndex) {
+            0 -> RapportParChapitre(depensesParChapitre, beneficiaires, dateFormat)
+            1 -> RapportParBeneficiaire(depensesParBeneficiaire, chapitres, dateFormat)
+            2 -> RapportRecapitulatif(chapitres, depensesParChapitre, total)
         }
     }
 }
@@ -98,6 +87,7 @@ fun RapportsScreen(
 @Composable
 private fun RapportParChapitre(
     depensesParChapitre: Map<Chapitre, List<Depense>>,
+    beneficiaires: List<Beneficiaire>,
     dateFormat: SimpleDateFormat
 ) {
     LazyColumn(
@@ -106,9 +96,11 @@ private fun RapportParChapitre(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        depensesParChapitre.forEach { (chapitre, depenses) ->
+        depensesParChapitre.entries
+            .sortedByDescending { (_, depenses) -> depenses.sumOf { it.montant } }
+            .forEach { (chapitre, depenses) ->
             item {
-                ChapitreSection(chapitre, depenses, dateFormat)
+                ChapitreSection(chapitre, depenses, beneficiaires, dateFormat)
             }
         }
         item {
@@ -120,6 +112,7 @@ private fun RapportParChapitre(
 @Composable
 private fun RapportParBeneficiaire(
     depensesParBeneficiaire: Map<Beneficiaire, List<Depense>>,
+    chapitres: List<Chapitre>,
     dateFormat: SimpleDateFormat
 ) {
     LazyColumn(
@@ -128,9 +121,11 @@ private fun RapportParBeneficiaire(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        depensesParBeneficiaire.forEach { (beneficiaire, depenses) ->
+        depensesParBeneficiaire.entries
+            .sortedByDescending { (_, depenses) -> depenses.sumOf { it.montant } }
+            .forEach { (beneficiaire, depenses) ->
             item {
-                BeneficiaireSection(beneficiaire, depenses, dateFormat)
+                BeneficiaireSection(beneficiaire, depenses, chapitres, dateFormat)
             }
         }
         item {
@@ -156,7 +151,10 @@ private fun RapportRecapitulatif(
 
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
-                chapitres.forEach { chapitre ->
+                val chapitresTries = chapitres.sortedByDescending { chapitre ->
+                    depensesParChapitre[chapitre]?.sumOf { it.montant } ?: 0L
+                }
+                chapitresTries.forEachIndexed { index, chapitre ->
                     val depenses = depensesParChapitre[chapitre] ?: emptyList()
                     val totalChapitre = depenses.sumOf { it.montant }
 
@@ -168,18 +166,19 @@ private fun RapportRecapitulatif(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
-                            Text(chapitre.nom, style = MaterialTheme.typography.bodyMedium)
+                            Text(chapitre.nom, style = MaterialTheme.typography.titleMedium)
                             Text(
                                 "${depenses.size} dépense${if (depenses.size != 1) "s" else ""}",
-                                style = MaterialTheme.typography.bodySmall
+                                style = MaterialTheme.typography.labelSmall
                             )
                         }
                         Text(
-                            FormattingUtils.formatCurrencyNoDecimals(totalChapitre),
-                            style = MaterialTheme.typography.bodyMedium
+                            "${FormattingUtils.formatNumber(totalChapitre)} DT",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
-                    if (chapitre != chapitres.last()) {
+                    if (index < chapitresTries.lastIndex) {
                         Divider()
                     }
                 }
@@ -199,10 +198,10 @@ private fun RapportRecapitulatif(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Total dépensé", style = MaterialTheme.typography.titleMedium)
+                Text("Total dépensé", style = MaterialTheme.typography.titleLarge)
                 Text(
-                    FormattingUtils.formatCurrencyNoDecimals(total),
-                    style = MaterialTheme.typography.titleMedium,
+                    "${FormattingUtils.formatNumber(total)} DT",
+                    style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.primary
                 )
             }
@@ -216,28 +215,34 @@ private fun RapportRecapitulatif(
 private fun ChapitreSection(
     chapitre: Chapitre,
     depenses: List<Depense>,
+    beneficiaires: List<Beneficiaire>,
     dateFormat: SimpleDateFormat
 ) {
     val total = depenses.sumOf { it.montant }
 
-    Card(
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(10.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(chapitre.nom, style = MaterialTheme.typography.titleSmall)
+                Text(chapitre.nom, style = MaterialTheme.typography.titleMedium)
                 Text(
-                    FormattingUtils.formatCurrencyNoDecimals(total),
-                    style = MaterialTheme.typography.labelMedium
+                    "${FormattingUtils.formatNumber(total)} DT",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
-            Divider(modifier = Modifier.padding(vertical = 8.dp))
+            Divider(modifier = Modifier.padding(vertical = 6.dp))
             depenses.forEach { depense ->
-                DepenseRow(depense, dateFormat)
+                val beneficiaire = beneficiaires.find { it.id == depense.beneficiaireId }
+                DepenseRow(
+                    dateStr = dateFormat.format(Date(depense.date)),
+                    middleLabel = beneficiaire?.nom ?: "?",
+                    objet = depense.objet,
+                    montant = depense.montant
+                )
             }
         }
     }
@@ -247,54 +252,108 @@ private fun ChapitreSection(
 private fun BeneficiaireSection(
     beneficiaire: Beneficiaire,
     depenses: List<Depense>,
+    chapitres: List<Chapitre>,
     dateFormat: SimpleDateFormat
 ) {
     val total = depenses.sumOf { it.montant }
 
-    Card(
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(10.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(beneficiaire.nom, style = MaterialTheme.typography.titleSmall)
+                Text(beneficiaire.nom, style = MaterialTheme.typography.titleMedium)
                 Text(
-                    FormattingUtils.formatCurrencyNoDecimals(total),
-                    style = MaterialTheme.typography.labelMedium
+                    "${FormattingUtils.formatNumber(total)} DT",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
-            Divider(modifier = Modifier.padding(vertical = 8.dp))
+            Divider(modifier = Modifier.padding(vertical = 6.dp))
             depenses.forEach { depense ->
-                DepenseRow(depense, dateFormat)
+                val chapitre = chapitres.find { it.id == depense.chapitreId }
+                DepenseRowWithNature(
+                    dateStr = dateFormat.format(Date(depense.date)),
+                    middleLabel = chapitre?.nom ?: "?",
+                    nature = depense.nature,
+                    objet = depense.objet,
+                    montant = depense.montant
+                )
             }
         }
     }
 }
 
 @Composable
-private fun DepenseRow(depense: Depense, dateFormat: SimpleDateFormat) {
+private fun DepenseRow(dateStr: String, middleLabel: String, objet: String, montant: Long) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
+            .padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            dateFormat.format(Date(depense.date)),
-            style = MaterialTheme.typography.bodySmall,
+            dateStr,
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.weight(0.6f)
+        )
+        Text(
+            if (objet.isBlank()) middleLabel else "$middleLabel - $objet",
+            style = MaterialTheme.typography.labelSmall,
             modifier = Modifier.weight(1f)
         )
         Text(
-            depense.nature,
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.weight(1f)
-        )
-        Text(
-            FormattingUtils.formatCurrencyNoDecimals(depense.montant),
-            style = MaterialTheme.typography.bodySmall
+            "${FormattingUtils.formatNumber(montant)} DT",
+            style = MaterialTheme.typography.labelSmall
         )
     }
 }
+
+@Composable
+private fun DepenseRowWithNature(
+    dateStr: String,
+    middleLabel: String,
+    nature: String,
+    objet: String,
+    montant: Long
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            dateStr,
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.weight(0.55f)
+        )
+        Text(
+            if (objet.isBlank()) middleLabel else "$middleLabel - $objet",
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            nature,
+            style = MaterialTheme.typography.labelSmall,
+            color = paymentModeColor(nature),
+            modifier = Modifier.weight(0.35f)
+        )
+        Text(
+            "${FormattingUtils.formatNumber(montant)} DT",
+            style = MaterialTheme.typography.labelSmall
+        )
+    }
+}
+
+private fun paymentModeColor(nature: String): Color =
+    when (nature.uppercase()) {
+        "CHQ" -> Color(0xFF81C784)
+        "ESP", "ESPC" -> Color(0xFFFFB74D)
+        "VIR", "VIRM" -> Color(0xFF64B5F6)
+        else -> Color(0xFFB0BEC5)
+    }

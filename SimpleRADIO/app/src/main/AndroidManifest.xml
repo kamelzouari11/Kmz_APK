@@ -19,6 +19,7 @@
         android:required="false" />
 
     <application
+        android:name=".SimpleRadioApplication"
         android:allowBackup="true"
         android:banner="@mipmap/ic_launcher"
         android:icon="@mipmap/ic_launcher"

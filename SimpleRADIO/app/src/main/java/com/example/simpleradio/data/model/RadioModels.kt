@@ -23,6 +23,7 @@ data class RadioStation(
     val url: String,
     val url_resolved: String,
     val favicon: String?,
+    val homepage: String? = null,
     val tags: String?,
     val country: String?,
     val bitrate: Int?,

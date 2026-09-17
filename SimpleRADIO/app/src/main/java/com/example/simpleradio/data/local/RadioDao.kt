@@ -21,12 +21,41 @@ interface RadioDao {
 
     // --- WEB RADIOS Favorite Lists ---
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertRadioFavoriteList(list: RadioFavoriteListEntity)
+    suspend fun insertRadioFavoriteList(list: RadioFavoriteListEntity): Long
 
     @Query("SELECT * FROM radio_favorite_lists")
     fun getAllRadioFavoriteLists(): Flow<List<RadioFavoriteListEntity>>
 
     @Delete suspend fun deleteRadioFavoriteList(list: RadioFavoriteListEntity)
+
+    @Query("DELETE FROM radio_favorites") suspend fun deleteAllRadioFavorites()
+
+    @Query("DELETE FROM radio_favorite_lists") suspend fun deleteAllRadioFavoriteLists()
+
+    /**
+     * Replaces the local favorite hierarchy with the already-normalized cloud hierarchy. Keeping
+     * this operation in the DAO makes the destructive part atomic: a failed import cannot leave a
+     * half-imported set of lists behind.
+     */
+    @Transaction
+    suspend fun replaceRadioFavorites(lists: List<Pair<String, List<RadioStationEntity>>>) {
+        deleteAllRadioFavorites()
+        deleteAllRadioFavoriteLists()
+
+        lists.forEach { (name, stations) ->
+            val listId = insertRadioFavoriteList(RadioFavoriteListEntity(name = name)).toInt()
+            insertRadioStations(stations)
+            stations.forEachIndexed { position, station ->
+                addRadioToFavorite(
+                        RadioFavoriteCrossRef(
+                                stationuuid = station.stationuuid,
+                                listId = listId,
+                                position = position
+                        )
+                )
+            }
+        }
+    }
 
     // --- WEB RADIOS Favorite CrossRef ---
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -80,4 +109,14 @@ interface RadioDao {
     """
     )
     suspend fun trimRadioRecents()
+
+    // --- Persistent station-logo cache ---
+    @Query("SELECT * FROM station_logo_cache WHERE stationuuid = :uuid")
+    suspend fun getStationLogoCache(uuid: String): StationLogoCacheEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertStationLogoCache(cache: StationLogoCacheEntity)
+
+    @Query("DELETE FROM station_logo_cache WHERE stationuuid = :uuid")
+    suspend fun deleteStationLogoCache(uuid: String)
 }

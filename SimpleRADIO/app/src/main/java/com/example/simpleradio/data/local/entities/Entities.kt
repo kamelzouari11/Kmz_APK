@@ -10,6 +10,7 @@ data class RadioStationEntity(
         val url: String,
         val url_resolved: String? = null,
         val favicon: String?,
+        val homepage: String? = null,
         val country: String?,
         val tags: String?,
         val bitrate: Int?
@@ -26,3 +27,13 @@ data class RadioFavoriteCrossRef(val stationuuid: String, val listId: Int, val p
 
 @Entity(tableName = "radio_recent")
 data class RadioRecentEntity(@PrimaryKey val stationuuid: String, val timestamp: Long)
+
+@Entity(tableName = "station_logo_cache")
+data class StationLogoCacheEntity(
+        @PrimaryKey val stationuuid: String,
+        val logoUrl: String,
+        val source: String,
+        val width: Int,
+        val height: Int,
+        val checkedAt: Long
+)

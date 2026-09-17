@@ -7,7 +7,6 @@ import com.kmz.taskmanager.data.*
 import com.kmz.taskmanager.util.BackupUtils
 import com.kmz.taskmanager.util.DataManagementHelper
 import com.kmz.taskmanager.util.NotificationHelper
-import com.kmz.taskmanager.util.SmartParser
 import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlinx.coroutines.flow.*
@@ -18,21 +17,6 @@ class TaskViewModel(application: Application) : AndroidViewModel(application) {
 
     val tasks = taskDao.getAllTasks()
     val folders = taskDao.getAllFolders()
-
-    fun addTaskSmart(input: String, folderId: Long) {
-        val (label, dueDate) = SmartParser.parse(input)
-        viewModelScope.launch {
-            val task =
-                    Task(
-                            folderId = folderId,
-                            label = label,
-                            dueDate = dueDate,
-                            priority = Priority.MEDIUM
-                    )
-            val id = taskDao.insertTask(task)
-            NotificationHelper.scheduleTaskAlarm(getApplication(), task.copy(id = id))
-        }
-    }
 
     fun addTask(task: Task) {
         viewModelScope.launch {
@@ -109,36 +93,76 @@ class TaskViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun filterTasks(list: List<Task>, viewType: ViewType, folderId: Long? = null): List<Task> {
+    fun filterTasks(
+        list: List<Task>,
+        viewType: ViewType,
+        folderId: Long? = null,
+        searchQuery: String = ""
+    ): List<Task> {
         val now = LocalDate.now()
+        val trimmedQuery = searchQuery.trim()
         val folderFiltered =
                 if (folderId != null && folderId != 0L) {
                     list.filter { it.folderId == folderId }
                 } else {
                     list
                 }
+        val textFiltered =
+                if (trimmedQuery.isEmpty()) {
+                    folderFiltered
+                } else {
+                    folderFiltered.filter { task ->
+                        task.label.contains(trimmedQuery, ignoreCase = true)
+                    }
+                }
 
         val filtered =
                 when (viewType) {
-                    ViewType.ALL -> folderFiltered
-                    ViewType.TODAY -> folderFiltered.filter { it.dueDate?.toLocalDate() == now }
-                    ViewType.THIS_WEEK ->
-                            folderFiltered.filter {
+                    ViewType.ALL -> textFiltered
+                    ViewType.TODAY ->
+                            textFiltered.filter {
                                 it.dueDate?.toLocalDate()?.let { date ->
-                                    date.isAfter(now) && date.isBefore(now.plusDays(8))
+                                    !date.isAfter(now)
+                                }
+                                        ?: false
+                            }
+                    ViewType.WEEK ->
+                            textFiltered.filter {
+                                it.dueDate?.toLocalDate()?.let { date ->
+                                    date.isAfter(now) && !date.isAfter(now.plusDays(7))
+                                }
+                                        ?: false
+                            }
+                    ViewType.MONTH ->
+                            textFiltered.filter {
+                                it.dueDate?.toLocalDate()?.let { date ->
+                                    date.isAfter(now.plusDays(7)) &&
+                                            !date.isAfter(now.plusMonths(1))
+                                }
+                                        ?: false
+                            }
+                    ViewType.YEAR ->
+                            textFiltered.filter {
+                                it.dueDate?.toLocalDate()?.let { date ->
+                                    date.isAfter(now.plusMonths(1)) &&
+                                            !date.isAfter(now.plusYears(1))
                                 }
                                         ?: false
                             }
                     ViewType.LATER ->
-                            folderFiltered.filter {
+                            textFiltered.filter {
                                 it.dueDate == null ||
-                                        it.dueDate.toLocalDate().isAfter(now.plusDays(7))
+                                        it.dueDate.toLocalDate().isAfter(now.plusYears(1))
                             }
                 }
 
-        return filtered.sortedWith(
-                compareBy<Task> { it.isDone }.thenBy { it.dueDate ?: LocalDateTime.MAX }
-        )
+        return if (viewType == ViewType.ALL) {
+            filtered.sortedBy { it.dueDate ?: LocalDateTime.MAX }
+        } else {
+            filtered.sortedWith(
+                    compareBy<Task> { it.isDone }.thenBy { it.dueDate ?: LocalDateTime.MAX }
+            )
+        }
     }
 
     fun deleteTasks(tasksToDelete: List<Task>) {
@@ -215,6 +239,8 @@ class TaskViewModel(application: Application) : AndroidViewModel(application) {
 enum class ViewType {
     ALL,
     TODAY,
-    THIS_WEEK,
+    WEEK,
+    MONTH,
+    YEAR,
     LATER
 }

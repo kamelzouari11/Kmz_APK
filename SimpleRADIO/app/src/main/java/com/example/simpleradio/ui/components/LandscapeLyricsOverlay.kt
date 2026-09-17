@@ -27,7 +27,8 @@ fun BoxScope.LandscapeLyricsOverlay(
         isTranslating: Boolean,
         translatedLyrics: String?,
         onTranslate: () -> Unit,
-        onCloseLyrics: () -> Unit
+        onCloseLyrics: () -> Unit,
+        onPowerOff: () -> Unit
 ) {
     val closeButtonFocusRequester = remember { FocusRequester() }
 
@@ -74,23 +75,26 @@ fun BoxScope.LandscapeLyricsOverlay(
                                         else MaterialTheme.colorScheme.primary
                         )
                     }
-                    var isCloseFocused by remember { mutableStateOf(false) }
-                    IconButton(
-                            onClick = onCloseLyrics,
-                            modifier =
-                                    Modifier.focusRequester(closeButtonFocusRequester)
-                                            .onFocusChanged { isCloseFocused = it.isFocused }
-                                            .background(
-                                                    if (isCloseFocused) Color.White
-                                                    else Color.Transparent,
-                                                    CircleShape
-                                            )
-                    ) {
-                        Icon(
-                                Icons.Default.Close,
-                                null,
-                                tint = if (isCloseFocused) Color.Black else Color.White
-                        )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        PowerOffButton(onPowerOff = onPowerOff)
+                        var isCloseFocused by remember { mutableStateOf(false) }
+                        IconButton(
+                                onClick = onCloseLyrics,
+                                modifier =
+                                        Modifier.focusRequester(closeButtonFocusRequester)
+                                                .onFocusChanged { isCloseFocused = it.isFocused }
+                                                .background(
+                                                        if (isCloseFocused) Color.White
+                                                        else Color.Transparent,
+                                                        CircleShape
+                                                )
+                        ) {
+                            Icon(
+                                    Icons.Default.Close,
+                                    null,
+                                    tint = if (isCloseFocused) Color.Black else Color.White
+                            )
+                        }
                     }
                 }
 

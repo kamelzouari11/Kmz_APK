@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun LandscapePlayerHeader(
         onBack: () -> Unit,
+        onPowerOff: () -> Unit,
         onLyrics: () -> Unit,
         showLyricsButton: Boolean,
         sleepTimerTimeLeft: Long? = null,
@@ -108,6 +109,8 @@ fun LandscapePlayerHeader(
                 }
             }
         }
+
+        PowerOffButton(onPowerOff = onPowerOff)
 
         // --- CAST BUTTON ---
         CastButton()

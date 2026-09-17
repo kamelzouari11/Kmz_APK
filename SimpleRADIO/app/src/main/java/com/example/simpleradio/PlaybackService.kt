@@ -2,6 +2,7 @@ package com.example.simpleradio
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Bundle
@@ -13,9 +14,15 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.net.HttpURLConnection
+import java.net.URL
+import java.util.concurrent.atomic.AtomicLong
 
 class PlaybackService : MediaSessionService() {
         private var mediaSession: MediaSession? = null
@@ -28,10 +35,11 @@ class PlaybackService : MediaSessionService() {
 
         // Artwork injecté par l'UI (Bluetooth), séparé du flux audio
         private var overrideArtworkData: ByteArray? = null
-        private var overrideArtworkUri: String? = null
         private var overrideTitle: String? = null
         private var overrideArtist: String? = null
         private var overrideAlbum: String? = null
+        private val artworkRequestVersion = AtomicLong(0L)
+        private var artworkDownloadJob: Job? = null
 
         // Player custom avec gestion manuelle des événements
         private var customPlayer: CustomForwardingPlayer? = null
@@ -136,36 +144,49 @@ class PlaybackService : MediaSessionService() {
                                                                 overrideArtist = artist
                                                                 overrideAlbum = album
 
-                                                                serviceScope.launch {
-                                                                        overrideArtworkUri =
-                                                                                artworkUrl
-                                                                        if (artworkUrl != null) {
-                                                                                try {
-                                                                                        val url =
-                                                                                                java.net
-                                                                                                        .URL(
-                                                                                                                artworkUrl
-                                                                                                        )
-                                                                                        overrideArtworkData =
-                                                                                                url.readBytes()
-                                                                                } catch (
-                                                                                        e:
-                                                                                                Exception) {
-                                                                                        overrideArtworkData =
-                                                                                                null
-                                                                                }
-                                                                        } else {
-                                                                                overrideArtworkData =
-                                                                                        null
-                                                                        }
+                                                                val requestVersion =
+                                                                        artworkRequestVersion
+                                                                                .incrementAndGet()
+                                                                artworkDownloadJob?.cancel()
+                                                                overrideArtworkData = null
 
-                                                                        withContext(
-                                                                                Dispatchers.Main
-                                                                        ) {
-                                                                                customPlayer
-                                                                                        ?.notifyMetadataChanged()
-                                                                        }
+                                                                // Publish text immediately. Artwork must never delay
+                                                                // the media session or its notification.
+                                                                serviceScope.launch(
+                                                                        Dispatchers.Main
+                                                                ) {
+                                                                        customPlayer
+                                                                                ?.notifyMetadataChanged()
                                                                 }
+
+                                                                artworkDownloadJob =
+                                                                        serviceScope.launch {
+                                                                                val artworkData =
+                                                                                        artworkUrl
+                                                                                                ?.takeIf {
+                                                                                                        it.isNotBlank()
+                                                                                                }
+                                                                                                ?.let {
+                                                                                                        downloadDecodableArtwork(
+                                                                                                                it
+                                                                                                        )
+                                                                                                }
+                                                                                if (requestVersion !=
+                                                                                                artworkRequestVersion
+                                                                                                        .get()
+                                                                                ) {
+                                                                                        return@launch
+                                                                                }
+                                                                                overrideArtworkData =
+                                                                                        artworkData
+
+                                                                                withContext(
+                                                                                        Dispatchers.Main
+                                                                                ) {
+                                                                                        customPlayer
+                                                                                                ?.notifyMetadataChanged()
+                                                                                }
+                                                                        }
                                                                 return com.google.common.util
                                                                         .concurrent.Futures
                                                                         .immediateFuture(
@@ -273,6 +294,53 @@ class PlaybackService : MediaSessionService() {
                 )
         }
 
+        private suspend fun downloadDecodableArtwork(url: String): ByteArray? {
+                val connection =
+                        try {
+                                URL(url).openConnection() as HttpURLConnection
+                        } catch (_: Exception) {
+                                return null
+                        }
+                connection.instanceFollowRedirects = true
+                connection.connectTimeout = 5_000
+                connection.readTimeout = 5_000
+                connection.setRequestProperty("User-Agent", SimpleRadioApplication.IMAGE_USER_AGENT)
+                connection.setRequestProperty("Accept", "image/jpeg,image/png,image/webp")
+
+                return try {
+                        if (connection.responseCode !in 200..299) return null
+                        val declaredSize = connection.contentLengthLong
+                        if (declaredSize > MAX_ARTWORK_BYTES) return null
+
+                        val output = java.io.ByteArrayOutputStream()
+                        connection.inputStream.use { input ->
+                                val buffer = ByteArray(16_384)
+                                var total = 0
+                                while (true) {
+                                        currentCoroutineContext().ensureActive()
+                                        val count = input.read(buffer)
+                                        if (count <= 0) break
+                                        total += count
+                                        if (total > MAX_ARTWORK_BYTES) return null
+                                        output.write(buffer, 0, count)
+                                }
+                        }
+                        val bytes = output.toByteArray()
+                        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+                        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+                        bytes
+                } catch (_: Exception) {
+                        null
+                } finally {
+                        connection.disconnect()
+                }
+        }
+
+        private companion object {
+                const val MAX_ARTWORK_BYTES = 8 * 1024 * 1024
+        }
+
         // Classe interne pour gérer l'injection de métadonnées et la notification
         @OptIn(UnstableApi::class)
         inner class CustomForwardingPlayer(player: androidx.media3.common.Player) :
@@ -306,12 +374,8 @@ class PlaybackService : MediaSessionService() {
                                 builder.setAlbumTitle(overrideAlbum)
                                 builder.setStation(overrideAlbum)
                         }
-                        if (overrideArtworkUri != null)
-                                try {
-                                        builder.setArtworkUri(
-                                                android.net.Uri.parse(overrideArtworkUri)
-                                        )
-                                } catch (e: Exception) {}
+                        // Never let Media3 redownload the original favicon in an unsupported format.
+                        builder.setArtworkUri(null)
                         if (overrideArtworkData != null)
                                 builder.setArtworkData(
                                         overrideArtworkData,

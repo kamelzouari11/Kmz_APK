@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">MyVolume</string>
+    <string name="overlay_channel_name">Bouton de volume</string>
+    <string name="overlay_notification_title">MyVolume actif</string>
+    <string name="overlay_notification_text">Le bouton de volume flottant est visible</string>
+    <string name="overlay_notification_text_hidden">Le bouton flottant est temporairement masqué</string>
+    <string name="hide">Masquer</string>
+    <string name="show">Afficher</string>
+    <string name="stop">Arrêter</string>
+</resources>

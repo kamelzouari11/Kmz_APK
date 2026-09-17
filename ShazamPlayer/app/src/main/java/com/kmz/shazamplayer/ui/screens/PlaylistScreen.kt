@@ -5,6 +5,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Headphones
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -23,7 +25,11 @@ fun PlaylistScreen(
         tracks: List<Track>,
         selectedIndex: Int,
         isDiscovery: Boolean,
+        isPreparingNewPipePlaylist: Boolean,
+        newPipePlaylistProgress: Int,
+        newPipePlaylistTargetCount: Int,
         onTrackClick: (Int) -> Unit,
+        onOpenInNewPipe: () -> Unit,
         onBack: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
@@ -35,14 +41,39 @@ fun PlaylistScreen(
                 Icon(Icons.Default.ArrowBack, contentDescription = null, tint = Color.White)
             }
             val title = if (isDiscovery) "Mode Découverte" else "Ma Library Shazam"
-            Column(modifier = Modifier.padding(start = 16.dp)) {
+            Column(modifier = Modifier.padding(start = 16.dp).weight(1f)) {
                 Text(title, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                if (isDiscovery) {
+                if (isPreparingNewPipePlaylist) {
+                    Text(
+                            "Préparation NewPipe $newPipePlaylistProgress/$newPipePlaylistTargetCount",
+                            color = Color(0xFFFF4E45),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium
+                    )
+                } else if (isDiscovery) {
                     Text(
                             "Playlist générée par Artiste",
                             color = Color(0xFF00FF88),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+            IconButton(
+                    onClick = onOpenInNewPipe,
+                    enabled = tracks.isNotEmpty() && !isPreparingNewPipePlaylist
+            ) {
+                if (isPreparingNewPipePlaylist) {
+                    CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = Color(0xFFFF4E45),
+                            strokeWidth = 2.dp
+                    )
+                } else {
+                    Icon(
+                            Icons.Default.Headphones,
+                            contentDescription = "Lire la playlist dans NewPipe",
+                            tint = Color(0xFFFF4E45)
                     )
                 }
             }

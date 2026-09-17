@@ -32,6 +32,20 @@ class MainViewModel(
     var currentArtist by mutableStateOf<String?>(null)
     var currentTitle by mutableStateOf<String?>(null)
     var currentArtworkUrl by mutableStateOf<String?>(null)
+    var stationLogoNeedsValidation by mutableStateOf(false)
+        private set
+    var stationLogoIsConfirmed by mutableStateOf(false)
+        private set
+    var stationLogoCandidates by mutableStateOf<List<String>>(emptyList())
+        private set
+    private var stationLogoThumbnailUrls by mutableStateOf<List<String?>>(emptyList())
+    var stationLogoCandidateIndex by mutableIntStateOf(0)
+        private set
+    var stationLogoRefreshTrigger by mutableIntStateOf(0)
+        private set
+
+    val stationLogoCandidatePosition: Int
+        get() = if (stationLogoCandidates.isEmpty()) 0 else stationLogoCandidateIndex + 1
 
     // --- STATE: Filters & Search ---
     var radioCountries by mutableStateOf<List<RadioCountry>>(emptyList())
@@ -224,5 +238,111 @@ class MainViewModel(
 
     fun setSleepTimer(minutes: Int?) {
         sleepTimerTimeLeft = minutes?.let { it * 60 * 1000L }
+    }
+
+    fun getConfirmedStationLogo(stationUuid: String): String? =
+            prefs.getString("confirmed_station_logo_$stationUuid", null)
+
+    fun refreshStationLogoAfterImport() {
+        stationLogoRefreshTrigger++
+    }
+
+    fun setStationLogoResult(
+            url: String?,
+            needsValidation: Boolean,
+            candidates: List<String> = emptyList(),
+            thumbnailUrls: List<String?> = emptyList()
+    ) {
+        currentArtworkUrl = url
+        stationLogoCandidates =
+                candidates.ifEmpty {
+                    url?.takeIf { it.isNotBlank() }?.let(::listOf).orEmpty()
+                }
+        stationLogoCandidateIndex =
+                url?.let(stationLogoCandidates::indexOf)?.takeIf { it >= 0 } ?: 0
+        stationLogoThumbnailUrls = thumbnailUrls
+        stationLogoNeedsValidation = needsValidation && !url.isNullOrBlank()
+        stationLogoIsConfirmed =
+                !url.isNullOrBlank() &&
+                        url == playingRadio?.stationuuid?.let(::getConfirmedStationLogo)
+    }
+
+    fun clearStationLogoValidation() {
+        stationLogoNeedsValidation = false
+        stationLogoIsConfirmed = false
+        stationLogoCandidates = emptyList()
+        stationLogoThumbnailUrls = emptyList()
+        stationLogoCandidateIndex = 0
+    }
+
+    fun useThumbnailForCurrentStationLogo(failedUrl: String) {
+        if (!stationLogoNeedsValidation || currentArtworkUrl != failedUrl) return
+        val thumbnailUrl =
+                stationLogoThumbnailUrls.getOrNull(stationLogoCandidateIndex)
+                        ?.takeIf { it.isNotBlank() && it != failedUrl }
+                        ?: return
+
+        stationLogoCandidates =
+                stationLogoCandidates.toMutableList().also { candidates ->
+                    if (stationLogoCandidateIndex in candidates.indices) {
+                        candidates[stationLogoCandidateIndex] = thumbnailUrl
+                    }
+                }
+        stationLogoThumbnailUrls =
+                stationLogoThumbnailUrls.toMutableList().also { thumbnails ->
+                    if (stationLogoCandidateIndex in thumbnails.indices) {
+                        thumbnails[stationLogoCandidateIndex] = null
+                    }
+                }
+        currentArtworkUrl = thumbnailUrl
+    }
+
+    fun confirmCurrentStationLogo() {
+        val stationUuid = playingRadio?.stationuuid ?: return
+        val logoUrl = currentArtworkUrl?.takeIf { it.isNotBlank() } ?: return
+        if (!stationLogoNeedsValidation) return
+
+        prefs.edit {
+            putString("confirmed_station_logo_$stationUuid", logoUrl)
+        }
+        stationLogoNeedsValidation = false
+        stationLogoIsConfirmed = true
+    }
+
+    fun unconfirmCurrentStationLogo() {
+        val stationUuid = playingRadio?.stationuuid ?: return
+        val logoUrl = currentArtworkUrl?.takeIf { it.isNotBlank() } ?: return
+        if (!stationLogoIsConfirmed) return
+
+        prefs.edit { remove("confirmed_station_logo_$stationUuid") }
+        stationLogoIsConfirmed = false
+        // Keep the image visible so it can immediately be confirmed again or rejected.
+        stationLogoNeedsValidation = true
+    }
+
+    fun rejectCurrentStationLogo() {
+        val stationUuid = playingRadio?.stationuuid ?: return
+        val logoUrl = currentArtworkUrl?.takeIf { it.isNotBlank() } ?: return
+        if (!stationLogoNeedsValidation) return
+
+        prefs.edit {
+            remove("confirmed_station_logo_$stationUuid")
+        }
+        stationLogoIsConfirmed = false
+        val nextIndex =
+                ((stationLogoCandidateIndex + 1) until stationLogoCandidates.size)
+                        .firstOrNull()
+        viewModelScope.launch { radioRepository.invalidateStationLogo(stationUuid) }
+        if (nextIndex != null) {
+            stationLogoCandidateIndex = nextIndex
+            currentArtworkUrl = stationLogoCandidates[nextIndex]
+            stationLogoNeedsValidation = true
+        } else {
+            currentArtworkUrl = null
+            stationLogoNeedsValidation = false
+            stationLogoCandidates = emptyList()
+            stationLogoThumbnailUrls = emptyList()
+            stationLogoCandidateIndex = 0
+        }
     }
 }

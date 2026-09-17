@@ -88,25 +88,7 @@ fun MainHeader(
                                 )
                         }
 
-                        // Bouton Power
-                        var isPowerFocused by remember { mutableStateOf(false) }
-                        IconButton(
-                                onClick = onPowerOff,
-                                modifier =
-                                        Modifier.size(48.dp)
-                                                .onFocusChanged { isPowerFocused = it.isFocused }
-                                                .background(
-                                                        if (isPowerFocused) Color.White
-                                                        else Color.Transparent,
-                                                        CircleShape
-                                                )
-                        ) {
-                                Icon(
-                                        Icons.Default.PowerSettingsNew,
-                                        "Quitter",
-                                        tint = if (isPowerFocused) Color.Red else Color.Red
-                                )
-                        }
+                        PowerOffButton(onPowerOff = onPowerOff)
                 }
 
                 // LIGNE 2: Recent + Refresh + Player (avec texte pour Recent/Refresh)
@@ -219,5 +201,27 @@ fun MainHeader(
                                 }
                         }
                 }
+        }
+}
+
+/** Power-off action shared by browse, player and lyrics screens, with TV focus feedback. */
+@Composable
+fun PowerOffButton(onPowerOff: () -> Unit, modifier: Modifier = Modifier) {
+        var isPowerFocused by remember { mutableStateOf(false) }
+        IconButton(
+                onClick = onPowerOff,
+                modifier =
+                        modifier.size(48.dp)
+                                .onFocusChanged { isPowerFocused = it.isFocused }
+                                .background(
+                                        if (isPowerFocused) Color.White else Color.Transparent,
+                                        CircleShape
+                                )
+        ) {
+                Icon(
+                        Icons.Default.PowerSettingsNew,
+                        "Éteindre et quitter",
+                        tint = Color.Red
+                )
         }
 }

@@ -1,0 +1,12 @@
+<resources>
+    <style name="Theme.MyIPTV" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowBackground">#010306</item>
+        <item name="android:navigationBarColor">#010306</item>
+        <item name="android:statusBarColor">#010306</item>
+        <item name="android:colorAccent">#00D1B2</item>
+    </style>
+</resources>

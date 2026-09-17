@@ -7,5 +7,6 @@ import androidx.room.PrimaryKey
 data class Beneficiaire(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
-    val nom: String
+    val nom: String,
+    val projetId: Long = 0
 )

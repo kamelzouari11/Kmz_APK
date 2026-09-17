@@ -32,5 +32,7 @@ data class Depense(
     val chapitreId: Long,
     val beneficiaireId: Long,
     val montant: Long,
-    val nature: String
+    val nature: String,
+    val objet: String = "",
+    val projetId: Long = 0
 )

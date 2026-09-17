@@ -20,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -31,9 +32,11 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kmz.taskmanager.R
 import com.kmz.taskmanager.data.*
-import com.kmz.taskmanager.util.SmartParser
+import com.kmz.taskmanager.util.NotificationHelper
+import com.kmz.taskmanager.util.UnifiedParser
 import com.kmz.taskmanager.viewmodel.TaskViewModel
 import com.kmz.taskmanager.viewmodel.ViewType
+import androidx.compose.ui.window.DialogProperties
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -49,16 +52,21 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel()) {
         var folderToEdit by remember { mutableStateOf<Folder?>(null) }
         var selectedTaskIds by remember { mutableStateOf(setOf<Long>()) }
         var showMoveTasksDialog by remember { mutableStateOf(false) }
+        var showUploadConfirm by remember { mutableStateOf(false) }
+        var showDownloadConfirm by remember { mutableStateOf(false) }
+        var searchQuery by remember { mutableStateOf("") }
+        var showSearchBar by remember { mutableStateOf(false) }
 
         val allTasks by taskViewModel.tasks.collectAsState(initial = emptyList())
         val filteredTasks =
-                remember(allTasks, selectedView, selectedFolderId) {
-                        taskViewModel.filterTasks(allTasks, selectedView, selectedFolderId)
+                remember(allTasks, selectedView, selectedFolderId, searchQuery) {
+                        taskViewModel.filterTasks(allTasks, selectedView, selectedFolderId, searchQuery)
                 }
 
         val folders by taskViewModel.folders.collectAsState(initial = emptyList())
 
         var taskToEdit by remember { mutableStateOf<Task?>(null) }
+        var taskToQuickPostpone by remember { mutableStateOf<Task?>(null) }
         val context = androidx.compose.ui.platform.LocalContext.current
 
         val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -228,6 +236,54 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel()) {
                                                 }
                                         }
                                 }
+                                HorizontalDivider(
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                        color = Color.White.copy(alpha = 0.15f)
+                                )
+                                NavigationDrawerItem(
+                                        icon = {
+                                                Icon(
+                                                        Icons.Default.MusicNote,
+                                                        contentDescription = null,
+                                                        tint = Secondary
+                                                )
+                                        },
+                                        label = { Text("Sonnerie des alertes") },
+                                        selected = false,
+                                        onClick = {
+                                                scope.launch { drawerState.close() }
+                                                NotificationHelper.openAlertSoundSettings(context)
+                                        },
+                                        shape = RoundedCornerShape(6.dp),
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                        colors =
+                                                NavigationDrawerItemDefaults.colors(
+                                                        unselectedTextColor = Color.White,
+                                                        unselectedContainerColor = Color.Transparent
+                                                )
+                                )
+                                NavigationDrawerItem(
+                                        icon = {
+                                                Icon(
+                                                        Icons.Default.NotificationsActive,
+                                                        contentDescription = null,
+                                                        tint = Secondary
+                                                )
+                                        },
+                                        label = { Text("Alertes plein écran") },
+                                        selected = false,
+                                        onClick = {
+                                                scope.launch { drawerState.close() }
+                                                NotificationHelper.openFullScreenAlertSettings(context)
+                                        },
+                                        shape = RoundedCornerShape(6.dp),
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                        colors =
+                                                NavigationDrawerItemDefaults.colors(
+                                                        unselectedTextColor = Color.White,
+                                                        unselectedContainerColor = Color.Transparent
+                                                )
+                                )
                         }
                 },
                 scrimColor = Color.Black.copy(alpha = 0.5f)
@@ -336,17 +392,7 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel()) {
                                                 } else {
                                                         IconButton(
                                                                 onClick = {
-                                                                        taskViewModel
-                                                                                .backupDataCloud {
-                                                                                        msg ->
-                                                                                        scope
-                                                                                                .launch {
-                                                                                                        snackbarHostState
-                                                                                                                .showSnackbar(
-                                                                                                                        msg
-                                                                                                                )
-                                                                                                }
-                                                                                }
+                                                                        showUploadConfirm = true
                                                                 }
                                                         ) {
                                                                 Icon(
@@ -359,17 +405,7 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel()) {
                                                         Spacer(Modifier.width(6.dp))
                                                         IconButton(
                                                                 onClick = {
-                                                                        taskViewModel
-                                                                                .restoreDataCloud {
-                                                                                        msg ->
-                                                                                        scope
-                                                                                                .launch {
-                                                                                                        snackbarHostState
-                                                                                                                .showSnackbar(
-                                                                                                                        msg
-                                                                                                                )
-                                                                                                }
-                                                                                }
+                                                                        showDownloadConfirm = true
                                                                 }
                                                         ) {
                                                                 Icon(
@@ -416,48 +452,133 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel()) {
                                                                 horizontal = 6.dp,
                                                                 vertical = 4.dp
                                                         ),
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
                                         listOf(
-                                                        ViewType.ALL,
                                                         ViewType.TODAY,
-                                                        ViewType.THIS_WEEK,
-                                                        ViewType.LATER
+                                                        ViewType.WEEK,
+                                                        ViewType.MONTH,
+                                                        ViewType.YEAR,
+                                                        ViewType.LATER,
+                                                        ViewType.ALL
                                                 )
                                                 .forEach { view ->
                                                         val label =
                                                                 when (view) {
                                                                         ViewType.ALL -> "ALL"
-                                                                        ViewType.TODAY -> "TODAY"
-                                                                        ViewType.THIS_WEEK -> "WEEK"
-                                                                        ViewType.LATER -> "LATER"
+                                                                        ViewType.TODAY -> "1D"
+                                                                        ViewType.WEEK -> "1W"
+                                                                        ViewType.MONTH -> "1M"
+                                                                        ViewType.YEAR -> "1Y"
+                                                                        ViewType.LATER -> "AFT"
+                                                                        else -> ""
                                                                 }
-                                                        FilterChip(
-                                                                modifier = Modifier.weight(1f),
-                                                                selected = selectedView == view,
-                                                                onClick = { selectedView = view },
-                                                                label = {
-                                                                        Text(
-                                                                                label,
-                                                                                fontSize = 11.sp,
-                                                                                maxLines = 1
-                                                                        )
-                                                                },
-                                                                colors =
-                                                                        FilterChipDefaults
-                                                                                .filterChipColors(
-                                                                                        selectedContainerColor =
-                                                                                                Secondary,
-                                                                                        selectedLabelColor =
-                                                                                                Color.White,
-                                                                                        containerColor =
-                                                                                                SurfaceVariant,
-                                                                                        labelColor =
-                                                                                                Color.Gray
+                                                        val viewColor = viewTypeColor(view)
+                                                        val isSelected = selectedView == view
+                                                        Box(
+                                                                modifier =
+                                                                        Modifier.weight(1f)
+                                                                                .clip(
+                                                                                        RoundedCornerShape(
+                                                                                                50
+                                                                                        )
+                                                                                )
+                                                                                .background(
+                                                                                        if (isSelected)
+                                                                                                viewColor
+                                                                                        else
+                                                                                                SurfaceVariant
+                                                                                )
+                                                                                .clickable {
+                                                                                        selectedView =
+                                                                                                view
+                                                                                }
+                                                                                .padding(
+                                                                                        vertical =
+                                                                                                6.dp
                                                                                 ),
-                                                                border = null
-                                                        )
+                                                                contentAlignment =
+                                                                        Alignment.Center
+                                                        ) {
+                                                                Text(
+                                                                        label,
+                                                                        fontSize = 12.sp,
+                                                                        maxLines = 1,
+                                                                        color =
+                                                                                if (isSelected)
+                                                                                        Color.Black
+                                                                                else viewColor,
+                                                                        fontWeight =
+                                                                                if (isSelected)
+                                                                                        FontWeight
+                                                                                                .Bold
+                                                                                else
+                                                                                        FontWeight
+                                                                                                .Normal
+                                                                )
+                                                        }
                                                 }
+
+                                        Box(
+                                                modifier =
+                                                        Modifier.width(46.dp)
+                                                                .height(38.dp)
+                                                                .clip(RoundedCornerShape(50))
+                                                                .background(
+                                                                        if (showSearchBar)
+                                                                                Secondary
+                                                                        else
+                                                                                SurfaceVariant
+                                                                )
+                                                                .clickable {
+                                                                        showSearchBar = !showSearchBar
+                                                                        if (!showSearchBar) {
+                                                                                searchQuery = ""
+                                                                        }
+                                                                },
+                                                contentAlignment = Alignment.Center
+                                        ) {
+                                                Icon(
+                                                        Icons.Default.Search,
+                                                        contentDescription = "Recherche",
+                                                        tint = if (showSearchBar) Color.Black else Secondary,
+                                                        modifier = Modifier.size(22.dp)
+                                                )
+                                        }
+                                }
+
+                                if (showSearchBar) {
+                                        OutlinedTextField(
+                                                value = searchQuery,
+                                                onValueChange = { searchQuery = it },
+                                                modifier =
+                                                        Modifier.fillMaxWidth()
+                                                                .padding(
+                                                                        horizontal = 8.dp,
+                                                                        vertical = 4.dp
+                                                                ),
+                                                singleLine = true,
+                                                placeholder = { Text("Recherche: taxe") },
+                                                leadingIcon = {
+                                                        Icon(
+                                                                Icons.Default.Search,
+                                                                contentDescription = null,
+                                                                tint = Secondary
+                                                        )
+                                                },
+                                                colors =
+                                                        OutlinedTextFieldDefaults.colors(
+                                                                focusedBorderColor = Secondary,
+                                                                unfocusedBorderColor = SurfaceVariant,
+                                                                focusedTextColor = Color.White,
+                                                                unfocusedTextColor = Color.White,
+                                                                cursorColor = Secondary,
+                                                                focusedPlaceholderColor = Color.Gray,
+                                                                unfocusedPlaceholderColor = Color.Gray,
+                                                                focusedLeadingIconColor = Secondary,
+                                                                unfocusedLeadingIconColor = Secondary
+                                                        )
+                                        )
                                 }
 
                                 if (filteredTasks.isEmpty()) {
@@ -484,24 +605,34 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel()) {
                                                 groupedTasks.forEach { (date, tasks) ->
                                                         item {
                                                                 val dateText =
-                                                                        date?.format(
-                                                                                DateTimeFormatter
-                                                                                        .ofPattern(
-                                                                                                "EEEE d MMMM",
-                                                                                                java.util
-                                                                                                        .Locale
-                                                                                                        .FRENCH
-                                                                                        )
+                                                                        date?.let {
+                                                                                val pattern =
+                                                                                        if (it.year != java.time.LocalDate.now().year)
+                                                                                                "EEEE d MMMM yyyy"
+                                                                                        else
+                                                                                                "EEEE d MMMM"
+                                                                                it.format(
+                                                                                        DateTimeFormatter
+                                                                                                .ofPattern(
+                                                                                                        pattern,
+                                                                                                        java.util.Locale.FRENCH
+                                                                                                )
+                                                                                )
+                                                                        } ?: "Sans date"
+                                                                val headerColor =
+                                                                        bucketColorForDueDate(
+                                                                                date?.atStartOfDay(),
+                                                                                java.time.LocalDate
+                                                                                        .now()
                                                                         )
-                                                                                ?: "Sans date"
                                                                 Text(
                                                                         text =
                                                                                 dateText
                                                                                         .replaceFirstChar {
                                                                                                 it.uppercase()
                                                                                         },
-                                                                        color = Secondary,
-                                                                        fontSize = 13.sp,
+                                                                        color = headerColor,
+                                                                        fontSize = 11.sp,
                                                                         fontWeight =
                                                                                 FontWeight.Bold,
                                                                         modifier =
@@ -512,9 +643,9 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel()) {
                                                                                                 end =
                                                                                                         16.dp,
                                                                                                 top =
-                                                                                                        16.dp,
+                                                                                                        8.dp,
                                                                                                 bottom =
-                                                                                                        4.dp
+                                                                                                        2.dp
                                                                                         ),
                                                                         textAlign = TextAlign.Center
                                                                 )
@@ -526,7 +657,7 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel()) {
                                                                                 ),
                                                                         thickness = 0.5.dp,
                                                                         color =
-                                                                                Secondary.copy(
+                                                                                headerColor.copy(
                                                                                         alpha = 0.3f
                                                                                 )
                                                                 )
@@ -636,38 +767,8 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel()) {
                                                                                 datePicker.show()
                                                                         },
                                                                         onQuickPostpone = { t ->
-                                                                                t.dueDate?.let {
-                                                                                        taskViewModel
-                                                                                                .postponeTask(
-                                                                                                        t,
-                                                                                                        it.plusDays(
-                                                                                                                1
-                                                                                                        )
-                                                                                                )
-                                                                                }
-                                                                                        ?: run {
-                                                                                                taskViewModel
-                                                                                                        .postponeTask(
-                                                                                                                t,
-                                                                                                                LocalDateTime
-                                                                                                                        .now()
-                                                                                                                        .plusDays(
-                                                                                                                                1
-                                                                                                                        )
-                                                                                                                        .withHour(
-                                                                                                                                9
-                                                                                                                        )
-                                                                                                                        .withMinute(
-                                                                                                                                0
-                                                                                                                        )
-                                                                                                                        .withSecond(
-                                                                                                                                0
-                                                                                                                        )
-                                                                                                                        .withNano(
-                                                                                                                                0
-                                                                                                                        )
-                                                                                                        )
-                                                                                        }
+                                                                                taskToQuickPostpone =
+                                                                                        t
                                                                         }
                                                                 )
                                                         }
@@ -690,7 +791,6 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel()) {
                                 onAdd = {
                                         label,
                                         folderId,
-                                        priority,
                                         alarm,
                                         type,
                                         n,
@@ -705,7 +805,6 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel()) {
                                                         taskToEdit!!.copy(
                                                                 label = label,
                                                                 folderId = folderId,
-                                                                priority = priority,
                                                                 alarmLevel = alarm,
                                                                 type = type,
                                                                 repeatInterval = n,
@@ -723,7 +822,6 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel()) {
                                                                 folderId = folderId,
                                                                 label = label,
                                                                 dueDate = dueDate,
-                                                                priority = priority,
                                                                 alarmLevel = alarm,
                                                                 type = type,
                                                                 repeatInterval = n,
@@ -776,6 +874,119 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel()) {
                                 }
                         )
                 }
+
+                if (showUploadConfirm) {
+                        AlertDialog(
+                                onDismissRequest = { showUploadConfirm = false },
+                                containerColor = SelectedTaskBg,
+                                title = {
+                                        Text(
+                                                "Sauvegarder vers GitHub",
+                                                color = Color.White,
+                                                fontWeight = FontWeight.Bold
+                                        )
+                                },
+                                text = {
+                                        Text(
+                                                "Les données locales seront envoyées vers GitHub et remplaceront la sauvegarde existante.",
+                                                color = Color.Gray
+                                        )
+                                },
+                                confirmButton = {
+                                        Button(
+                                                onClick = {
+                                                        showUploadConfirm = false
+                                                        taskViewModel.backupDataCloud { msg ->
+                                                                scope.launch {
+                                                                        snackbarHostState.showSnackbar(msg)
+                                                                }
+                                                        }
+                                                },
+                                                colors =
+                                                        ButtonDefaults.buttonColors(
+                                                                containerColor = Secondary,
+                                                                contentColor = Color.Black
+                                                        )
+                                        ) { Text("Sauvegarder", fontWeight = FontWeight.Bold) }
+                                },
+                                dismissButton = {
+                                        TextButton(onClick = { showUploadConfirm = false }) {
+                                                Text("Annuler", color = Color.Gray)
+                                        }
+                                }
+                        )
+                }
+
+                if (showDownloadConfirm) {
+                        AlertDialog(
+                                onDismissRequest = { showDownloadConfirm = false },
+                                containerColor = SelectedTaskBg,
+                                title = {
+                                        Text(
+                                                "Restaurer depuis GitHub",
+                                                color = Color.White,
+                                                fontWeight = FontWeight.Bold
+                                        )
+                                },
+                                text = {
+                                        Column {
+                                                Text(
+                                                        "Toutes les données locales seront remplacées par la sauvegarde GitHub.",
+                                                        color = Color.Gray
+                                                )
+                                                Spacer(Modifier.height(6.dp))
+                                                Text(
+                                                        "Cette action est irréversible.",
+                                                        color = Color.Red,
+                                                        fontWeight = FontWeight.Medium
+                                                )
+                                        }
+                                },
+                                confirmButton = {
+                                        Button(
+                                                onClick = {
+                                                        showDownloadConfirm = false
+                                                        taskViewModel.restoreDataCloud { msg ->
+                                                                scope.launch {
+                                                                        snackbarHostState.showSnackbar(msg)
+                                                                }
+                                                        }
+                                                },
+                                                colors =
+                                                        ButtonDefaults.buttonColors(
+                                                                containerColor = Secondary,
+                                                                contentColor = Color.Black
+                                                        )
+                                        ) { Text("Restaurer", fontWeight = FontWeight.Bold) }
+                                },
+                                dismissButton = {
+                                        TextButton(onClick = { showDownloadConfirm = false }) {
+                                                Text("Annuler", color = Color.Gray)
+                                        }
+                                }
+                        )
+                }
+
+                taskToQuickPostpone?.let { task ->
+                        QuickPostponeDialog(
+                                currentDueDate = task.dueDate,
+                                onDismiss = { taskToQuickPostpone = null },
+                                onApply = { input ->
+                                        val newDate = UnifiedParser.parse(input, base = task.dueDate)
+                                        if (newDate != null) {
+                                                taskViewModel.postponeTask(task, newDate)
+                                                taskToQuickPostpone = null
+                                        } else {
+                                                android.widget.Toast.makeText(
+                                                                context,
+                                                                "Format invalide ou date dans le passé",
+                                                                android.widget.Toast.LENGTH_SHORT
+                                                        )
+                                                        .show()
+                                        }
+                                }
+                        )
+                }
         }
 }
 
@@ -808,6 +1019,98 @@ fun MoveTasksDialog(folders: List<Folder>, onDismiss: () -> Unit, onMove: (Long)
         )
 }
 
+fun viewTypeColor(view: ViewType): Color =
+        when (view) {
+                ViewType.ALL -> ViewAllColor
+                ViewType.TODAY -> ViewTodayColor
+                ViewType.WEEK -> ViewWeekColor
+                ViewType.MONTH -> ViewMonthColor
+                ViewType.YEAR -> ViewYearColor
+                ViewType.LATER -> ViewLaterColor
+        }
+
+fun bucketColorForDueDate(dueDate: LocalDateTime?, now: java.time.LocalDate): Color {
+        if (dueDate == null) return ViewLaterColor
+        val date = dueDate.toLocalDate()
+        return when {
+                !date.isAfter(now) -> ViewTodayColor
+                !date.isAfter(now.plusDays(7)) -> ViewWeekColor
+                !date.isAfter(now.plusMonths(1)) -> ViewMonthColor
+                !date.isAfter(now.plusYears(1)) -> ViewYearColor
+                else -> ViewLaterColor
+        }
+}
+
+@Composable
+fun QuickPostponeDialog(
+        currentDueDate: LocalDateTime?,
+        onDismiss: () -> Unit,
+        onApply: (String) -> Unit
+) {
+        var shortcut by remember { mutableStateOf("") }
+        AlertDialog(
+                onDismissRequest = onDismiss,
+                modifier = Modifier.fillMaxWidth(),
+                properties = DialogProperties(usePlatformDefaultWidth = false),
+                containerColor = SelectedTaskBg,
+                title = { Text("Reporter la tâche", color = Color.White) },
+                text = {
+                        Column {
+                                Text(
+                                        "Date libre ou raccourci [p|+][n][h|j|s|m] / [m|-][n][h|j|s|m]",
+                                        color = Color.Gray,
+                                        fontSize = 12.sp
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                        "p2s (+2 sem.)  +3j (+3 jours)  m1j (-1 jour)  -1m (-1 mois)  demain 14h  dans 3 jours",
+                                        color = Color.Gray,
+                                        fontSize = 12.sp
+                                )
+                                Spacer(Modifier.height(12.dp))
+                                TextField(
+                                        value = shortcut,
+                                        onValueChange = { shortcut = it },
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(8.dp),
+                                        colors =
+                                                TextFieldDefaults.colors(
+                                                        focusedContainerColor = InputFieldBg,
+                                                        unfocusedContainerColor = InputFieldBg,
+                                                        focusedTextColor = Color.White,
+                                                        unfocusedTextColor = Color.White,
+                                                        focusedIndicatorColor = Color.Transparent,
+                                                        unfocusedIndicatorColor = Color.Transparent,
+                                                        cursorColor = Secondary
+                                                )
+                                )
+                                if (currentDueDate != null) {
+                                        Spacer(Modifier.height(8.dp))
+                                        Text(
+                                                "Échéance actuelle : " +
+                                                        currentDueDate.format(
+                                                                DateTimeFormatter.ofPattern(
+                                                                        "dd/MM/yyyy HH:mm"
+                                                                )
+                                                        ),
+                                                color = Color.Gray,
+                                                fontSize = 11.sp
+                                        )
+                                }
+                        }
+                },
+                confirmButton = {
+                        TextButton(onClick = { onApply(shortcut) }) {
+                                Text("Valider", color = Secondary)
+                        }
+                },
+                dismissButton = {
+                        TextButton(onClick = onDismiss) { Text("Annuler", color = Color.Gray) }
+                }
+        )
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskItem(
@@ -821,20 +1124,13 @@ fun TaskItem(
         onPostpone: (Task) -> Unit,
         onQuickPostpone: (Task) -> Unit
 ) {
-        val priorityColor =
-                when (task.priority) {
-                        Priority.LOW -> PriorityLow
-                        Priority.MEDIUM -> PriorityMedium
-                        Priority.HIGH -> PriorityHigh
-                }
-
         val isExpired = task.dueDate?.isBefore(now) == true && !task.isDone
 
         val containerColor =
                 when {
                         isSelected -> SelectedTaskBg
                         isExpired -> ExpiredTaskBg
-                        else -> SurfaceVariant
+                        else -> TaskCardBg
                 }
 
         val dismissState =
@@ -866,10 +1162,10 @@ fun TaskItem(
                 Card(
                         modifier =
                                 Modifier.fillMaxWidth()
-                                        .padding(horizontal = 6.dp, vertical = 4.dp)
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
                                         .clickable { onToggle(task) },
                         colors = CardDefaults.cardColors(containerColor = containerColor),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(10.dp),
                         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
                         border =
                                 if (isSelected) BorderStroke(1.dp, Secondary.copy(alpha = 0.5f))
@@ -889,7 +1185,7 @@ fun TaskItem(
                                 }
                                 Row(
                                         modifier =
-                                                Modifier.padding(horizontal = 6.dp, vertical = 6.dp)
+                                                Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
                                                         .fillMaxWidth()
                                                         .height(IntrinsicSize.Min),
                                         verticalAlignment = Alignment.CenterVertically
@@ -903,8 +1199,8 @@ fun TaskItem(
                                                                 text = task.label,
                                                                 color =
                                                                         if (task.isDone) Color.Gray
-                                                                        else priorityColor,
-                                                                fontSize = 15.sp,
+                                                                        else Color.White,
+                                                                fontSize = 14.sp,
                                                                 fontWeight = FontWeight.Medium,
                                                                 textDecoration =
                                                                         if (task.isDone)
@@ -938,7 +1234,7 @@ fun TaskItem(
                                                                                                         .VERY_HIGH
                                                                                 )
                                                                                         Color.Red
-                                                                                else Color.White,
+                                                                                else Color(0xFFFFC107),
                                                                         modifier =
                                                                                 Modifier.size(14.dp)
                                                                 )
@@ -967,37 +1263,14 @@ fun TaskItem(
                                                                                 tint = Color.Gray
                                                                         )
                                                                         Spacer(Modifier.width(4.dp))
-                                                                        val isToday =
-                                                                                task.dueDate
-                                                                                        .toLocalDate() ==
-                                                                                        now.toLocalDate()
-                                                                        val isPast =
-                                                                                task.dueDate
-                                                                                        .isBefore(
-                                                                                                now
-                                                                                        )
-                                                                        val isThisWeek =
-                                                                                task.dueDate
-                                                                                        .isBefore(
-                                                                                                now.plusDays(
-                                                                                                        7
-                                                                                                )
-                                                                                        ) &&
-                                                                                        !isToday
-
                                                                         val dueDateColor =
-                                                                                when {
-                                                                                        task.isDone ->
-                                                                                                Color.Gray
-                                                                                        isPast ->
-                                                                                                Color.Red
-                                                                                        isToday ->
-                                                                                                Secondary
-                                                                                        isThisWeek ->
-                                                                                                Color.White
-                                                                                        else ->
-                                                                                                Color.Gray
-                                                                                }
+                                                                                if (task.isDone)
+                                                                                        Color.Gray
+                                                                                else
+                                                                                        bucketColorForDueDate(
+                                                                                                task.dueDate,
+                                                                                                now.toLocalDate()
+                                                                                        )
 
                                                                         Row(
                                                                                 verticalAlignment =
@@ -1040,7 +1313,7 @@ fun TaskItem(
                                                                                         color =
                                                                                                 dueDateColor,
                                                                                         fontSize =
-                                                                                                12.sp,
+                                                                                                11.sp,
                                                                                         fontWeight =
                                                                                                 FontWeight
                                                                                                         .Medium
@@ -1083,7 +1356,7 @@ fun TaskItem(
                                                                                         text =
                                                                                                 "• $folderName",
                                                                                         color =
-                                                                                                Secondary,
+                                                                                                FolderLabelColor,
                                                                                         fontSize =
                                                                                                 10.sp,
                                                                                         maxLines =
@@ -1110,7 +1383,7 @@ fun TaskItem(
                                                                 IconButton(
                                                                         onClick = { onEdit(task) },
                                                                         modifier =
-                                                                                Modifier.size(24.dp)
+                                                                                Modifier.size(32.dp)
                                                                 ) {
                                                                         Icon(
                                                                                 Icons.Default
@@ -1120,10 +1393,12 @@ fun TaskItem(
                                                                                 tint = Color.Gray,
                                                                                 modifier =
                                                                                         Modifier.size(
-                                                                                                16.dp
+                                                                                                22.dp
                                                                                         )
                                                                         )
                                                                 }
+
+                                                                Spacer(Modifier.width(6.dp))
 
                                                                 IconButton(
                                                                         onClick = {
@@ -1132,16 +1407,16 @@ fun TaskItem(
                                                                                 )
                                                                         },
                                                                         modifier =
-                                                                                Modifier.size(24.dp)
+                                                                                Modifier.size(32.dp)
                                                                 ) {
                                                                         Icon(
                                                                                 Icons.Default.Add,
                                                                                 contentDescription =
-                                                                                        "Reporter +1j",
+                                                                                        "Reporter",
                                                                                 tint = Secondary,
                                                                                 modifier =
                                                                                         Modifier.size(
-                                                                                                16.dp
+                                                                                                22.dp
                                                                                         )
                                                                         )
                                                                 }
@@ -1175,7 +1450,6 @@ fun AddTaskDialog(
                 (
                         String,
                         Long,
-                        Priority,
                         AlarmLevel,
                         TaskType,
                         Int?,
@@ -1186,10 +1460,10 @@ fun AddTaskDialog(
                         RepeatUnit?,
                         LocalDateTime?) -> Unit
 ) {
-        var text by remember { mutableStateOf(task?.label ?: "") }
+        var labelText by remember { mutableStateOf(task?.label ?: "") }
+        var dueDateText by remember { mutableStateOf("") }
         var selectedFolderId by remember { mutableStateOf(task?.folderId ?: initialFolderId) }
-        var priority by remember { mutableStateOf(task?.priority ?: Priority.MEDIUM) }
-        var alarmLevel by remember { mutableStateOf(task?.alarmLevel ?: AlarmLevel.MEDIUM) }
+        var alarmLevel by remember { mutableStateOf(task?.alarmLevel ?: AlarmLevel.HIGH) }
         var taskType by remember { mutableStateOf(task?.type ?: TaskType.ONCE) }
         var nValue by remember { mutableStateOf(task?.repeatInterval?.toString() ?: "1") }
         var repeatUnit by remember { mutableStateOf(task?.repeatUnit ?: RepeatUnit.D) }
@@ -1197,7 +1471,7 @@ fun AddTaskDialog(
         var currentDueDate by remember { mutableStateOf(task?.dueDate) }
 
         var warningInterval by remember {
-                mutableStateOf(task?.warningInterval?.toString() ?: "15")
+                mutableStateOf(task?.warningInterval?.takeIf { it > 0 }?.toString() ?: "")
         }
         var warningUnit by remember { mutableStateOf(task?.warningUnit ?: RepeatUnit.MINUTES) }
         var warningRepeatInterval by remember {
@@ -1209,11 +1483,11 @@ fun AddTaskDialog(
 
         val context = androidx.compose.ui.platform.LocalContext.current
 
-        // Update currentDueDate based on text parsing in real-time
-        LaunchedEffect(text) {
-                if (text.isNotBlank()) {
+        LaunchedEffect(dueDateText) {
+                if (dueDateText.isNotBlank()) {
                         val defaultTime = task?.dueDate?.toLocalTime() ?: LocalTime.of(9, 0)
-                        val (_, parsedDate) = SmartParser.parse(text, defaultTime)
+                        val base = if (task != null) currentDueDate else null
+                        val parsedDate = UnifiedParser.parse(dueDateText, base = base, defaultTime = defaultTime)
                         if (parsedDate != null) {
                                 currentDueDate = parsedDate
                         }
@@ -1222,8 +1496,38 @@ fun AddTaskDialog(
                 }
         }
 
+        var showDiscardDialog by remember { mutableStateOf(false) }
+
+        val hasChanges =
+                if (task == null) labelText.isNotBlank()
+                else
+                        labelText != task.label ||
+                                currentDueDate != task.dueDate ||
+                                alarmLevel != task.alarmLevel ||
+                                taskType != task.type
+
+        val doSave: () -> Unit = {
+                if (labelText.isNotBlank()) {
+                        onAdd(
+                                labelText,
+                                selectedFolderId,
+                                alarmLevel,
+                                taskType,
+                                nValue.toIntOrNull(),
+                                repeatUnit,
+                                warningInterval.toIntOrNull()?.coerceAtLeast(0) ?: 0,
+                                warningUnit,
+                                warningRepeatInterval.toIntOrNull(),
+                                warningRepeatUnit,
+                                currentDueDate
+                        )
+                }
+        }
+
         AlertDialog(
-                onDismissRequest = onDismiss,
+                onDismissRequest = { if (hasChanges) showDiscardDialog = true else onDismiss() },
+                modifier = Modifier.fillMaxWidth(),
+                properties = DialogProperties(usePlatformDefaultWidth = false),
                 title = {
                         Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -1234,39 +1538,18 @@ fun AddTaskDialog(
                                         if (task == null) "Nouvelle Tâche" else "Modifier Tâche",
                                         fontWeight = FontWeight.Bold
                                 )
-                                IconButton(
-                                        onClick = {
-                                                if (text.isNotBlank()) {
-                                                        val (cleanLabel, parsedDate) =
-                                                                SmartParser.parse(text)
-                                                        val finalLabel =
-                                                                if (cleanLabel.isNotBlank())
-                                                                        cleanLabel
-                                                                else text
-                                                        val finalDate = currentDueDate ?: parsedDate
-
-                                                        onAdd(
-                                                                finalLabel,
-                                                                selectedFolderId,
-                                                                priority,
-                                                                alarmLevel,
-                                                                taskType,
-                                                                nValue.toIntOrNull(),
-                                                                repeatUnit,
-                                                                warningInterval.toIntOrNull() ?: 15,
-                                                                warningUnit,
-                                                                warningRepeatInterval.toIntOrNull(),
-                                                                warningRepeatUnit,
-                                                                finalDate
-                                                        )
-                                                }
-                                        }
+                                Box(
+                                        modifier =
+                                                Modifier.clip(RoundedCornerShape(50))
+                                                        .background(Color(0xFF4CAF50))
+                                                        .clickable { doSave() }
+                                                        .padding(horizontal = 16.dp, vertical = 8.dp)
                                 ) {
                                         Icon(
                                                 Icons.Default.Check,
                                                 contentDescription = "Valider",
-                                                tint = Secondary,
-                                                modifier = Modifier.size(26.dp)
+                                                tint = Color.White,
+                                                modifier = Modifier.size(22.dp)
                                         )
                                 }
                         }
@@ -1274,16 +1557,38 @@ fun AddTaskDialog(
                 text = {
                         Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                                 TextField(
-                                        value = text,
-                                        onValueChange = { text = it },
-                                        placeholder = { Text("Ex: RDV à 10h30") },
+                                        value = labelText,
+                                        onValueChange = { labelText = it },
                                         modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(8.dp),
                                         colors =
                                                 TextFieldDefaults.colors(
-                                                        focusedContainerColor = SurfaceVariant,
-                                                        unfocusedContainerColor = SurfaceVariant,
+                                                        focusedContainerColor = InputFieldBg,
+                                                        unfocusedContainerColor = InputFieldBg,
                                                         focusedTextColor = Color.White,
-                                                        unfocusedTextColor = Color.White
+                                                        unfocusedTextColor = Color.White,
+                                                        focusedIndicatorColor = Color.Transparent,
+                                                        unfocusedIndicatorColor = Color.Transparent,
+                                                        cursorColor = Secondary
+                                                )
+                                )
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                TextField(
+                                        value = dueDateText,
+                                        onValueChange = { dueDateText = it },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(8.dp),
+                                        colors =
+                                                TextFieldDefaults.colors(
+                                                        focusedContainerColor = InputFieldBg,
+                                                        unfocusedContainerColor = InputFieldBg,
+                                                        focusedTextColor = Color.White,
+                                                        unfocusedTextColor = Color.White,
+                                                        focusedIndicatorColor = Color.Transparent,
+                                                        unfocusedIndicatorColor = Color.Transparent,
+                                                        cursorColor = Secondary
                                                 )
                                 )
 
@@ -1321,66 +1626,9 @@ fun AddTaskDialog(
 
                                 Row(
                                         modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        horizontalArrangement = Arrangement.End,
                                         verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                        Column {
-                                                Text(
-                                                        "Priorité",
-                                                        fontSize = 12.sp,
-                                                        color = Color.Gray
-                                                )
-                                                Row(modifier = Modifier.padding(top = 6.dp)) {
-                                                        Priority.entries.forEach { p ->
-                                                                val pColor =
-                                                                        when (p) {
-                                                                                Priority.LOW ->
-                                                                                        PriorityLow
-                                                                                Priority.MEDIUM ->
-                                                                                        PriorityMedium
-                                                                                Priority.HIGH ->
-                                                                                        PriorityHigh
-                                                                        }
-                                                                Box(
-                                                                        modifier =
-                                                                                Modifier.padding(
-                                                                                                end =
-                                                                                                        12.dp
-                                                                                        )
-                                                                                        .size(
-                                                                                                if (priority ==
-                                                                                                                p
-                                                                                                )
-                                                                                                        26.dp
-                                                                                                else
-                                                                                                        24.dp
-                                                                                        )
-                                                                                        .background(
-                                                                                                pColor,
-                                                                                                CircleShape
-                                                                                        )
-                                                                                        .border(
-                                                                                                width =
-                                                                                                        if (priority ==
-                                                                                                                        p
-                                                                                                        )
-                                                                                                                2.dp
-                                                                                                        else
-                                                                                                                0.dp,
-                                                                                                color =
-                                                                                                        Color.White,
-                                                                                                shape =
-                                                                                                        CircleShape
-                                                                                        )
-                                                                                        .clickable {
-                                                                                                priority =
-                                                                                                        p
-                                                                                        }
-                                                                )
-                                                        }
-                                                }
-                                        }
-
                                         Column(horizontalAlignment = Alignment.End) {
                                                 Text("Alarme", fontSize = 12.sp, color = Color.Gray)
                                                 Row(modifier = Modifier.padding(top = 6.dp)) {
@@ -1446,12 +1694,14 @@ fun AddTaskDialog(
                                                                                         contentDescription =
                                                                                                 null,
                                                                                         tint =
-                                                                                                if (alarmLevel ==
-                                                                                                                level
-                                                                                                )
-                                                                                                        Secondary
-                                                                                                else
-                                                                                                        Color.Gray,
+                                                                                                when (level) {
+                                                                                                        AlarmLevel.MEDIUM ->
+                                                                                                                if (alarmLevel == level) Color.Gray else Color.Gray.copy(alpha = 0.35f)
+                                                                                                        AlarmLevel.HIGH ->
+                                                                                                                if (alarmLevel == level) Color(0xFFFFC107) else Color(0xFFFFC107).copy(alpha = 0.35f)
+                                                                                                        AlarmLevel.VERY_HIGH ->
+                                                                                                                if (alarmLevel == level) Color.Red else Color.Red.copy(alpha = 0.35f)
+                                                                                                },
                                                                                         modifier =
                                                                                                 Modifier.size(
                                                                                                         size
@@ -1611,13 +1861,18 @@ fun AddTaskDialog(
                                                         colors =
                                                                 TextFieldDefaults.colors(
                                                                         focusedContainerColor =
-                                                                                SurfaceVariant,
+                                                                                InputFieldBg,
                                                                         unfocusedContainerColor =
-                                                                                SurfaceVariant,
+                                                                                InputFieldBg,
                                                                         focusedTextColor =
                                                                                 Color.White,
                                                                         unfocusedTextColor =
-                                                                                Color.White
+                                                                                Color.White,
+                                                                        focusedIndicatorColor =
+                                                                                Color.Transparent,
+                                                                        unfocusedIndicatorColor =
+                                                                                Color.Transparent,
+                                                                        cursorColor = Secondary
                                                                 )
                                                 )
                                                 Spacer(Modifier.width(6.dp))
@@ -1651,11 +1906,16 @@ fun AddTaskDialog(
                                                 colors =
                                                         TextFieldDefaults.colors(
                                                                 focusedContainerColor =
-                                                                        SurfaceVariant,
+                                                                        InputFieldBg,
                                                                 unfocusedContainerColor =
-                                                                        SurfaceVariant,
+                                                                        InputFieldBg,
                                                                 focusedTextColor = Color.White,
-                                                                unfocusedTextColor = Color.White
+                                                                unfocusedTextColor = Color.White,
+                                                                focusedIndicatorColor =
+                                                                        Color.Transparent,
+                                                                unfocusedIndicatorColor =
+                                                                        Color.Transparent,
+                                                                cursorColor = Secondary
                                                         )
                                         )
                                         Spacer(Modifier.width(6.dp))
@@ -1676,7 +1936,6 @@ fun AddTaskDialog(
                                                 value = warningRepeatInterval,
                                                 onValueChange = { warningRepeatInterval = it },
                                                 modifier = Modifier.width(70.dp),
-                                                placeholder = { Text("0", fontSize = 12.sp) },
                                                 keyboardOptions =
                                                         androidx.compose.foundation.text
                                                                 .KeyboardOptions(
@@ -1689,11 +1948,16 @@ fun AddTaskDialog(
                                                 colors =
                                                         TextFieldDefaults.colors(
                                                                 focusedContainerColor =
-                                                                        SurfaceVariant,
+                                                                        InputFieldBg,
                                                                 unfocusedContainerColor =
-                                                                        SurfaceVariant,
+                                                                        InputFieldBg,
                                                                 focusedTextColor = Color.White,
-                                                                unfocusedTextColor = Color.White
+                                                                unfocusedTextColor = Color.White,
+                                                                focusedIndicatorColor =
+                                                                        Color.Transparent,
+                                                                unfocusedIndicatorColor =
+                                                                        Color.Transparent,
+                                                                cursorColor = Secondary
                                                         )
                                         )
                                         Spacer(Modifier.width(6.dp))
@@ -1710,6 +1974,35 @@ fun AddTaskDialog(
                 titleContentColor = Color.White,
                 textContentColor = Color.White
         )
+
+        if (showDiscardDialog) {
+                AlertDialog(
+                        onDismissRequest = { showDiscardDialog = false },
+                        containerColor = SelectedTaskBg,
+                        title = { Text("Modifications non sauvegardées", color = Color.White) },
+                        text = {
+                                Text("Sauvegarder avant de quitter ?", color = Color.Gray)
+                        },
+                        confirmButton = {
+                                Button(
+                                        onClick = { doSave() },
+                                        colors =
+                                                ButtonDefaults.buttonColors(
+                                                        containerColor = Secondary,
+                                                        contentColor = Color.Black
+                                                )
+                                ) { Text("Sauvegarder", fontWeight = FontWeight.Bold) }
+                        },
+                        dismissButton = {
+                                TextButton(
+                                        onClick = {
+                                                showDiscardDialog = false
+                                                onDismiss()
+                                        }
+                                ) { Text("Ignorer", color = Color.Gray) }
+                        }
+                )
+        }
 }
 
 @Composable
@@ -1763,14 +2056,17 @@ fun AddFolderDialog(folder: Folder? = null, onDismiss: () -> Unit, onAdd: (Strin
                         TextField(
                                 value = text,
                                 onValueChange = { text = it },
-                                placeholder = { Text("Nom du dossier") },
                                 modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(8.dp),
                                 colors =
                                         TextFieldDefaults.colors(
-                                                focusedContainerColor = SurfaceVariant,
-                                                unfocusedContainerColor = SurfaceVariant,
+                                                focusedContainerColor = InputFieldBg,
+                                                unfocusedContainerColor = InputFieldBg,
                                                 focusedTextColor = Color.White,
-                                                unfocusedTextColor = Color.White
+                                                unfocusedTextColor = Color.White,
+                                                focusedIndicatorColor = Color.Transparent,
+                                                unfocusedIndicatorColor = Color.Transparent,
+                                                cursorColor = Secondary
                                         )
                         )
                 },

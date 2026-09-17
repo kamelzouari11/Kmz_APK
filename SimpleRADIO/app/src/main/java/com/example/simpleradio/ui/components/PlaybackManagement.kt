@@ -76,10 +76,57 @@ fun PlaybackManagement(
         onDispose { exoPlayer?.removeListener(listener) }
     }
 
-    // 4. Fetch Artwork (Cover image)
-    LaunchedEffect(viewModel.currentArtist, viewModel.currentTitle) {
-        viewModel.currentArtworkUrl =
-                MetadataHelper.fetchArtwork(viewModel.currentArtist, viewModel.currentTitle)
+    // 4. Resolve one image: try both metadata orders, then fall back to the station logo.
+    LaunchedEffect(
+            viewModel.playingRadio?.stationuuid,
+            viewModel.currentArtist,
+            viewModel.currentTitle,
+            viewModel.stationLogoRefreshTrigger
+    ) {
+        val radio = viewModel.playingRadio
+        if (radio == null) {
+            viewModel.setStationLogoResult(null, false)
+            return@LaunchedEffect
+        }
+
+        viewModel.clearStationLogoValidation()
+        viewModel.currentArtworkUrl = null
+        val hasTrackMetadata =
+                !viewModel.currentArtist.isNullOrBlank() &&
+                        !viewModel.currentTitle.isNullOrBlank()
+
+        val trackCover =
+                if (hasTrackMetadata) {
+                    MetadataHelper.fetchCover(viewModel.currentArtist, viewModel.currentTitle)
+                            ?: MetadataHelper.fetchCover(
+                                    viewModel.currentTitle,
+                                    viewModel.currentArtist
+                            )
+                } else {
+                    null
+                }
+
+        if (trackCover != null) {
+            viewModel.currentArtworkUrl = trackCover
+        } else {
+            val logo =
+                    radioRepository.findStationLogo(
+                            stationUuid = radio.stationuuid,
+                            name = radio.name,
+                            country = radio.country,
+                            streamUrl = radio.url,
+                            homepage = radio.homepage,
+                            fallback = radio.favicon,
+                            confirmedLogo =
+                                    viewModel.getConfirmedStationLogo(radio.stationuuid)
+                    )
+            viewModel.setStationLogoResult(
+                    logo.url,
+                    logo.needsValidation,
+                    logo.candidates,
+                    logo.thumbnailUrls
+            )
+        }
     }
 
     // 5. Global Synchronization (Chromecast & System Media Session)

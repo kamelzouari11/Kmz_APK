@@ -73,11 +73,16 @@ class MainActivity : AppCompatActivity() {
 fun MainScreen(viewModel: MainViewModel, radioRepository: RadioRepository, lrcLibApi: LrcLibApi) {
         val scope = rememberCoroutineScope()
         val context = LocalContext.current
+        val prefs = context.getSharedPreferences("SimpleRadioPrefs", Context.MODE_PRIVATE)
 
         // --- Sauvegarde/Restauration via Helper ---
-        val dataManagement = rememberDataManagement(radioRepository)
+        val dataManagement =
+                rememberDataManagement(
+                        radioRepository = radioRepository,
+                        prefs = prefs,
+                        onImportApplied = viewModel::refreshStationLogoAfterImport
+                )
 
-        val prefs = context.getSharedPreferences("SimpleRadioPrefs", Context.MODE_PRIVATE)
         val resultsListState = rememberLazyListState()
         val listFocusRequester = remember { FocusRequester() }
 
@@ -86,6 +91,13 @@ fun MainScreen(viewModel: MainViewModel, radioRepository: RadioRepository, lrcLi
         val exoPlayer = rememberRadioPlayer(context, viewModel, radioRepository, prefs)
         val (castHelper, castSession) = rememberCastManagement(context, viewModel, exoPlayer)
         val upnpManager = rememberUpnpManagement(context, viewModel)
+        val powerOff: () -> Unit = {
+                try {
+                        exoPlayer?.stop()
+                } catch (_: Exception) {}
+                context.stopService(Intent(context, PlaybackService::class.java))
+                (context as? Activity)?.finish()
+        }
 
         PlaybackManagement(
                 viewModel,
@@ -202,15 +214,7 @@ fun MainScreen(viewModel: MainViewModel, radioRepository: RadioRepository, lrcLi
                                                                 dataManagement.importFavorites()
                                                         },
                                                         onPowerOff = {
-                                                                exoPlayer?.stop()
-                                                                context.stopService(
-                                                                        Intent(
-                                                                                context,
-                                                                                PlaybackService::class
-                                                                                        .java
-                                                                        )
-                                                                )
-                                                                (context as? Activity)?.finish()
+                                                                powerOff()
                                                         },
                                                         onRecentClick = {
                                                                 viewModel.onRecentClick()
@@ -385,6 +389,7 @@ fun MainScreen(viewModel: MainViewModel, radioRepository: RadioRepository, lrcLi
                                 VideoPlayerView(
                                         exoPlayer = exoPlayer!!,
                                         onBack = { viewModel.isFullScreenPlayer = false },
+                                        onPowerOff = powerOff,
                                         radioStation = viewModel.playingRadio,
                                         radioList = viewModel.navRadioList,
                                         lrcLibApi = lrcLibApi,
@@ -392,6 +397,23 @@ fun MainScreen(viewModel: MainViewModel, radioRepository: RadioRepository, lrcLi
                                         artist = viewModel.currentArtist,
                                         title = viewModel.currentTitle,
                                         artworkUrl = viewModel.currentArtworkUrl,
+                                        showLogoValidation =
+                                                viewModel.stationLogoNeedsValidation,
+                                        logoIsConfirmed = viewModel.stationLogoIsConfirmed,
+                                        logoCandidatePosition =
+                                                viewModel.stationLogoCandidatePosition,
+                                        logoCandidateCount =
+                                                viewModel.stationLogoCandidates.size,
+                                        onArtworkLoadError = { failedUrl ->
+                                                viewModel.useThumbnailForCurrentStationLogo(
+                                                        failedUrl
+                                                )
+                                        },
+                                        onConfirmLogo = { viewModel.confirmCurrentStationLogo() },
+                                        onRejectLogo = { viewModel.rejectCurrentStationLogo() },
+                                        onUnconfirmLogo = {
+                                                viewModel.unconfirmCurrentStationLogo()
+                                        },
                                         sleepTimerTimeLeft = viewModel.sleepTimerTimeLeft,
                                         onSetSleepTimer = { mins -> viewModel.setSleepTimer(mins) },
                                         showLyrics = showLyricsGlobal,

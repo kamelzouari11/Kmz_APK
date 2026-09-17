@@ -3,47 +3,98 @@ package fr.kmz.projects.utils
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import fr.kmz.projects.data.model.Beneficiaire
-import fr.kmz.projects.data.model.Chapitre
-import fr.kmz.projects.data.model.Depense
+import fr.kmz.projects.data.model.Projet
 
 object CsvManager {
 
-    private const val HEADER = "Date,Chapitre,Beneficiaire,Montant,Nature"
+    private const val HEADER = "Type,Projet,Date,Chapitre,Beneficiaire,Montant,Nature,Objet"
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
 
-    fun exportToCsv(depenses: List<DepenseWithNames>): String {
+    fun exportToCsv(data: GithubBackupData): String {
         val lines = mutableListOf<String>()
         lines.add(HEADER)
 
-        for (depense in depenses) {
+        data.projets.forEach { projet ->
+            lines.add("PROJET,${escapeCsv(projet.nom)},,,,,,")
+        }
+
+        data.chapitres.forEach { chapitre ->
+            lines.add("CHAPITRE,${escapeCsv(chapitre.projetNom)},,${escapeCsv(chapitre.nom)},,,,")
+        }
+
+        data.beneficiaires.forEach { beneficiaire ->
+            lines.add("BENEFICIAIRE,${escapeCsv(beneficiaire.projetNom)},,,${escapeCsv(beneficiaire.nom)},,,")
+        }
+
+        for (depense in data.depenses) {
+            val projet = escapeCsv(depense.projetNom)
             val date = dateFormat.format(Date(depense.date))
             val chapitre = escapeCsv(depense.chapitreNom)
             val beneficiaire = escapeCsv(depense.beneficiaireNom)
             val montant = depense.montant
             val nature = escapeCsv(depense.nature)
-            lines.add("$date,$chapitre,$beneficiaire,$montant,$nature")
+            val objet = escapeCsv(depense.objet)
+            lines.add("DEPENSE,$projet,$date,$chapitre,$beneficiaire,$montant,$nature,$objet")
         }
         return lines.joinToString("\n")
     }
 
     fun parseCsv(csvContent: String): ParsedData {
-        val chapitresMap = mutableMapOf<String, Chapitre>()
-        val beneficiairesMap = mutableMapOf<String, Beneficiaire>()
-        val depenses = mutableListOf<Depense>()
+        val projetsSet = mutableSetOf<String>()
+        val chapitresSet = mutableSetOf<String>()
+        val beneficiairesSet = mutableSetOf<String>()
+        val depenses = mutableListOf<ParsedDepense>()
 
         val lines = csvContent.lines().filter { it.isNotBlank() }
-        if (lines.isEmpty()) return ParsedData(emptyList(), emptyList(), emptyList())
+        if (lines.isEmpty()) return ParsedData(emptyList(), emptyList(), emptyList(), emptyList())
 
-        for (i in 1 until lines.size) {
+        val header = smartSplit(lines.first()).map { it.trim().unescapeCsv().lowercase() }
+        val hasTypeColumn = header.firstOrNull() in listOf("type", "ligne", "rowtype")
+        val hasProjetColumn = hasTypeColumn || header.firstOrNull() in listOf("projet", "project")
+
+        lineLoop@ for (i in 1 until lines.size) {
             val line = lines[i]
             val parts = smartSplit(line)
-            if (parts.size >= 5) {
-                val dateStr = parts[0].trim()
-                val chapitreNom = parts[1].trim().unescapeCsv()
-                val beneficiaireNom = parts[2].trim().unescapeCsv()
-                val montantStr = parts[3].trim()
-                val nature = parts[4].trim().unescapeCsv()
+            val rowType = if (hasTypeColumn) parts.getOrNull(0)?.trim()?.unescapeCsv()?.uppercase() else "DEPENSE"
+            val typeOffset = if (hasTypeColumn) 1 else 0
+            val minColumns = if (hasProjetColumn) 6 else 5
+            if (parts.size >= minColumns + typeOffset) {
+                val offset = typeOffset + if (hasProjetColumn) 1 else 0
+                val projetNom = if (hasProjetColumn) {
+                    parts[typeOffset].trim().unescapeCsv().ifBlank { DEFAULT_PROJECT_NAME }
+                } else {
+                    DEFAULT_PROJECT_NAME
+                }
+
+                when (rowType) {
+                    "PROJET" -> {
+                        projetsSet.add(projetNom)
+                        continue@lineLoop
+                    }
+                    "CHAPITRE" -> {
+                        val chapitreNom = parts.getOrNull(offset + 1)?.trim()?.unescapeCsv().orEmpty()
+                        if (chapitreNom.isNotBlank()) {
+                            projetsSet.add(projetNom)
+                            chapitresSet.add("$projetNom\u0000$chapitreNom")
+                        }
+                        continue@lineLoop
+                    }
+                    "BENEFICIAIRE" -> {
+                        val beneficiaireNom = parts.getOrNull(offset + 2)?.trim()?.unescapeCsv().orEmpty()
+                        if (beneficiaireNom.isNotBlank()) {
+                            projetsSet.add(projetNom)
+                            beneficiairesSet.add("$projetNom\u0000$beneficiaireNom")
+                        }
+                        continue@lineLoop
+                    }
+                }
+
+                val dateStr = parts[offset].trim()
+                val chapitreNom = parts[offset + 1].trim().unescapeCsv()
+                val beneficiaireNom = parts[offset + 2].trim().unescapeCsv()
+                val montantStr = parts[offset + 3].trim()
+                val nature = parts[offset + 4].trim().unescapeCsv()
+                val objet = parts.getOrNull(offset + 5)?.trim()?.unescapeCsv() ?: ""
 
                 if (dateStr.isNotBlank() && chapitreNom.isNotBlank() && beneficiaireNom.isNotBlank()) {
                     val date = try {
@@ -53,24 +104,19 @@ object CsvManager {
                     }
                     val montant = montantStr.toLongOrNull() ?: 0L
 
-                    // Create or reuse chapitre
-                    val chapitre = chapitresMap.getOrPut(chapitreNom) {
-                        Chapitre(nom = chapitreNom)
-                    }
+                    projetsSet.add(projetNom)
+                    chapitresSet.add("$projetNom\u0000$chapitreNom")
+                    beneficiairesSet.add("$projetNom\u0000$beneficiaireNom")
 
-                    // Create or reuse beneficiaire
-                    val beneficiaire = beneficiairesMap.getOrPut(beneficiaireNom) {
-                        Beneficiaire(nom = beneficiaireNom)
-                    }
-
-                    // Create depense (IDs will be reassigned by Room on insert)
                     depenses.add(
-                        Depense(
+                        ParsedDepense(
+                            projetNom = projetNom,
                             date = date,
-                            chapitreId = chapitre.id,
-                            beneficiaireId = beneficiaire.id,
+                            chapitreNom = chapitreNom,
+                            beneficiaireNom = beneficiaireNom,
                             montant = montant,
-                            nature = nature
+                            nature = nature,
+                            objet = objet
                         )
                     )
                 }
@@ -78,8 +124,15 @@ object CsvManager {
         }
 
         return ParsedData(
-            chapitres = chapitresMap.values.toList(),
-            beneficiaires = beneficiairesMap.values.toList(),
+            projets = projetsSet.map { Projet(nom = it) },
+            chapitres = chapitresSet.map {
+                val parts = it.split("\u0000", limit = 2)
+                ParsedChapitre(projetNom = parts[0], nom = parts.getOrElse(1) { "" })
+            },
+            beneficiaires = beneficiairesSet.map {
+                val parts = it.split("\u0000", limit = 2)
+                ParsedBeneficiaire(projetNom = parts[0], nom = parts.getOrElse(1) { "" })
+            },
             depenses = depenses
         )
     }
@@ -126,16 +179,58 @@ object CsvManager {
     }
 }
 
+data class GithubBackupData(
+    val projets: List<Projet>,
+    val chapitres: List<ChapitreWithProject>,
+    val beneficiaires: List<BeneficiaireWithProject>,
+    val depenses: List<DepenseWithNames>
+)
+
+data class ChapitreWithProject(
+    val projetNom: String,
+    val nom: String
+)
+
+data class BeneficiaireWithProject(
+    val projetNom: String,
+    val nom: String
+)
+
 data class DepenseWithNames(
+    val projetNom: String,
     val date: Long,
     val chapitreNom: String,
     val beneficiaireNom: String,
     val montant: Long,
-    val nature: String
+    val nature: String,
+    val objet: String
+)
+
+data class ParsedDepense(
+    val projetNom: String,
+    val date: Long,
+    val chapitreNom: String,
+    val beneficiaireNom: String,
+    val montant: Long,
+    val nature: String,
+    val objet: String
 )
 
 data class ParsedData(
-    val chapitres: List<Chapitre>,
-    val beneficiaires: List<Beneficiaire>,
-    val depenses: List<Depense>
+    val projets: List<Projet>,
+    val chapitres: List<ParsedChapitre>,
+    val beneficiaires: List<ParsedBeneficiaire>,
+    val depenses: List<ParsedDepense>
 )
+
+data class ParsedChapitre(
+    val projetNom: String,
+    val nom: String
+)
+
+data class ParsedBeneficiaire(
+    val projetNom: String,
+    val nom: String
+)
+
+private const val DEFAULT_PROJECT_NAME = "Projet par défaut"

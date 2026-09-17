@@ -35,11 +35,15 @@ fun FullScreenPlayer(
         duration: Long,
         isDiscovery: Boolean,
         isUsingYouTube: Boolean,
+        isUsingNewPipe: Boolean,
         youtubeVideoId: String?,
         youtubeChannel: String?,
         youtubeCommand: YouTubePlayerCommand?,
         isTrackLoading: Boolean,
         playbackError: String?,
+        isPreparingNewPipePlaylist: Boolean,
+        newPipePlaylistProgress: Int,
+        newPipePlaylistTargetCount: Int,
         onClose: () -> Unit,
         onTogglePlay: () -> Unit,
         onPrevious: () -> Unit,
@@ -47,6 +51,7 @@ fun FullScreenPlayer(
         onShuffleToggle: () -> Unit,
         onRepeatToggle: () -> Unit,
         onCycleStream: () -> Unit,
+        onOpenInNewPipe: () -> Unit,
         onSeek: (Long) -> Unit,
         onArtistRadio: () -> Unit,
         isSearchingPlaylists: Boolean,
@@ -71,7 +76,7 @@ fun FullScreenPlayer(
                     modifier = Modifier.size(200.dp),
                     contentAlignment = Alignment.Center
             ) {
-                if (youtubeVideoId != null) {
+                if (isUsingYouTube && youtubeVideoId != null) {
                     YouTubePlayer(
                             videoId = youtubeVideoId,
                             command = youtubeCommand,
@@ -88,7 +93,7 @@ fun FullScreenPlayer(
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
                     )
-                    if (isTrackLoading || playbackError != null || isUsingYouTube) {
+                    if (isTrackLoading || playbackError != null || isUsingYouTube || isUsingNewPipe) {
                         Box(
                                 modifier =
                                         Modifier.fillMaxSize()
@@ -101,8 +106,11 @@ fun FullScreenPlayer(
                                             CircularProgressIndicator(color = Color.White)
                                             Spacer(modifier = Modifier.height(8.dp))
                                             Text(
-                                                    if (isUsingYouTube) "Recherche YouTube…"
-                                                    else "Recherche SoundCloud…",
+                                                    when {
+                                                        isUsingNewPipe -> "Recherche NewPipe…"
+                                                        isUsingYouTube -> "Recherche YouTube…"
+                                                        else -> "Recherche SoundCloud…"
+                                                    },
                                                     color = Color.White,
                                                     fontSize = 12.sp
                                             )
@@ -263,6 +271,38 @@ fun FullScreenPlayer(
             ) {
                 Text(formatTime(currentPosition), color = Color.Gray, fontSize = 11.sp)
                 Text(formatTime(duration), color = Color.Gray, fontSize = 11.sp)
+            }
+
+            OutlinedButton(
+                    onClick = onOpenInNewPipe,
+                    enabled = !isPreparingNewPipePlaylist,
+                    modifier = Modifier.fillMaxWidth().height(42.dp),
+                    colors =
+                            ButtonDefaults.outlinedButtonColors(
+                                    contentColor = Color(0xFFFF4E45),
+                                    disabledContentColor = Color(0xFFFF4E45).copy(alpha = 0.7f)
+                            )
+            ) {
+                if (isPreparingNewPipePlaylist) {
+                    CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            color = Color(0xFFFF4E45),
+                            strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                            "Préparation $newPipePlaylistProgress/$newPipePlaylistTargetCount",
+                            fontSize = 12.sp
+                    )
+                } else {
+                    Icon(
+                            Icons.Default.Headphones,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Lire la playlist dans NewPipe", fontSize = 12.sp)
+                }
             }
 
             // Contrôles

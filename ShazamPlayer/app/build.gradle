@@ -1,6 +1,6 @@
 plugins {
     id 'com.android.application'
-    id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
 }
 
 def localProperties = new Properties()
@@ -40,15 +40,9 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = '17'
-    }
     buildFeatures {
         compose = true
         buildConfig = true
-    }
-    composeOptions {
-        kotlinCompilerExtensionVersion = '1.5.8'
     }
     packagingOptions {
         resources {
@@ -74,6 +68,7 @@ dependencies {
     implementation 'androidx.media3:media3-exoplayer:1.2.1'
     implementation 'androidx.media3:media3-ui:1.2.1'
     implementation 'androidx.media3:media3-session:1.2.1'
+    implementation 'androidx.media:media:1.7.0'
 
     // Network & JSON
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'

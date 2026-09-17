@@ -13,7 +13,11 @@ fun RadioStationEntity.toMediaItem(): MediaItem {
             MediaMetadata.Builder()
                     .setStation(name)
                     .setAlbumTitle(name)
-                    .setArtworkUri(favicon?.toUri())
+                    .setArtworkUri(favicon?.takeIf { it.isNotBlank() }?.toUri())
                     .build()
-    return MediaItem.Builder().setUri(url).setMediaId(stationuuid).setMediaMetadata(meta).build()
+    return MediaItem.Builder()
+            .setUri(url.trim())
+            .setMediaId(stationuuid)
+            .setMediaMetadata(meta)
+            .build()
 }

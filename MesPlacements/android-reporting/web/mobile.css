@@ -1,0 +1,64 @@
+:root { font-family: system-ui, -apple-system, sans-serif; color: #223f35; background: #f3f6f3; font-synthesis: none; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+[hidden] { display: none !important; }
+#app { max-width: 1600px; margin: auto; padding: 18px max(16px, env(safe-area-inset-right)) 34px max(16px, env(safe-area-inset-left)); }
+button, input, select { font: inherit; }
+button { cursor: pointer; }
+button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 3px solid #d39c38; outline-offset: 2px; }
+.mobile-header, .source-heading, .connection-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.mobile-header { padding-bottom: 18px; }
+.mobile-header h1 { font-size: 25px; margin: 6px 0 0; }
+.mobile-header button, .connection button { min-height: 44px; padding: 10px 14px; border: 1px solid #bfd2c6; border-radius: 8px; color: #245940; background: #fff; font-weight: 600; }
+.connection { padding: 18px; background: white; border: 1px solid #dce5de; border-radius: 12px; }
+.connection h2 { margin: 0; font-size: 18px; }
+.connection p { font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.readonly-label { padding: 5px 9px; background: #eef5ef; border-radius: 20px; font-size: 11px; white-space: nowrap; }
+#unlock-form label { display: block; margin: 16px 0 8px; font-size: 14px; font-weight: 600; }
+.unlock-fields { display: flex; gap: 10px; }
+.unlock-fields input { min-width: 0; flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #b9cdc0; font-size: 16px; }
+.connection #sync, .connection #refresh { color: white; background: #267357; border-color: #267357; }
+.connection-actions { flex-wrap: wrap; justify-content: flex-start; margin-top: 12px; }
+#connection-status { margin-bottom: 0; padding: 10px 12px; border-radius: 7px; background: #f0f4f7; color: #354f67; }
+#connection-status[data-kind="success"] { background: #e9f5ec; color: #245737; }
+#connection-status[data-kind="error"] { background: #fff0ed; color: #8b3528; }
+#mobile-message { position: sticky; bottom: 8px; padding: 14px; border: 1px solid #92bca0; border-radius: 8px; background: #e5f5ea; font-weight: 600; z-index: 5; }
+.report-heading { margin: 26px 0 18px; }
+.report-heading h2 { font-size: 24px; }
+.report-actions button { min-height: 48px; font-size: 14px; border-radius: 8px; }
+.report-filters { padding: 16px; gap: 18px; }
+.report-filters label, .report-years legend { font-size: 14px; }
+.report-filters input:not([type=checkbox]), .report-filters select { min-height: 46px; font-size: 16px; }
+#report-years { max-height: none; }
+#report-years label { min-height: 40px; padding: 5px; }
+#report-years input { width: 20px; height: 20px; }
+.report-options summary { min-height: 44px; padding-top: 10px; font-size: 15px; }
+.report-options-grid { gap: 15px; }
+#reset-report { min-height: 44px; font-size: 14px; }
+.report-document { min-width: 0; padding: 20px; }
+.report-table { font-size: 13px; }
+@media (max-width: 599px) {
+  .unlock-fields { flex-direction: column; }
+  .report-heading, .report-actions { width: 100%; }
+  .report-actions button { width: 100%; justify-content: center; }
+  .report-filters, .report-options-grid, .report-grouping { grid-template-columns: 1fr; }
+  .report-document { padding: 16px; }
+  .report-table-wrap { overflow: visible; }
+  .report-table, .report-table tbody { display: block; width: 100%; }
+  .report-table thead { display: none; }
+  .report-table tr { display: block; border: 1px solid #dce7df; border-radius: 8px; padding: 8px 10px; margin: 12px 0; }
+  .report-table td, .report-table td.number { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 8px 0; text-align: right; white-space: normal; font-size: 13px; }
+  .report-table td::before { content: attr(data-label); flex: 0 0 42%; color: #607467; text-align: left; font-size: 12px; }
+  .report-table td:last-child { border-bottom: 0; }
+  .report-grand-total { padding: 16px; gap: 12px; }
+  .total-value > strong { font-size: 18px; }
+}
+@media (min-width: 900px) and (orientation: landscape) {
+  #reports-view { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 20px; align-items: start; }
+  .report-heading { grid-column: 1 / -1; margin-bottom: 0; }
+  .report-filters { grid-template-columns: 1fr; position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow-y: auto; }
+  .report-options-grid, .report-grouping { grid-template-columns: 1fr; }
+  .report-document { margin-top: 0; }
+}
+
+#mobile-message[data-kind="error"] { background: #fff0ed; border-color: #d9a098; color: #8b3528; }

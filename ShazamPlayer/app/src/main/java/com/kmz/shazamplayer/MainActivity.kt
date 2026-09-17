@@ -67,6 +67,7 @@ class MainActivity : ComponentActivity() {
     var onPlayAction: (() -> Unit)? = null
     var onPauseAction: (() -> Unit)? = null
     var onSeekAction: ((Long) -> Unit)? = null
+    var onShuffleAction: ((Boolean) -> Unit)? = null
 
     @OptIn(UnstableApi::class)
     inner class CustomForwardingPlayer(player: Player) : ForwardingPlayer(player) {
@@ -133,6 +134,12 @@ class MainActivity : ComponentActivity() {
                     )
                     it.onIsPlayingChanged(isPlaying)
                 }
+            }
+        }
+
+        fun updateShuffleMode(enabled: Boolean) {
+            if (super.getShuffleModeEnabled() != enabled) {
+                super.setShuffleModeEnabled(enabled)
             }
         }
 
@@ -203,6 +210,7 @@ class MainActivity : ComponentActivity() {
                     .add(COMMAND_SEEK_TO_PREVIOUS)
                     .add(COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
                     .add(COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
+                    .add(COMMAND_SET_SHUFFLE_MODE)
                     .build()
         }
 
@@ -213,9 +221,15 @@ class MainActivity : ComponentActivity() {
                 COMMAND_SEEK_TO_NEXT,
                 COMMAND_SEEK_TO_PREVIOUS,
                 COMMAND_SEEK_TO_NEXT_MEDIA_ITEM,
-                COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM -> true
+                COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM,
+                COMMAND_SET_SHUFFLE_MODE -> true
                 else -> super.isCommandAvailable(command)
             }
+        }
+
+        override fun setShuffleModeEnabled(shuffleModeEnabled: Boolean) {
+            super.setShuffleModeEnabled(shuffleModeEnabled)
+            onShuffleAction?.invoke(shuffleModeEnabled)
         }
 
         override fun seekToNext() {
@@ -277,6 +291,8 @@ class MainActivity : ComponentActivity() {
                         if (viewModel.isActuallyPlaying) viewModel.togglePlay()
                     }
                     onSeekAction = { viewModel.seekTo(it) }
+                    onShuffleAction = { enabled -> viewModel.setShuffleEnabled(enabled) }
+                    forwardingPlayer?.updateShuffleMode(viewModel.isShuffle)
                 }
 
                 LaunchedEffect(
@@ -405,6 +421,11 @@ class MainActivity : ComponentActivity() {
         super.onPause()
     }
 
+    override fun onResume() {
+        super.onResume()
+        appViewModel?.refreshNewPipeSearchAccess()
+    }
+
     override fun onDestroy() {
         artworkDownloadJob?.cancel()
         metadataScope.cancel()
@@ -462,7 +483,7 @@ fun MainScreen(viewModel: MainViewModel) {
                 HomeScreen(
                         onLoadCsv = { filePickerLauncher.launch("*/*") },
                         onExit = { viewModel.exitApp() },
-                        years = listOf("Toutes") + (2021..2026).map { it.toString() },
+                        years = listOf("Toutes") + viewModel.shazamTracks.map { it.tagTime.take(4) }.distinct().sortedDescending(),
                         months =
                                 listOf(
                                         "Tous",
@@ -486,6 +507,12 @@ fun MainScreen(viewModel: MainViewModel) {
                         shazamTitleValue = viewModel.shazamTitleInput,
                         isActuallyPlaying = viewModel.isActuallyPlaying,
                         sleepTimerMinutes = viewModel.sleepTimerMinutes,
+                        youtubeMappingCount = viewModel.youtubeMappingCount,
+                        youtubeMappingTotal = viewModel.shazamTracks.size,
+                        hasNewPipeSearchAccess = viewModel.hasNewPipeSearchAccess,
+                        isCompletingYouTubeCatalog = viewModel.isCompletingYouTubeCatalog,
+                        catalogCompletionProgress = viewModel.catalogCompletionProgress,
+                        catalogCompletionTarget = viewModel.catalogCompletionTarget,
                         onYearChange = { viewModel.selectedYear = it },
                         onMonthChange = { viewModel.selectedMonth = it },
                         onMagicArtistInputChange = { viewModel.magicArtistInput = it },
@@ -494,6 +521,8 @@ fun MainScreen(viewModel: MainViewModel) {
                         onApply = { viewModel.applyFilters() },
                         onMagicSearch = { viewModel.openArtistRadio(it) },
                         onSetSleepTimer = { viewModel.startSleepTimer(it) },
+                        onEnableNewPipeSearch = { viewModel.requestNewPipeSearchAccess() },
+                        onCompleteYouTubeCatalog = { viewModel.completeYouTubeCatalog() },
                         onBackToPlaylist = { viewModel.currentLevel = NavLevel.PLAYLIST }
                 )
             }
@@ -502,7 +531,11 @@ fun MainScreen(viewModel: MainViewModel) {
                         tracks = viewModel.filteredTracks,
                         selectedIndex = viewModel.currentTrackIndexInFiltered,
                         isDiscovery = viewModel.isDiscoveryMode,
+                        isPreparingNewPipePlaylist = viewModel.isPreparingNewPipePlaylist,
+                        newPipePlaylistProgress = viewModel.newPipePlaylistProgress,
+                        newPipePlaylistTargetCount = viewModel.newPipePlaylistTargetCount,
                         onTrackClick = { idx -> viewModel.playTrack(idx) },
+                        onOpenInNewPipe = { viewModel.openCurrentPlaylistInNewPipe() },
                         onBack = { viewModel.currentLevel = NavLevel.HOME }
                 )
             }
@@ -518,11 +551,15 @@ fun MainScreen(viewModel: MainViewModel) {
                             duration = viewModel.duration,
                             isDiscovery = viewModel.isDiscoveryMode,
                             isUsingYouTube = viewModel.isUsingYouTube,
+                            isUsingNewPipe = viewModel.isUsingNewPipe,
                             youtubeVideoId = viewModel.youtubeVideoId,
                             youtubeChannel = viewModel.youtubeChannel,
                             youtubeCommand = viewModel.youtubeCommand,
                             isTrackLoading = viewModel.isTrackLoading,
                             playbackError = viewModel.playbackError,
+                            isPreparingNewPipePlaylist = viewModel.isPreparingNewPipePlaylist,
+                            newPipePlaylistProgress = viewModel.newPipePlaylistProgress,
+                            newPipePlaylistTargetCount = viewModel.newPipePlaylistTargetCount,
                             onClose = {
                                 viewModel.pauseYouTube()
                                 viewModel.currentLevel = NavLevel.PLAYLIST
@@ -530,9 +567,10 @@ fun MainScreen(viewModel: MainViewModel) {
                             onTogglePlay = { viewModel.togglePlay() },
                             onPrevious = { viewModel.playPrevious() },
                             onNext = { viewModel.playNext() },
-                            onShuffleToggle = { viewModel.isShuffle = !viewModel.isShuffle },
+                            onShuffleToggle = { viewModel.toggleShuffle() },
                             onRepeatToggle = { viewModel.isRepeat = !viewModel.isRepeat },
                             onCycleStream = { viewModel.cycleStream() },
+                            onOpenInNewPipe = { viewModel.openCurrentPlaylistInNewPipe() },
                             onSeek = { viewModel.seekTo(it) },
                             onArtistRadio = { viewModel.openArtistRadio(track.artist) },
                             isSearchingPlaylists = viewModel.isSearchingPlaylists,

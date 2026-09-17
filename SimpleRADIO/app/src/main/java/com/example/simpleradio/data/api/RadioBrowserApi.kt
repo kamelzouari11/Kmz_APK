@@ -7,6 +7,9 @@ import retrofit2.http.Path
 
 interface RadioBrowserApi {
 
+    @GET("json/stations/byuuid/{uuid}")
+    suspend fun getStationByUuid(@Path("uuid") uuid: String): List<RadioStation>
+
     @GET("json/countries")
     suspend fun getCountries(): List<RadioCountry>
 
@@ -35,4 +38,5 @@ interface RadioBrowserApi {
         @Query("order") order: String = "clickcount",
         @Query("reverse") reverse: Boolean = true
     ): List<RadioStation>
+
 }

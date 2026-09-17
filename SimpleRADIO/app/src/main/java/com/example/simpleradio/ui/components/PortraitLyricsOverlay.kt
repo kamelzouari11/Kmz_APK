@@ -22,6 +22,7 @@ fun PortraitLyricsOverlay(
         translatedLyrics: String?,
         onToggleTranslation: () -> Unit,
         onClose: () -> Unit,
+        onPowerOff: () -> Unit,
         bilingualLyricsContent: @Composable (String, String?, Boolean, Modifier) -> Unit
 ) {
     Box(modifier = Modifier.fillMaxSize().background(Color.Black).zIndex(10f).padding(16.dp)) {
@@ -37,13 +38,17 @@ fun PortraitLyricsOverlay(
                             color = MaterialTheme.colorScheme.primary
                     )
                 }
-                Button(
-                        onClick = onClose,
-                        colors =
-                                ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.primary
-                                )
-                ) { Text("Fermer") }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    PowerOffButton(onPowerOff = onPowerOff)
+                    Spacer(Modifier.width(8.dp))
+                    Button(
+                            onClick = onClose,
+                            colors =
+                                    ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.primary
+                                    )
+                    ) { Text("Fermer") }
+                }
             }
 
             if (isFetchingLyrics) {

@@ -11,7 +11,7 @@ import androidx.mediarouter.app.MediaRouteButton
 import com.google.android.gms.cast.framework.CastButtonFactory
 
 /**
- * Reusable Cast button that wraps the MediaRouteButton in a composable. Always visible on screen.
+ * Reusable Cast button. The Cast framework controls its visibility based on available routes.
  */
 @Composable
 fun CastButton(modifier: Modifier = Modifier) {
@@ -20,9 +20,6 @@ fun CastButton(modifier: Modifier = Modifier) {
                 factory = { ctx ->
                     MediaRouteButton(ctx).apply {
                         CastButtonFactory.setUpMediaRouteButton(ctx, this)
-                        try {
-                            @Suppress("DEPRECATION") this.setAlwaysVisible(true)
-                        } catch (_: Exception) {}
                     }
                 }
         )

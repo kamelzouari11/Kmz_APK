@@ -19,11 +19,17 @@ interface BeneficiaireDao {
     @Delete
     suspend fun delete(beneficiaire: Beneficiaire)
 
+    @Query("SELECT * FROM beneficiaires WHERE projetId = :projetId ORDER BY nom ASC")
+    fun getBeneficiairesByProjet(projetId: Long): Flow<List<Beneficiaire>>
+
     @Query("SELECT * FROM beneficiaires ORDER BY nom ASC")
-    fun getAllBeneficiaires(): Flow<List<Beneficiaire>>
+    suspend fun getAllBeneficiairesSnapshot(): List<Beneficiaire>
 
     @Query("SELECT * FROM beneficiaires WHERE id = :id")
     suspend fun getBeneficiaireById(id: Long): Beneficiaire?
+
+    @Query("DELETE FROM beneficiaires WHERE projetId = :projetId")
+    suspend fun clearAllForProjet(projetId: Long)
 
     @Query("DELETE FROM beneficiaires")
     suspend fun clearAll()

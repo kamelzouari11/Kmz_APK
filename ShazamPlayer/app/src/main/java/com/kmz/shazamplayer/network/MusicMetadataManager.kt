@@ -4,6 +4,8 @@ import android.net.Uri
 import android.util.Log
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -14,12 +16,13 @@ import org.json.JSONObject
  *
  * Stratégie de validation PRO:
  * 1. Deezer API (prioritaire) - matching très fiable avec durée exacte
- * 2. iTunes API (fallback) - sans clé API, cover HD disponible
+ * 2. iTunes API (fallback) - sans clé API
+ * 3. CoverArtProvider - méthode d'illustration identique à SimpleRADIO
  *
  * Permet de:
  * - Valider que c'est le BON titre (pas remix, pas live)
  * - Récupérer la durée réelle pour filtrer les versions incorrectes
- * - Obtenir une cover propre en haute définition
+ * - Obtenir une cover validée en haute définition
  */
 data class OfficialTrackMetadata(
         val title: String,
@@ -46,33 +49,61 @@ class MusicMetadataManager {
     }
 
     /**
-     * Recherche les métadonnées officielles d'un titre. Essaie Deezer d'abord, puis iTunes en
-     * fallback.
+     * Recherche les métadonnées officielles d'un titre. La durée et l'album viennent de Deezer ou
+     * iTunes, tandis que l'illustration est exclusivement résolue par CoverArtProvider.
      */
     suspend fun getOfficialMetadata(artist: String, title: String): OfficialTrackMetadata? =
-            withContext(Dispatchers.IO) {
-                // 1. Essayer Deezer d'abord
-                val deezerResult = searchDeezer(artist, title)
-                if (deezerResult != null) {
-                    Log.d(
-                            TAG,
-                            "✅ Deezer match: ${deezerResult.title} - ${deezerResult.durationMs}ms"
-                    )
-                    return@withContext deezerResult
-                }
+            coroutineScope {
+                val coverDeferred =
+                        async {
+                            try {
+                                CoverArtProvider.findCover(artist, title)
+                                        ?: CoverArtProvider.findCover(title, artist)
+                            } catch (error: Exception) {
+                                Log.e(TAG, "Cover search error: ${error.message}")
+                                null
+                            }
+                        }
+                val catalogMetadata =
+                        withContext(Dispatchers.IO) {
+                            val deezerResult = searchDeezer(artist, title)
+                            if (deezerResult != null) {
+                                Log.d(
+                                        TAG,
+                                        "✅ Deezer match: ${deezerResult.title} - ${deezerResult.durationMs}ms"
+                                )
+                                deezerResult
+                            } else {
+                                val itunesResult = searchiTunes(artist, title)
+                                if (itunesResult != null) {
+                                    Log.d(
+                                            TAG,
+                                            "✅ iTunes match: ${itunesResult.title} - ${itunesResult.durationMs}ms"
+                                    )
+                                }
+                                itunesResult
+                            }
+                        }
+                val coverUrl = coverDeferred.await()
 
-                // 2. Fallback sur iTunes
-                val itunesResult = searchiTunes(artist, title)
-                if (itunesResult != null) {
-                    Log.d(
-                            TAG,
-                            "✅ iTunes match: ${itunesResult.title} - ${itunesResult.durationMs}ms"
-                    )
-                    return@withContext itunesResult
+                when {
+                    catalogMetadata != null ->
+                            catalogMetadata.copy(coverUrl = coverUrl, coverUrlHD = coverUrl)
+                    coverUrl != null ->
+                            OfficialTrackMetadata(
+                                    title = title,
+                                    artist = artist,
+                                    album = null,
+                                    durationMs = 0L,
+                                    coverUrl = coverUrl,
+                                    coverUrlHD = coverUrl,
+                                    source = "cover_art_provider"
+                            )
+                    else -> {
+                        Log.w(TAG, "⚠️ Aucune métadonnée trouvée pour: $artist - $title")
+                        null
+                    }
                 }
-
-                Log.w(TAG, "⚠️ Aucune métadonnée trouvée pour: $artist - $title")
-                null
             }
 
     /**
@@ -109,10 +140,8 @@ class MusicMetadataManager {
                     artist = artistObj?.getString("name") ?: artist,
                     album = albumObj?.optString("title"),
                     durationMs = track.getLong("duration") * 1000, // Deezer retourne en secondes
-                    coverUrl = albumObj?.optString("cover_medium"),
-                    coverUrlHD = albumObj?.optString("cover_big")?.replace("500x500", "600x600")
-                                    ?: albumObj?.optString("cover_medium")
-                                            ?.replace("250x250", "600x600"),
+                    coverUrl = null,
+                    coverUrlHD = null,
                     source = "deezer"
             )
         } catch (e: Exception) {
@@ -145,10 +174,8 @@ class MusicMetadataManager {
                     artist = artistObj?.getString("name") ?: artist,
                     album = albumObj?.optString("title"),
                     durationMs = track.getLong("duration") * 1000,
-                    coverUrl = albumObj?.optString("cover_medium"),
-                    coverUrlHD = albumObj?.optString("cover_big")?.replace("500x500", "600x600")
-                                    ?: albumObj?.optString("cover_medium")
-                                            ?.replace("250x250", "600x600"),
+                    coverUrl = null,
+                    coverUrlHD = null,
                     source = "deezer"
             )
         } catch (e: Exception) {
@@ -176,15 +203,13 @@ class MusicMetadataManager {
             if (results.length() == 0) return null
 
             val track = results.getJSONObject(0)
-            val artworkUrl = track.optString("artworkUrl100", "")
-
             OfficialTrackMetadata(
                     title = track.getString("trackName"),
                     artist = track.getString("artistName"),
                     album = track.optString("collectionName"),
                     durationMs = track.getLong("trackTimeMillis"),
-                    coverUrl = artworkUrl.replace("100x100bb", "300x300bb"),
-                    coverUrlHD = artworkUrl.replace("100x100bb", "600x600bb"),
+                    coverUrl = null,
+                    coverUrlHD = null,
                     source = "itunes"
             )
         } catch (e: Exception) {
@@ -232,7 +257,7 @@ class MusicMetadataManager {
                 .trim()
     }
 
-    /** Obtient la meilleure cover disponible (priorité: Deezer HD > iTunes HD > SoundCloud) */
+    /** Obtient la cover validée par CoverArtProvider, puis l'illustration SoundCloud. */
     fun getBestCoverUrl(
             officialMetadata: OfficialTrackMetadata?,
             soundcloudArtwork: String?

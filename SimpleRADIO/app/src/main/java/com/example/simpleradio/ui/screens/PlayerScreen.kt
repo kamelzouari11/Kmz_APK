@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.res.Configuration
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -23,7 +24,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.media3.common.Player
-import com.example.simpleradio.data.api.ImageScraper
 import com.example.simpleradio.data.api.LrcLibApi
 import com.example.simpleradio.data.api.TranslationApi
 import com.example.simpleradio.data.local.entities.RadioStationEntity
@@ -32,14 +32,13 @@ import com.example.simpleradio.ui.components.ArtworkDisplay
 import com.example.simpleradio.ui.components.BilingualLyrics
 import com.example.simpleradio.upnp.UpnpButton
 import com.google.android.gms.cast.framework.CastSession
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @Composable
 fun VideoPlayerView(
         exoPlayer: Player,
         onBack: () -> Unit,
+        onPowerOff: () -> Unit,
         radioStation: RadioStationEntity? = null,
         lrcLibApi: LrcLibApi? = null,
         radioList: List<RadioStationEntity> = emptyList(),
@@ -47,6 +46,14 @@ fun VideoPlayerView(
         artist: String? = null,
         title: String? = null,
         artworkUrl: String? = null,
+        showLogoValidation: Boolean = false,
+        logoIsConfirmed: Boolean = false,
+        logoCandidatePosition: Int = 0,
+        logoCandidateCount: Int = 0,
+        onArtworkLoadError: (String) -> Unit = {},
+        onConfirmLogo: () -> Unit = {},
+        onRejectLogo: () -> Unit = {},
+        onUnconfirmLogo: () -> Unit = {},
         sleepTimerTimeLeft: Long? = null,
         onSetSleepTimer: (Int?) -> Unit = {},
         showLyrics: Boolean = false,
@@ -88,64 +95,6 @@ fun VideoPlayerView(
             isTranslating = false
         }
     }
-
-    // --- LOGIC: Artwork/Logo Cycling ---
-    var artworkCycleIndex by remember { mutableIntStateOf(0) }
-    var alternativeArtworks by remember { mutableStateOf<List<String>>(emptyList()) }
-    var dynamicLogos by remember { mutableStateOf<List<String>>(emptyList()) }
-
-    // On reset l'index quand la station ou le titre change
-    LaunchedEffect(radioStation?.stationuuid, artist, title) { artworkCycleIndex = 0 }
-
-    LaunchedEffect(radioStation, artworkUrl) {
-        if (!artworkUrl.isNullOrBlank()) {
-            dynamicLogos = emptyList()
-            return@LaunchedEffect
-        }
-        if (radioStation != null) {
-            withContext(Dispatchers.IO) {
-                try {
-                    val logos =
-                            ImageScraper.findLogos(
-                                    radioName = radioStation.name,
-                                    country = radioStation.country,
-                                    streamUrl = radioStation.url
-                            )
-                    dynamicLogos = logos
-                } catch (_: Exception) {}
-            }
-        }
-    }
-
-    LaunchedEffect(artist, title) {
-        alternativeArtworks = emptyList()
-        if (!artist.isNullOrBlank() && !title.isNullOrBlank()) {
-            scope.launch(Dispatchers.IO) {
-                try {
-                    val results = ImageScraper.findArtworks(artist!!, title)
-                    alternativeArtworks = results
-                } catch (_: Exception) {}
-            }
-        }
-    }
-
-    val cycleList =
-            remember(artworkUrl, alternativeArtworks, dynamicLogos, radioStation) {
-                val list = mutableListOf<String>()
-                if (!artworkUrl.isNullOrBlank() || alternativeArtworks.isNotEmpty()) {
-                    if (!artworkUrl.isNullOrBlank()) list.add(artworkUrl)
-                    list.addAll(alternativeArtworks.filter { it != artworkUrl })
-                } else {
-                    list.addAll(dynamicLogos)
-                    radioStation?.favicon?.takeIf { it.isNotBlank() }?.let {
-                        if (!list.contains(it)) list.add(it)
-                    }
-                }
-                list.distinct().take(5)
-            }
-
-    val effectiveArtworkUrl =
-            if (cycleList.isNotEmpty()) cycleList[artworkCycleIndex % cycleList.size] else null
 
     // Interception des commandes Bluetooth (Voiture) via Broadcast
     DisposableEffect(Unit) {
@@ -230,12 +179,30 @@ fun VideoPlayerView(
                 isFetchingLyrics = true
                 scope.launch {
                     try {
-                        val resp = lrcLibApi.getLyrics(a, t)
-                        val text = resp.plainLyrics ?: "Paroles non disponibles."
+                        val exactResult =
+                                try {
+                                    lrcLibApi.getLyrics(a.trim(), t.trim())
+                                } catch (exactError: Exception) {
+                                    Log.w(
+                                            "LyricsLookup",
+                                            "LRCLIB /get failed for $a - $t; trying /search",
+                                            exactError
+                                    )
+                                    null
+                                }
+                        val resp =
+                                exactResult?.takeIf { !it.plainLyrics.isNullOrBlank() }
+                                        ?: lrcLibApi
+                                                .searchLyrics(a.trim(), t.trim())
+                                                .firstOrNull {
+                                                    !it.plainLyrics.isNullOrBlank()
+                                                }
+                        val text = resp?.plainLyrics ?: "Paroles non disponibles."
                         lyricsText = text
                         lyricsCache[key] = text
-                    } catch (_: Exception) {
-                        lyricsText = "Paroles introuvables."
+                    } catch (error: Exception) {
+                        Log.e("LyricsLookup", "LRCLIB lookup failed for $a - $t", error)
+                        lyricsText = "Service de paroles temporairement indisponible."
                     }
                     isFetchingLyrics = false
                 }
@@ -249,10 +216,19 @@ fun VideoPlayerView(
                     currentStation = radioStation,
                     artist = artist,
                     title = title,
-                    artworkUrl = effectiveArtworkUrl,
+                    artworkUrl = artworkUrl,
+                    showLogoValidation = showLogoValidation,
+                    logoIsConfirmed = logoIsConfirmed,
+                    logoCandidatePosition = logoCandidatePosition,
+                    logoCandidateCount = logoCandidateCount,
+                    onArtworkLoadError = onArtworkLoadError,
+                    onConfirmLogo = onConfirmLogo,
+                    onRejectLogo = onRejectLogo,
+                    onUnconfirmLogo = onUnconfirmLogo,
                     exoPlayer = exoPlayer,
                     isActuallyPlaying = isActuallyPlaying,
                     onBack = onBack,
+                    onPowerOff = onPowerOff,
                     onLyrics = {
                         onToggleLyrics(!showLyrics)
                         if (!showLyrics) fetchLyrics()
@@ -267,11 +243,6 @@ fun VideoPlayerView(
                     castSession = castSession,
                     sleepTimerTimeLeft = sleepTimerTimeLeft,
                     onSetSleepTimer = onSetSleepTimer,
-                    onCycleArtwork = {
-                        if (cycleList.isNotEmpty()) {
-                            artworkCycleIndex = (artworkCycleIndex + 1) % cycleList.size
-                        }
-                    },
                     onTranslate = { toggleTranslation() },
                     isTranslating = isTranslating,
                     translatedLyrics = translatedLyrics
@@ -281,10 +252,19 @@ fun VideoPlayerView(
                     currentStation = radioStation,
                     artist = artist,
                     title = title,
-                    artworkUrl = effectiveArtworkUrl,
+                    artworkUrl = artworkUrl,
+                    showLogoValidation = showLogoValidation,
+                    logoIsConfirmed = logoIsConfirmed,
+                    logoCandidatePosition = logoCandidatePosition,
+                    logoCandidateCount = logoCandidateCount,
+                    onArtworkLoadError = onArtworkLoadError,
+                    onConfirmLogo = onConfirmLogo,
+                    onRejectLogo = onRejectLogo,
+                    onUnconfirmLogo = onUnconfirmLogo,
                     exoPlayer = exoPlayer,
                     isActuallyPlaying = isActuallyPlaying,
                     onBack = onBack,
+                    onPowerOff = onPowerOff,
                     onLyrics = {
                         onToggleLyrics(true)
                         fetchLyrics()
@@ -293,12 +273,7 @@ fun VideoPlayerView(
                     showLyricsButton =
                             lrcLibApi != null && !artist.isNullOrBlank() && !title.isNullOrBlank(),
                     castSession = castSession,
-                    upnpManager = upnpManager,
-                    onCycleArtwork = {
-                        if (cycleList.isNotEmpty()) {
-                            artworkCycleIndex = (artworkCycleIndex + 1) % cycleList.size
-                        }
-                    }
+                    upnpManager = upnpManager
             )
 
             // Portrait Full Screen Lyrics Overlay
@@ -310,6 +285,7 @@ fun VideoPlayerView(
                         translatedLyrics = translatedLyrics,
                         onToggleTranslation = { toggleTranslation() },
                         onClose = { onToggleLyrics(false) },
+                        onPowerOff = onPowerOff,
                         bilingualLyricsContent = { original, translated, translating, modifier ->
                             BilingualLyrics(
                                     original = original,
@@ -330,15 +306,23 @@ fun PortraitPlayerLayout(
         artist: String?,
         title: String?,
         artworkUrl: String?,
+        showLogoValidation: Boolean,
+        logoIsConfirmed: Boolean,
+        logoCandidatePosition: Int,
+        logoCandidateCount: Int,
+        onArtworkLoadError: (String) -> Unit,
+        onConfirmLogo: () -> Unit,
+        onRejectLogo: () -> Unit,
+        onUnconfirmLogo: () -> Unit,
         exoPlayer: Player,
         isActuallyPlaying: Boolean,
         onBack: () -> Unit,
+        onPowerOff: () -> Unit,
         onLyrics: () -> Unit,
         radioList: List<RadioStationEntity>,
         showLyricsButton: Boolean,
         castSession: CastSession? = null,
-        upnpManager: UpnpManager? = null,
-        onCycleArtwork: () -> Unit = {}
+        upnpManager: UpnpManager? = null
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         // Header Bar (Single line: Back + Cast + Lyrics)
@@ -366,6 +350,8 @@ fun PortraitPlayerLayout(
 
                 // Cast Button
                 CastButton()
+
+                PowerOffButton(onPowerOff = onPowerOff)
 
                 // Lyrics Button (Pill style)
                 if (showLyricsButton) {
@@ -400,8 +386,15 @@ fun PortraitPlayerLayout(
         // ZONE 1 : LOGO/POCHETTE
         ArtworkDisplay(
                 artworkUrl = artworkUrl,
-                onCycleArtwork = onCycleArtwork,
-                modifier = Modifier.fillMaxWidth().weight(0.5f)
+                modifier = Modifier.fillMaxWidth().weight(0.5f),
+                showLogoValidation = showLogoValidation,
+                logoIsConfirmed = logoIsConfirmed,
+                logoCandidatePosition = logoCandidatePosition,
+                logoCandidateCount = logoCandidateCount,
+                onArtworkLoadError = onArtworkLoadError,
+                onConfirmLogo = onConfirmLogo,
+                onRejectLogo = onRejectLogo,
+                onUnconfirmLogo = onUnconfirmLogo
         )
 
         // ZONE 2 : INFOS STATION (20% Hauteur)
@@ -436,9 +429,18 @@ fun LandscapePlayerLayout(
         artist: String?,
         title: String?,
         artworkUrl: String?,
+        showLogoValidation: Boolean,
+        logoIsConfirmed: Boolean,
+        logoCandidatePosition: Int,
+        logoCandidateCount: Int,
+        onArtworkLoadError: (String) -> Unit,
+        onConfirmLogo: () -> Unit,
+        onRejectLogo: () -> Unit,
+        onUnconfirmLogo: () -> Unit,
         exoPlayer: Player,
         isActuallyPlaying: Boolean,
         onBack: () -> Unit,
+        onPowerOff: () -> Unit,
         onLyrics: () -> Unit,
         radioList: List<RadioStationEntity>,
         showLyricsButton: Boolean,
@@ -449,7 +451,6 @@ fun LandscapePlayerLayout(
         castSession: CastSession? = null,
         sleepTimerTimeLeft: Long? = null,
         onSetSleepTimer: (Int?) -> Unit = {},
-        onCycleArtwork: () -> Unit = {},
         onTranslate: () -> Unit = {},
         isTranslating: Boolean = false,
         translatedLyrics: String? = null
@@ -476,6 +477,7 @@ fun LandscapePlayerLayout(
                     // ZONE 1 (15%) : Boutons Back, Timer, Cast et Lyrics
                     LandscapePlayerHeader(
                             onBack = onBack,
+                            onPowerOff = onPowerOff,
                             onLyrics = onLyrics,
                             showLyricsButton = showLyricsButton,
                             sleepTimerTimeLeft = sleepTimerTimeLeft,
@@ -520,12 +522,16 @@ fun LandscapePlayerLayout(
                 // DROITE (9/16) - Logo/Artwork
                 ArtworkDisplay(
                         artworkUrl = artworkUrl,
-                        onCycleArtwork = onCycleArtwork,
                         modifier = Modifier.weight(9f).fillMaxHeight(),
-                        syncButtonSize = 48.dp,
-                        syncIconSize = 24.dp,
                         defaultIconSize = 160.dp,
-                        syncButtonPadding = PaddingValues(end = 16.dp, bottom = 48.dp)
+                        showLogoValidation = showLogoValidation,
+                        logoIsConfirmed = logoIsConfirmed,
+                        logoCandidatePosition = logoCandidatePosition,
+                        logoCandidateCount = logoCandidateCount,
+                        onArtworkLoadError = onArtworkLoadError,
+                        onConfirmLogo = onConfirmLogo,
+                        onRejectLogo = onRejectLogo,
+                        onUnconfirmLogo = onUnconfirmLogo
                 )
             }
         }
@@ -538,7 +544,8 @@ fun LandscapePlayerLayout(
                     isTranslating = isTranslating,
                     translatedLyrics = translatedLyrics,
                     onTranslate = onTranslate,
-                    onCloseLyrics = onCloseLyrics
+                    onCloseLyrics = onCloseLyrics,
+                    onPowerOff = onPowerOff
             )
         }
     }

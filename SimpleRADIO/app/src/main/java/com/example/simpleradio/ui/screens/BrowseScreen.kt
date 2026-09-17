@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -65,6 +66,14 @@ fun BrowseScreen(
         allFavoriteUuids: Set<String> = emptySet()
 ) {
     var isReorderMode by remember { mutableStateOf(false) }
+    // The favorite chooser stays compact until the user explicitly opens it. Selecting a list
+    // closes it again, which is especially useful in the landscape sidebar.
+    var areFavoritesExpanded by rememberSaveable { mutableStateOf(false) }
+
+    fun selectFavorite(listId: Int) {
+        onFavoriteListSelected(listId)
+        areFavoritesExpanded = false
+    }
 
     if (isPortrait) {
         Box(modifier = Modifier.fillMaxWidth().fillMaxHeight()) {
@@ -80,8 +89,14 @@ fun BrowseScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     // ===== SECTION FAVORIS =====
-                    item { FavoritesSectionHeader(onCreateFavoriteList = onCreateFavoriteList) }
-                    if (radioFavoriteLists.isEmpty()) {
+                    item {
+                        FavoritesSectionHeader(
+                                expanded = areFavoritesExpanded,
+                                onToggle = { areFavoritesExpanded = !areFavoritesExpanded },
+                                onCreateFavoriteList = onCreateFavoriteList
+                        )
+                    }
+                    if (areFavoritesExpanded && radioFavoriteLists.isEmpty()) {
                         item {
                             Text(
                                     "Aucune liste de favoris. Créez-en une avec +",
@@ -90,21 +105,21 @@ fun BrowseScreen(
                                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
                             )
                         }
-                    } else {
+                    } else if (areFavoritesExpanded) {
                         radioFavoriteLists.forEach { list ->
                             item(key = list.id) {
                                 SidebarItem(
                                         text = list.name,
                                         icon = Icons.Default.Star,
-                                        isSelected = selectedRadioFavoriteListId == list.id,
-                                        onClick = { onFavoriteListSelected(list.id) },
+                                        isSelected = false,
+                                        onClick = { selectFavorite(list.id) },
                                         onDelete = { onDeleteFavoriteList(list) }
                                 )
                             }
                         }
                     }
 
-                    item { Divider(color = Color.White.copy(alpha = 0.15f), thickness = 1.dp) }
+                    item { HorizontalDivider(color = Color.White.copy(alpha = 0.15f)) }
 
                     // ===== SECTION FILTRES / RECHERCHE =====
                     filterSidebarItems(
@@ -233,8 +248,14 @@ fun BrowseScreen(
 
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     // ===== SECTION FAVORIS =====
-                    item { FavoritesSectionHeader(onCreateFavoriteList = onCreateFavoriteList) }
-                    if (radioFavoriteLists.isEmpty()) {
+                    item {
+                        FavoritesSectionHeader(
+                                expanded = areFavoritesExpanded,
+                                onToggle = { areFavoritesExpanded = !areFavoritesExpanded },
+                                onCreateFavoriteList = onCreateFavoriteList
+                        )
+                    }
+                    if (areFavoritesExpanded && radioFavoriteLists.isEmpty()) {
                         item {
                             Text(
                                     "Aucune liste. Créez avec +",
@@ -243,21 +264,21 @@ fun BrowseScreen(
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                             )
                         }
-                    } else {
+                    } else if (areFavoritesExpanded) {
                         radioFavoriteLists.forEach { list ->
                             item(key = list.id) {
                                 SidebarItem(
                                         text = list.name,
                                         icon = Icons.Default.Star,
                                         isSelected = selectedRadioFavoriteListId == list.id,
-                                        onClick = { onFavoriteListSelected(list.id) },
+                                        onClick = { selectFavorite(list.id) },
                                         onDelete = { onDeleteFavoriteList(list) }
                                 )
                             }
                         }
                     }
 
-                    item { Divider(color = Color.White.copy(alpha = 0.15f), thickness = 1.dp) }
+                    item { HorizontalDivider(color = Color.White.copy(alpha = 0.15f)) }
 
                     // ===== SECTION FILTRES =====
                     filterSidebarItems(
@@ -303,13 +324,20 @@ fun BrowseScreen(
 
 /** En-tête de la section Favoris avec le bouton + pour créer une nouvelle liste. */
 @Composable
-fun FavoritesSectionHeader(onCreateFavoriteList: () -> Unit) {
+fun FavoritesSectionHeader(
+        expanded: Boolean,
+        onToggle: () -> Unit,
+        onCreateFavoriteList: () -> Unit
+) {
     Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f).clickable(onClick = onToggle).padding(vertical = 6.dp)
+        ) {
             Icon(
                     Icons.Default.Star,
                     null,
@@ -321,6 +349,13 @@ fun FavoritesSectionHeader(onCreateFavoriteList: () -> Unit) {
                     "MES FAVORIS",
                     style = MaterialTheme.typography.labelLarge,
                     color = Color(0xFFFFD700)
+            )
+            Spacer(Modifier.width(6.dp))
+            Icon(
+                    if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    if (expanded) "Replier les favoris" else "Choisir une liste de favoris",
+                    tint = Color(0xFFFFD700),
+                    modifier = Modifier.size(20.dp)
             )
         }
         // Bouton + pour créer une nouvelle liste

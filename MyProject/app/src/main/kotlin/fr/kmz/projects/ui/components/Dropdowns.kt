@@ -1,6 +1,5 @@
 package fr.kmz.projects.ui.components
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -10,6 +9,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuItemColors
+import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -28,7 +30,8 @@ fun ChapitreDropdown(
     chapitres: List<Chapitre>,
     selectedId: Long,
     onSelected: (Long) -> Unit,
-    onCreateNew: (String) -> Unit
+    onCreateNew: (String) -> Unit,
+    isError: Boolean = false
 ) {
     var expanded by remember { mutableStateOf(false) }
     var showCreateDialog by remember { mutableStateOf(false) }
@@ -48,6 +51,8 @@ fun ChapitreDropdown(
                 .fillMaxWidth()
                 .menuAnchor(),
             readOnly = true,
+            textStyle = MaterialTheme.typography.titleMedium,
+            isError = isError,
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
         )
 
@@ -56,12 +61,24 @@ fun ChapitreDropdown(
             onDismissRequest = { expanded = false }
         ) {
             DropdownMenuItem(
-                text = { Text("+ Nouveau chapitre") },
+                text = {
+                    Text(
+                        "+ Nouveau chapitre",
+                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.titleSmall
+                    )
+                },
                 onClick = {
                     expanded = false
                     showCreateDialog = true
                 },
-                leadingIcon = { Icon(Icons.Filled.Add, null) }
+                leadingIcon = {
+                    Icon(
+                        Icons.Filled.Add,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
             )
 
             chapitres.forEach { chapitre ->
@@ -116,7 +133,8 @@ fun BeneficiaireDropdown(
     beneficiaires: List<Beneficiaire>,
     selectedId: Long,
     onSelected: (Long) -> Unit,
-    onCreateNew: (String) -> Unit
+    onCreateNew: (String) -> Unit,
+    isError: Boolean = false
 ) {
     var expanded by remember { mutableStateOf(false) }
     var showCreateDialog by remember { mutableStateOf(false) }
@@ -136,6 +154,8 @@ fun BeneficiaireDropdown(
                 .fillMaxWidth()
                 .menuAnchor(),
             readOnly = true,
+            textStyle = MaterialTheme.typography.titleMedium,
+            isError = isError,
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
         )
 
@@ -144,12 +164,24 @@ fun BeneficiaireDropdown(
             onDismissRequest = { expanded = false }
         ) {
             DropdownMenuItem(
-                text = { Text("+ Nouveau bénéficiaire") },
+                text = {
+                    Text(
+                        "+ Nouveau bénéficiaire",
+                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.titleSmall
+                    )
+                },
                 onClick = {
                     expanded = false
                     showCreateDialog = true
                 },
-                leadingIcon = { Icon(Icons.Filled.Add, null) }
+                leadingIcon = {
+                    Icon(
+                        Icons.Filled.Add,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
             )
 
             beneficiaires.forEach { beneficiaire ->

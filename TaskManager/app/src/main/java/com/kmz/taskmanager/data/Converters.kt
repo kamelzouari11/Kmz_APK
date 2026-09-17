@@ -25,10 +25,6 @@ class Converters {
 
     @TypeConverter fun alarmLevelToString(level: AlarmLevel): String = level.name
 
-    @TypeConverter fun fromPriority(value: String): Priority = Priority.valueOf(value)
-
-    @TypeConverter fun priorityToString(priority: Priority): String = priority.name
-
     @TypeConverter
     fun fromRepeatUnit(value: String?): RepeatUnit? = value?.let { RepeatUnit.valueOf(it) }
 

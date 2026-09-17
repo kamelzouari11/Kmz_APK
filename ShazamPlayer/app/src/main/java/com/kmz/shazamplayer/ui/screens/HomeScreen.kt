@@ -37,6 +37,12 @@ fun HomeScreen(
         shazamTitleValue: String,
         isActuallyPlaying: Boolean,
         sleepTimerMinutes: Int,
+        youtubeMappingCount: Int,
+        youtubeMappingTotal: Int,
+        hasNewPipeSearchAccess: Boolean,
+        isCompletingYouTubeCatalog: Boolean,
+        catalogCompletionProgress: Int,
+        catalogCompletionTarget: Int,
         onYearChange: (String) -> Unit,
         onMonthChange: (String) -> Unit,
         onMagicArtistInputChange: (String) -> Unit,
@@ -45,6 +51,8 @@ fun HomeScreen(
         onApply: () -> Unit,
         onMagicSearch: (String) -> Unit,
         onSetSleepTimer: (Int) -> Unit,
+        onEnableNewPipeSearch: () -> Unit,
+        onCompleteYouTubeCatalog: () -> Unit,
         onBackToPlaylist: () -> Unit
 ) {
     val context = LocalContext.current
@@ -148,7 +156,83 @@ fun HomeScreen(
                     modifier = Modifier.size(16.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Charger Library CSV", fontSize = 13.sp)
+            Text("Importer SyncedSongs.csv", fontSize = 13.sp)
+        }
+
+        Text(
+                "Sélectionnez SyncedSongs.csv dans Téléchargements. La bibliothèque est conservée après import. Pour la mettre à jour, importez le nouvel export.",
+                color = Color.LightGray,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(vertical = 8.dp)
+        )
+
+        Surface(
+                color = Color(0xFF181818),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(10.dp)) {
+                Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                                "Catalogue YouTube permanent",
+                                color = Color.White,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                                "$youtubeMappingCount/$youtubeMappingTotal identifiants mémorisés",
+                                color = if (hasNewPipeSearchAccess) Color(0xFF00FF88) else Color.Gray,
+                                fontSize = 10.sp
+                        )
+                    }
+                    Icon(
+                            if (hasNewPipeSearchAccess) Icons.Default.Link
+                            else Icons.Default.LinkOff,
+                            contentDescription = null,
+                            tint = if (hasNewPipeSearchAccess) Color(0xFF00FF88) else Color.Gray
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+                OutlinedButton(
+                        onClick =
+                                if (hasNewPipeSearchAccess) onCompleteYouTubeCatalog
+                                else onEnableNewPipeSearch,
+                        enabled = !isCompletingYouTubeCatalog && youtubeMappingTotal > 0,
+                        modifier = Modifier.fillMaxWidth().height(38.dp)
+                ) {
+                    if (isCompletingYouTubeCatalog) {
+                        CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                                color = Color(0xFF00FF88)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                                "Recherche $catalogCompletionProgress/$catalogCompletionTarget",
+                                fontSize = 11.sp
+                        )
+                    } else {
+                        Icon(
+                                if (hasNewPipeSearchAccess) Icons.Default.TravelExplore
+                                else Icons.Default.AdminPanelSettings,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                                if (hasNewPipeSearchAccess) "Compléter avec NewPipe"
+                                else "Autoriser le moteur NewPipe",
+                                fontSize = 11.sp
+                        )
+                    }
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(12.dp))

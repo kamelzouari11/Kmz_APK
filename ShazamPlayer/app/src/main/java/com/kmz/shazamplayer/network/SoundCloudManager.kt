@@ -36,7 +36,7 @@ data class SoundCloudPlaylist(
  * Gestionnaire SoundCloud avec validation multi-sources.
  *
  * Stratégie PRO de sélection des flux:
- * 1. Recherche Deezer/iTunes pour obtenir métadonnées officielles (durée, cover HD)
+ * 1. Recherche Deezer/iTunes pour la durée et CoverArtProvider pour la pochette
  * 2. Recherche SoundCloud avec filtrage:
  * ```
  *    - Durée > 2 minutes (évite pubs/teasers)
@@ -45,7 +45,7 @@ data class SoundCloudPlaylist(
  * ```
  * 3. Hiérarchie des covers:
  * ```
- *    a. Cover HD officielle (Deezer/iTunes)
+ *    a. Cover validée par la même méthode que SimpleRADIO
  *    b. Pochette SoundCloud en HD (t500x500)
  *    c. Avatar du créateur en HD
  * ```
@@ -79,7 +79,7 @@ class SoundCloudManager(private val clientId: String) {
                 val results = mutableListOf<SoundCloudResult>()
 
                 try {
-                    // 1. Obtenir les métadonnées officielles (Deezer/iTunes)
+                    // 1. Obtenir la durée officielle et la cover validée par CoverArtProvider
                     val officialMetadata = metadataManager.getOfficialMetadata(artist, title)
                     val officialDuration = officialMetadata?.durationMs ?: 0L
                     val officialCoverHD = officialMetadata?.coverUrlHD
@@ -154,11 +154,8 @@ class SoundCloudManager(private val clientId: String) {
                                             ?: ""
                         }
 
-                        // Priorité à la cover officielle HD (Deezer/iTunes)
-                        val bestArtwork =
-                                officialCoverHD
-                                        ?: artworkUrl.ifEmpty { null }
-                                                ?: fetchiTunesCover(artist, title)
+                        // La recherche de cover passe exclusivement par CoverArtProvider.
+                        val bestArtwork = officialCoverHD ?: artworkUrl.ifEmpty { null }
 
                         // 4. Extraction du flux progressif (MP3 stable)
                         val media = trackJson.optJSONObject("media") ?: continue
@@ -261,29 +258,6 @@ class SoundCloudManager(private val clientId: String) {
                         }
                 sortedResults.take(5)
             }
-
-    /**
-     * Récupère la cover iTunes en fallback (pour les cas où SoundCloud et les métadonnées
-     * officielles échouent)
-     */
-    private fun fetchiTunesCover(artist: String, title: String): String? {
-        return try {
-            val itunesUrl =
-                    "https://itunes.apple.com/search?term=${Uri.encode("$artist $title")}&entity=song&limit=1"
-            val itunesResponse = client.newCall(Request.Builder().url(itunesUrl).build()).execute()
-            itunesResponse.body?.string()?.let { body ->
-                val results = JSONObject(body).optJSONArray("results")
-                if (results != null && results.length() > 0) {
-                    results.getJSONObject(0)
-                            .optString("artworkUrl100", "")
-                            .replace("100x100bb", "600x600bb")
-                            .ifEmpty { null }
-                } else null
-            }
-        } catch (e: Exception) {
-            null
-        }
-    }
 
     /** Retourne les métadonnées officielles pour un track (utile pour l'affichage). */
     suspend fun getOfficialMetadata(artist: String, title: String): OfficialTrackMetadata? =

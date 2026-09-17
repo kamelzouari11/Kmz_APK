@@ -40,16 +40,29 @@ fun rememberCastManagement(
         tempHelper
     }
 
-    LaunchedEffect(Unit) {
-        if (castHelper.initCast()) {
-            try {
-                CastContext.getSharedInstance(context)
-                        .sessionManager
-                        .addSessionManagerListener(
-                                castHelper.sessionManagerListener,
-                                CastSession::class.java
-                        )
-            } catch (_: Exception) {}
+    DisposableEffect(castHelper) {
+        val sessionManager =
+                if (castHelper.initCast()) {
+                    try {
+                        CastContext.getSharedInstance(context).sessionManager
+                    } catch (_: Exception) {
+                        null
+                    }
+                } else {
+                    null
+                }
+
+        sessionManager?.addSessionManagerListener(
+                castHelper.sessionManagerListener,
+                CastSession::class.java
+        )
+        castSession = sessionManager?.currentCastSession
+
+        onDispose {
+            sessionManager?.removeSessionManagerListener(
+                    castHelper.sessionManagerListener,
+                    CastSession::class.java
+            )
         }
     }
 

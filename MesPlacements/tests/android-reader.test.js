@@ -1,0 +1,22 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { makeBackup, encryptBackup } from '../src/github-backup.js';
+import { readEncryptedBackup, SOURCE } from '../android-reporting/web/reader.js';
+import { buildReport, reportTables } from '../src/report-data.js';
+import { createReportPdf } from '../src/report-pdf.js';
+const base = { id: '1', exercice: 2026, etablissement: 'Épargne Test', placement: 'CEA', revenu: 'Dividendes', montant: '120.125', rs: '1.000', imposition: 'Exonéré', declaration: 'Déjà déclaré' };
+test('PC encrypted backup is readable by Android with six digit code and all report fields intact', async () => {
+  const records = [base, { ...base, id: '2', montant: '-20.125' }, { ...base, id: '3', exercice: 2025 }];
+  const encrypted = await encryptBackup(makeBackup(records), '001234');
+  const restored = await readEncryptedBackup(encrypted, '001234');
+  assert.deepEqual(restored.records, records);
+  const settings = { type: 'declaration', years: ['2026'], search: 'épargne div', etablissement: 'Épargne Test', placement: 'CEA', revenu: 'Dividendes', imposition: 'Exonéré', declaration: 'Déjà déclaré', groupBy: 'revenu', direction: 'desc' };
+  const report = buildReport(restored.records, settings);
+  assert.equal(report.totals.count, 2); assert.equal(report.totals.montant, 100000n);
+  const pdf = createReportPdf({ report, tables: reportTables(report, settings), filterLabels: ['Exercices : 2026'], date: '17/09/2026' });
+  assert.equal(Math.round(pdf.internal.pageSize.getWidth()), 210);
+  assert.equal(Math.round(pdf.internal.pageSize.getHeight()), 297);
+  assert.ok(pdf.output().includes('100,000'));
+  await assert.rejects(readEncryptedBackup(encrypted, '999999'), /incorrect/);
+  assert.equal(SOURCE.path, 'MySharedFolder/mes_placements_backup.json');
+});

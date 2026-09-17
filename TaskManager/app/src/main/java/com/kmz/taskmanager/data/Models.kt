@@ -15,12 +15,6 @@ enum class AlarmLevel {
     VERY_HIGH
 }
 
-enum class Priority {
-    LOW,
-    MEDIUM,
-    HIGH
-}
-
 enum class RepeatUnit {
     MINUTES,
     HOURS,
@@ -37,12 +31,11 @@ data class Task(
         val label: String,
         val type: TaskType = TaskType.ONCE,
         val dueDate: LocalDateTime?,
-        val alarmLevel: AlarmLevel = AlarmLevel.MEDIUM,
-        val priority: Priority = Priority.MEDIUM,
+        val alarmLevel: AlarmLevel = AlarmLevel.HIGH,
         val isDone: Boolean = false,
         val repeatInterval: Int? = null,
         val repeatUnit: RepeatUnit? = null,
-        val warningInterval: Int = 15,
+        val warningInterval: Int = 0,
         val warningUnit: RepeatUnit = RepeatUnit.MINUTES,
         val warningRepeatInterval: Int? = null,
         val warningRepeatUnit: RepeatUnit? = null,

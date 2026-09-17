@@ -1,10 +1,16 @@
 package com.kmz.shazamplayer
 
 import android.app.Application
+import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.runtime.*
+import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
@@ -14,21 +20,30 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.SilenceMediaSource
 import com.kmz.shazamplayer.model.Track
 import com.kmz.shazamplayer.network.MusicMetadataManager
+import com.kmz.shazamplayer.network.NewPipeManager
+import com.kmz.shazamplayer.network.NewPipePlaylistException
+import com.kmz.shazamplayer.network.NewPipeSearchClient
+import com.kmz.shazamplayer.network.NewPipeSearchException
 import com.kmz.shazamplayer.network.SoundCloudManager
 import com.kmz.shazamplayer.network.SoundCloudPlaylist
 import com.kmz.shazamplayer.network.SoundCloudResult
 import com.kmz.shazamplayer.network.SpotifyManager
 import com.kmz.shazamplayer.network.YouTubeApiException
 import com.kmz.shazamplayer.network.YouTubeManager
+import com.kmz.shazamplayer.network.YouTubeMappingStore
 import com.kmz.shazamplayer.network.YouTubeResult
 import com.kmz.shazamplayer.ui.components.YouTubePlayerAction
 import com.kmz.shazamplayer.ui.components.YouTubePlayerCommand
 import com.kmz.shazamplayer.util.CsvParser
-import kotlin.random.Random
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val context = application.applicationContext
@@ -40,8 +55,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var soundCloudManager: SoundCloudManager? = null
     private var youtubeManager: YouTubeManager? = null
     private val metadataManager = MusicMetadataManager()
+    private val newPipeManager = NewPipeManager()
+    private val newPipeSearchClient = NewPipeSearchClient(context)
+    private val youtubeMappingStore = YouTubeMappingStore(context)
     private var onExit: (() -> Unit)? = null
     private var playbackSearchJob: Job? = null
+    private var newPipePlaylistJob: Job? = null
+    private var mappingPrefetchJob: Job? = null
+    private var catalogCompletionJob: Job? = null
     private var youtubeCommandId = 0L
 
     // Navigation State
@@ -61,9 +82,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var currentStreamIndex by mutableIntStateOf(0)
     var isActuallyPlaying by mutableStateOf(false)
     var isShuffle by mutableStateOf(false)
+        private set
     var isRepeat by mutableStateOf(false)
     var isUsingSpotify by mutableStateOf(false)
     var isUsingYouTube by mutableStateOf(false)
+    var isUsingNewPipe by mutableStateOf(false)
+        private set
     var youtubeVideoId by mutableStateOf<String?>(null)
     var youtubeChannel by mutableStateOf<String?>(null)
     var youtubeResults by mutableStateOf(emptyList<YouTubeResult>())
@@ -73,6 +97,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         private set
     var isTrackLoading by mutableStateOf(false)
     var playbackError by mutableStateOf<String?>(null)
+
+    // NewPipe hand-off state
+    var isPreparingNewPipePlaylist by mutableStateOf(false)
+        private set
+    var newPipePlaylistProgress by mutableIntStateOf(0)
+        private set
+    var newPipePlaylistTargetCount by mutableIntStateOf(0)
+        private set
+    var hasNewPipeSearchAccess by mutableStateOf(false)
+        private set
+    var youtubeMappingCount by mutableIntStateOf(0)
+        private set
+    var isCompletingYouTubeCatalog by mutableStateOf(false)
+        private set
+    var catalogCompletionProgress by mutableIntStateOf(0)
+        private set
+    var catalogCompletionTarget by mutableIntStateOf(0)
+        private set
 
     // Progress State
     var currentPosition by mutableLongStateOf(0L)
@@ -142,7 +184,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 if (isActuallyPlaying) {
                     if (isUsingSpotify) {
                         // Spotify progress is handled via subscription
-                    } else if (!isUsingYouTube) {
+                    } else if (!isUsingYouTube && !isUsingNewPipe) {
                         currentPosition = exoPlayer?.currentPosition ?: 0L
                         duration = (exoPlayer?.duration ?: 0L).coerceAtLeast(0L)
                     }
@@ -160,20 +202,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
 
+        refreshNewPipeSearchAccess()
         loadSavedCsv()
     }
 
     private fun loadSavedCsv() {
         val savedCsv = prefs.getString("csv_data", null)
         if (savedCsv != null) {
-            shazamTracks = CsvParser.parse(savedCsv.byteInputStream())
+            shazamTracks = runCatching { CsvParser.parse(savedCsv.byteInputStream()) }.getOrElse {
+                Toast.makeText(context, "Bibliothèque illisible : réimportez SyncedSongs.csv.", Toast.LENGTH_LONG).show()
+                emptyList()
+            }
+            restoreYouTubeMappings(shazamTracks)
             filteredTracks = shazamTracks
         }
     }
 
     fun handleCsvContent(content: String) {
+        val importedTracks = CsvParser.parse(content.byteInputStream())
         prefs.edit().putString("csv_data", content).apply()
-        shazamTracks = CsvParser.parse(content.byteInputStream())
+        shazamTracks = importedTracks
+        restoreYouTubeMappings(shazamTracks)
         filteredTracks = shazamTracks
         isDiscoveryMode = false
         Toast.makeText(context, "${shazamTracks.size} morceaux chargés !", Toast.LENGTH_SHORT)
@@ -217,6 +266,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun playTrack(index: Int, streamIdx: Int = 0) {
+        startTrack(index, streamIdx, preferNewPipe = true)
+    }
+
+    private fun startTrack(index: Int, streamIdx: Int, preferNewPipe: Boolean) {
         if (filteredTracks.isEmpty() || index !in filteredTracks.indices) return
         if (SOUNDCLOUD_FALLBACK_ENABLED) {
             playTrackFromSoundCloud(index, streamIdx)
@@ -231,8 +284,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         exoPlayer?.pause()
         spotifyManager?.pause()
         isUsingSpotify = false
-        isUsingYouTube = true
-        syncYouTubeQueue(index)
+        isUsingYouTube = false
+        isUsingNewPipe = false
         isActuallyPlaying = false
         youtubeVideoId = null
         youtubeChannel = null
@@ -243,6 +296,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         duration = 0L
         playbackError = null
         isTrackLoading = true
+
+        if (preferNewPipe && isNewPipeInstalled()) {
+            refreshNewPipeSearchAccess()
+            if (!hasNewPipeSearchAccess) {
+                isTrackLoading = false
+                playbackError = "Autorisez d'abord la liaison avec NewPipe."
+                requestNewPipeSearchAccess()
+                return
+            }
+            playTrackInNewPipe(index, track)
+            return
+        }
+
+        isUsingYouTube = true
+        syncYouTubeQueue(index)
 
         track.youtubeVideoId?.takeIf { it.isNotBlank() }?.let { videoId ->
             youtubeResults =
@@ -302,6 +370,120 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         if (currentTrackIndexInFiltered == index) isTrackLoading = false
                     }
                 }
+    }
+
+    /** Searches only when needed, then starts NewPipe's audio player without opening its UI. */
+    private fun playTrackInNewPipe(index: Int, track: Track) {
+        isUsingNewPipe = true
+        playbackSearchJob =
+                viewModelScope.launch {
+                    val officialMetadataDeferred =
+                            async { metadataManager.getOfficialMetadata(track.artist, track.title) }
+                    try {
+                        val knownVideoId =
+                                track.youtubeVideoId?.takeIf { VIDEO_ID.matches(it) }
+                                        ?: if (youtubeMappingStore.restore(track)) {
+                                            track.youtubeVideoId
+                                        } else {
+                                            null
+                                        }
+
+                        if (knownVideoId != null) {
+                            newPipeSearchClient.playVideoId(knownVideoId)
+                            youtubeVideoId = knownVideoId
+                            youtubeChannel = track.youtubeChannel
+                            applyNewPipeArtwork(track, knownVideoId)
+                        } else {
+                            val result =
+                                    newPipeSearchClient.searchAndPlayFirst(
+                                            artist = track.artist,
+                                            title = track.title
+                                    )
+                            if (result == null) {
+                                failNewPipePlayback(index, "Aucun résultat trouvé par NewPipe.")
+                                return@launch
+                            }
+                            youtubeMappingStore.save(
+                                    track,
+                                    result.videoId,
+                                    result.channel,
+                                    result.artworkUrl
+                            )
+                            refreshYouTubeMappingCount()
+                            youtubeVideoId = result.videoId
+                            youtubeChannel = result.channel
+                            applyNewPipeArtwork(track, result.videoId, result.artworkUrl)
+                        }
+
+                        if (currentTrackIndexInFiltered != index) return@launch
+                        isActuallyPlaying = true
+                        isTrackLoading = false
+                        playbackError = null
+                        prefetchUpcomingYouTubeMappings()
+
+                        // Replace the temporary thumbnail with the same validated cover strategy
+                        // used by SimpleRADIO, without delaying NewPipe playback.
+                        officialMetadataDeferred.await()?.let { metadata ->
+                            if (currentTrackIndexInFiltered != index) return@let
+                            track.officialDurationMs = metadata.durationMs
+                            track.officialAlbum = metadata.album
+                            track.officialCoverHD = metadata.coverUrlHD
+                            track.metadataSource = metadata.source
+                            track.artworkUrl =
+                                    metadata.coverUrlHD
+                                            ?: metadata.coverUrl
+                                            ?: track.artworkUrl
+                            currentArtworkUrl = track.artworkUrl
+                            youtubeVideoId?.let { videoId ->
+                                youtubeMappingStore.save(
+                                        track,
+                                        videoId,
+                                        youtubeChannel,
+                                        track.artworkUrl
+                                )
+                            }
+                        }
+                    } catch (error: CancellationException) {
+                        officialMetadataDeferred.cancel()
+                        throw error
+                    } catch (error: NewPipeSearchException) {
+                        officialMetadataDeferred.cancel()
+                        failNewPipePlayback(index, error.message ?: "Liaison NewPipe impossible.")
+                    } catch (error: Exception) {
+                        officialMetadataDeferred.cancel()
+                        failNewPipePlayback(
+                                index,
+                                error.localizedMessage ?: "Liaison NewPipe impossible."
+                        )
+                    } finally {
+                        if (currentTrackIndexInFiltered == index && isUsingNewPipe) {
+                            isTrackLoading = false
+                        }
+                    }
+                }
+    }
+
+    private fun applyNewPipeArtwork(
+            track: Track,
+            videoId: String,
+            newPipeArtworkUrl: String? = null
+    ) {
+        val artwork =
+                track.officialCoverHD
+                        ?: newPipeArtworkUrl?.takeIf { it.isNotBlank() }
+                        ?: track.artworkUrl?.takeIf { it.isNotBlank() }
+                        ?: "https://i.ytimg.com/vi/$videoId/hqdefault.jpg"
+        track.artworkUrl = artwork
+        currentArtworkUrl = artwork
+    }
+
+    private fun failNewPipePlayback(index: Int, message: String) {
+        if (currentTrackIndexInFiltered != index) return
+        isUsingNewPipe = false
+        isActuallyPlaying = false
+        isTrackLoading = false
+        playbackError = message
+        showToast(message, Toast.LENGTH_LONG)
     }
 
     /** Publishes the complete playlist to MediaSession while YouTube provides the actual audio. */
@@ -427,6 +609,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     result.artworkUrl
                             ?: "https://i.ytimg.com/vi/${result.videoId}/hqdefault.jpg"
             track.artworkUrl = track.officialCoverHD ?: youtubeThumbnail
+            track.youtubeVideoId = result.videoId
+            track.youtubeChannel = result.channelTitle
+            youtubeMappingStore.save(track, result.videoId, result.channelTitle)
+            refreshYouTubeMappingCount()
             currentArtworkUrl = track.artworkUrl
         }
         duration = result.durationMs
@@ -434,17 +620,309 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         playbackError = null
         youtubeCommand = null
         youtubeVideoId = result.videoId
+        prefetchUpcomingYouTubeMappings()
+    }
+
+    /**
+     * Resolves the current item and the following items, then hands a temporary YouTube playlist
+     * to NewPipe, with up to 100 video IDs in the generated queue.
+     */
+    fun openCurrentPlaylistInNewPipe() {
+        if (isPreparingNewPipePlaylist) return
+        if (filteredTracks.isEmpty()) {
+            showToast("La playlist est vide.")
+            return
+        }
+        if (!isNewPipeInstalled()) {
+            showToast("NewPipe n'est pas installé sur cet appareil.", Toast.LENGTH_LONG)
+            return
+        }
+        refreshNewPipeSearchAccess()
+        if (!hasNewPipeSearchAccess) {
+            requestNewPipeSearchAccess()
+            return
+        }
+
+        val orderedTracks = buildNewPipeQueue().take(NewPipeManager.MAX_PLAYLIST_SIZE)
+        mappingPrefetchJob?.cancel()
+        newPipePlaylistJob?.cancel()
+        newPipePlaylistJob =
+                viewModelScope.launch {
+                    isPreparingNewPipePlaylist = true
+                    newPipePlaylistProgress = 0
+                    newPipePlaylistTargetCount = orderedTracks.size
+
+                    try {
+                        val resolvedIds = resolveTracksInParallel(orderedTracks) {
+                            newPipePlaylistProgress++
+                        }
+                        val videoIds = resolvedIds.filterNotNull()
+                        val skipped = resolvedIds.count { it == null }
+
+                        if (videoIds.isEmpty()) {
+                            showToast("Aucun titre YouTube n'a pu être préparé.", Toast.LENGTH_LONG)
+                            return@launch
+                        }
+
+                        val playlistUrl = newPipeManager.createTemporaryPlaylistUrl(videoIds)
+                        pauseYouTube()
+                        val newPipeHomeIntent =
+                                context.packageManager
+                                        .getLaunchIntentForPackage(NewPipeManager.PACKAGE_NAME)
+                                        ?.apply {
+                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                                        }
+                                        ?: throw ActivityNotFoundException()
+                        val playlistIntent =
+                                Intent(Intent.ACTION_VIEW, Uri.parse(playlistUrl)).apply {
+                                    setClassName(
+                                            NewPipeManager.PACKAGE_NAME,
+                                            NewPipeManager.ROUTER_ACTIVITY
+                                    )
+                                    addCategory(Intent.CATEGORY_BROWSABLE)
+                                }
+                        try {
+                            // Keep NewPipe itself underneath its transparent RouterActivity. If the
+                            // user's preferred URL action is background playback, the router
+                            // finishes back to NewPipe instead of revealing ShazamPlayer again.
+                            context.startActivities(arrayOf(newPipeHomeIntent, playlistIntent))
+                            // Stop advertising ShazamPlayer's silent YouTube queue to MBUX. NewPipe
+                            // now owns playback, so car controls (including Shuffle) must target
+                            // NewPipe's active media session.
+                            isUsingYouTube = false
+                            isUsingNewPipe = true
+                            youtubeCommand = null
+                            exoPlayer?.clearMediaItems()
+                            val omittedByLimit =
+                                    (filteredTracks.size - NewPipeManager.MAX_PLAYLIST_SIZE)
+                                            .coerceAtLeast(0)
+                            val details =
+                                    buildList {
+                                                if (skipped > 0) add("$skipped introuvable(s)")
+                                                if (omittedByLimit > 0) {
+                                                    add("$omittedByLimit au-delà de la limite")
+                                                }
+                                            }
+                                            .joinToString(" · ")
+                            showToast(
+                                    "${videoIds.size} titre(s) envoyé(s) à NewPipe" +
+                                            if (details.isBlank()) "" else " · $details",
+                                    Toast.LENGTH_LONG
+                            )
+                        } catch (_: ActivityNotFoundException) {
+                            showToast(
+                                    "NewPipe n'est pas disponible. Installez la version officielle puis réessayez.",
+                                    Toast.LENGTH_LONG
+                            )
+                        }
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (error: NewPipePlaylistException) {
+                        showToast(error.message ?: "La playlist NewPipe n'a pas pu être créée.", Toast.LENGTH_LONG)
+                    } catch (error: Exception) {
+                        showToast(
+                                "Envoi vers NewPipe impossible : ${error.localizedMessage ?: "erreur réseau"}",
+                                Toast.LENGTH_LONG
+                        )
+                    } finally {
+                        isPreparingNewPipePlaylist = false
+                    }
+                }
+    }
+
+    private fun buildNewPipeQueue(): List<Track> {
+        if (filteredTracks.isEmpty()) return emptyList()
+        val startIndex = currentTrackIndexInFiltered.coerceIn(0, filteredTracks.lastIndex)
+        val current = filteredTracks[startIndex]
+        val remaining =
+                if (isShuffle) {
+                    filteredTracks.filterIndexed { index, _ -> index != startIndex }.shuffled()
+                } else {
+                    filteredTracks.drop(startIndex + 1) + filteredTracks.take(startIndex)
+                }
+        return listOf(current) + remaining
+    }
+
+    private suspend fun resolveVideoIdForNewPipe(track: Track): String? {
+        val selectedCurrentId =
+                if (track === currentTrack) youtubeVideoId?.takeIf { VIDEO_ID.matches(it) }
+                else null
+        val existing = selectedCurrentId ?: track.youtubeVideoId?.takeIf { VIDEO_ID.matches(it) }
+        if (existing != null) {
+            youtubeMappingStore.save(track, existing, track.youtubeChannel)
+            return existing
+        }
+
+        if (youtubeMappingStore.restore(track)) {
+            return track.youtubeVideoId
+        }
+
+        if (!hasNewPipeSearchAccess) return null
+        return try {
+            val newPipeResult =
+                    newPipeSearchClient.searchFirst(track.artist, track.title) ?: return null
+            youtubeMappingStore.save(
+                    track,
+                    newPipeResult.videoId,
+                    newPipeResult.channel,
+                    newPipeResult.artworkUrl
+            )
+            refreshYouTubeMappingCount()
+            newPipeResult.videoId
+        } catch (_: NewPipeSearchException) {
+            null
+        }
+    }
+
+    private suspend fun resolveTracksInParallel(
+            tracks: List<Track>,
+            onResolved: () -> Unit = {}
+    ): List<String?> =
+            coroutineScope {
+                val semaphore = Semaphore(NEWPIPE_SEARCH_CONCURRENCY)
+                tracks.map { track ->
+                            async {
+                                semaphore.withPermit {
+                                    val result = resolveVideoIdForNewPipe(track)
+                                    onResolved()
+                                    result
+                                }
+                            }
+                        }
+                        .awaitAll()
+            }
+
+    fun requestNewPipeSearchAccess() {
+        val intent =
+                Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+        context.startActivity(intent)
+        showToast(
+                "Activez ShazamPlayer, puis revenez dans l'application.",
+                Toast.LENGTH_LONG
+        )
+    }
+
+    fun refreshNewPipeSearchAccess() {
+        val wasEnabled = hasNewPipeSearchAccess
+        hasNewPipeSearchAccess =
+                NotificationManagerCompat.getEnabledListenerPackages(context)
+                        .contains(context.packageName)
+        if (!wasEnabled && hasNewPipeSearchAccess) {
+            showToast("Moteur de recherche NewPipe activé.")
+            prefetchUpcomingYouTubeMappings()
+        }
+    }
+
+    fun completeYouTubeCatalog() {
+        refreshNewPipeSearchAccess()
+        if (!hasNewPipeSearchAccess) {
+            requestNewPipeSearchAccess()
+            return
+        }
+        if (isCompletingYouTubeCatalog) return
+
+        restoreYouTubeMappings(shazamTracks)
+        val unresolved = shazamTracks.filter { it.youtubeVideoId?.matches(VIDEO_ID) != true }
+        if (unresolved.isEmpty()) {
+            showToast("Le catalogue YouTube est déjà complet.")
+            return
+        }
+
+        mappingPrefetchJob?.cancel()
+        catalogCompletionJob?.cancel()
+        catalogCompletionJob =
+                viewModelScope.launch {
+                    isCompletingYouTubeCatalog = true
+                    catalogCompletionProgress = 0
+                    catalogCompletionTarget = unresolved.size
+                    try {
+                        unresolved.chunked(CATALOG_RESOLUTION_BATCH_SIZE).forEach { batch ->
+                            resolveTracksInParallel(batch) { catalogCompletionProgress++ }
+                            delay(CATALOG_BATCH_PAUSE_MS)
+                        }
+                        showToast(
+                                "Catalogue mis à jour : $youtubeMappingCount/${shazamTracks.size}",
+                                Toast.LENGTH_LONG
+                        )
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (error: Exception) {
+                        showToast(
+                                "Catalogue interrompu : ${error.localizedMessage ?: "erreur réseau"}",
+                                Toast.LENGTH_LONG
+                        )
+                    } finally {
+                        isCompletingYouTubeCatalog = false
+                    }
+                }
+    }
+
+    private fun prefetchUpcomingYouTubeMappings() {
+        if (!hasNewPipeSearchAccess || isCompletingYouTubeCatalog || filteredTracks.isEmpty()) return
+        val candidates =
+                buildNewPipeQueue()
+                        .take(NewPipeManager.MAX_PLAYLIST_SIZE)
+                        .filter { track ->
+                            track.youtubeVideoId?.matches(VIDEO_ID) != true &&
+                                    !youtubeMappingStore.restore(track)
+                        }
+        if (candidates.isEmpty()) return
+
+        mappingPrefetchJob?.cancel()
+        mappingPrefetchJob =
+                viewModelScope.launch {
+                    runCatching { resolveTracksInParallel(candidates) }
+                }
+    }
+
+    private fun restoreYouTubeMappings(tracks: List<Track>) {
+        tracks.forEach(youtubeMappingStore::restore)
+        refreshYouTubeMappingCount()
+    }
+
+    private fun refreshYouTubeMappingCount() {
+        youtubeMappingCount = shazamTracks.count { it.youtubeVideoId?.matches(VIDEO_ID) == true }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun isNewPipeInstalled(): Boolean =
+            runCatching {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            context.packageManager.getPackageInfo(
+                                    NewPipeManager.PACKAGE_NAME,
+                                    PackageManager.PackageInfoFlags.of(0)
+                            )
+                        } else {
+                            context.packageManager.getPackageInfo(NewPipeManager.PACKAGE_NAME, 0)
+                        }
+                    }
+                    .isSuccess
+
+    private fun showToast(message: String, duration: Int = Toast.LENGTH_SHORT) {
+        Toast.makeText(context, message, duration).show()
     }
 
     fun playNext() {
         if (isRepeat) {
             seekTo(0L)
         } else if (isShuffle && filteredTracks.isNotEmpty()) {
-            playTrack(Random.nextInt(filteredTracks.size))
+            val nextCandidates = filteredTracks.indices.filter { it != currentTrackIndexInFiltered }
+            playTrack(if (nextCandidates.isEmpty()) 0 else nextCandidates.random())
         } else {
             val next = currentTrackIndexInFiltered + 1
             if (next < filteredTracks.size) playTrack(next) else playTrack(0)
         }
+    }
+
+    fun setShuffleEnabled(enabled: Boolean) {
+        isShuffle = enabled
+    }
+
+    fun toggleShuffle() {
+        setShuffleEnabled(!isShuffle)
     }
 
     fun playPrevious() {
@@ -594,7 +1072,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun togglePlay() {
-        if (isUsingYouTube) {
+        if (isUsingNewPipe) {
+            val shouldPlay = !isActuallyPlaying
+            isActuallyPlaying = shouldPlay
+            viewModelScope.launch {
+                runCatching { newPipeSearchClient.setPlaying(shouldPlay) }
+                        .onFailure { isActuallyPlaying = !shouldPlay }
+            }
+        } else if (isUsingYouTube) {
             issueYouTubeCommand(
                     if (isActuallyPlaying) YouTubePlayerAction.PAUSE else YouTubePlayerAction.PLAY
             )
@@ -604,7 +1089,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun seekTo(position: Long) {
-        if (isUsingYouTube) {
+        if (isUsingNewPipe) {
+            currentPosition = position.coerceAtLeast(0L)
+            viewModelScope.launch { runCatching { newPipeSearchClient.seekTo(position) } }
+        } else if (isUsingYouTube) {
             issueYouTubeCommand(YouTubePlayerAction.SEEK, position)
         } else {
             exoPlayer?.seekTo(position)
@@ -688,5 +1176,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     companion object {
         private const val SOUNDCLOUD_FALLBACK_ENABLED = false
         private const val DEFAULT_QUEUE_ITEM_DURATION_MS = 3 * 60_000L
+        private const val NEWPIPE_SEARCH_CONCURRENCY = 3
+        private const val CATALOG_RESOLUTION_BATCH_SIZE = 12
+        private const val CATALOG_BATCH_PAUSE_MS = 250L
+        private val VIDEO_ID = "[A-Za-z0-9_-]{11}".toRegex()
     }
 }

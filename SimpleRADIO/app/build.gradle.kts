@@ -2,19 +2,22 @@ import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
 }
 
-// Lire le local.properties COMMUN à la racine de KmzAPK (partagé par toutes les apps)
-// Chemin: app/ -> SimpleRADIO/ -> KmzAPK/local.properties
+// Lire d'abord la configuration partagée, puis le local.properties du projet.
+// Le fichier du projet a priorité lorsqu'une propriété existe dans les deux fichiers.
 val localProperties = Properties()
-val localPropertiesFile = rootProject.rootDir.parentFile.resolve("local.properties")
-if (localPropertiesFile.exists()) {
-    localPropertiesFile.inputStream().use { localProperties.load(it) }
-}
+listOf(
+    rootProject.rootDir.parentFile.resolve("local.properties"),
+    rootProject.rootDir.resolve("local.properties")
+).filter { it.exists() }
+    .forEach { file -> file.inputStream().use { localProperties.load(it) } }
 val githubToken: String = localProperties.getProperty("github.token", "")
+val logoDevPublishableKey: String =
+    localProperties.getProperty("logo.dev.publishable.key", "")
+val serperApiKey: String = localProperties.getProperty("serper.api.key", "")
 
 
 android {
@@ -29,6 +32,14 @@ android {
         versionName = "1.0"
         // Token GitHub injecté depuis local.properties (jamais dans le code)
         buildConfigField("String", "GITHUB_TOKEN", "\"$githubToken\"")
+        // Clé publique Logo.dev : conçue pour être utilisée dans une application cliente.
+        buildConfigField(
+            "String",
+            "LOGO_DEV_PUBLISHABLE_KEY",
+            "\"$logoDevPublishableKey\""
+        )
+        // Clé Serper locale. Pour une diffusion publique, préférer un proxy serveur.
+        buildConfigField("String", "SERPER_API_KEY", "\"$serperApiKey\"")
     }
 
 
@@ -63,13 +74,9 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
     }
 
-    kotlinOptions {
-        jvmTarget = "11"
-    }
-
     buildFeatures {
         compose = true
-        buildConfig = true   // nécessaire pour BuildConfig.GITHUB_TOKEN
+        buildConfig = true
     }
 
 }
@@ -111,6 +118,7 @@ dependencies {
 
     // Coil pour charger les logos des chaînes
     implementation("io.coil-kt:coil-compose:2.5.0")
+    implementation("io.coil-kt:coil-svg:2.5.0")
 
     // Room
     implementation(libs.androidx.room.runtime)

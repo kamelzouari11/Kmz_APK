@@ -103,31 +103,42 @@ class IptvScraper {
     fun parseText(text: String, sourceUrl: String? = null): List<LinkEntity> {
         val results = mutableListOf<LinkEntity>()
         
-        // Pre-clean text: replace non-breaking spaces and common HTML entities
-        val cleanText = text.replace("\u00A0", " ")
-            .replace("&nbsp;", " ")
-            .replace("\u200B", "")
-            .replace("\u200C", "")
-            .replace("\u200D", "")
-            .replace("\r\n", "\n")
-            .replace("\r", "\n")
-        
-        // Improved URL pattern that stops at spaces and common emoji/separator ranges
-        val urlPattern = Pattern.compile("https?://[^\\s\"'<>\\(\\)\\[\\]\\{\\}\\^\\|\\\\\\u27A4\\u2705\\u2714\\uD83C-\\uDBFF\\uDC00-\\uDFFF]+", Pattern.CASE_INSENSITIVE)
+        val cleanText = text.normalizeParserText()
+        val urlPattern = Pattern.compile(
+            "https?://[^\\s\"'<>\\(\\)\\[\\]\\{\\}\\^|\\\\\\p{So}]+",
+            Pattern.CASE_INSENSITIVE
+        )
         val urlMatcher = urlPattern.matcher(cleanText)
         
-        val urlPositions = mutableListOf<Pair<Int, String>>()
+        val urlPositions = mutableListOf<LocatedValue>()
         while (urlMatcher.find()) {
-            urlPositions.add(urlMatcher.start() to urlMatcher.group())
+            urlPositions.add(LocatedValue(urlMatcher.start(), urlMatcher.end(), urlMatcher.group().cleanUrl()))
         }
 
+        val credentialPairs = pairCredentialsLocated(
+            extractLabeledValues(cleanText, USER_LABELS),
+            extractLabeledValues(cleanText, PASSWORD_LABELS)
+        )
+        val globalMacs = extractMacs(cleanText)
+
         for (i in urlPositions.indices) {
-            val (pos, urlStr) = urlPositions[i]
+            val urlMatch = urlPositions[i]
+            val pos = urlMatch.start
+            val urlStr = urlMatch.value
             if (urlStr.isBlank()) continue
             
-            // Look ahead for the next URL or take a reasonable segment size
-            val nextUrlPos = if (i + 1 < urlPositions.size) urlPositions[i + 1].first else minOf(pos + 1000, cleanText.length)
-            val segment = cleanText.substring(pos, nextUrlPos)
+            // Include text before and after the URL: some posts use user/pass/url order.
+            val segmentStart = if (i > 0) {
+                maxOf(urlPositions[i - 1].end, pos - 1200)
+            } else {
+                maxOf(0, pos - 1200)
+            }
+            val segmentEnd = if (i + 1 < urlPositions.size) {
+                minOf(urlPositions[i + 1].start, pos + 1200)
+            } else {
+                minOf(cleanText.length, pos + 1200)
+            }
+            val segment = cleanText.substring(segmentStart, segmentEnd)
             
             // 1. M3U Check (get.php, m3u, m3u8, m3u8_plus)
             if (urlStr.contains(Regex("m3u|m3u8|get\\.php|m3u8_plus|type=m3u", RegexOption.IGNORE_CASE))) {
@@ -139,12 +150,9 @@ class IptvScraper {
             var foundSomething = false
 
             // 2. Stalker Check (Multiple MACs allowed)
-            val pureMacPattern = Pattern.compile("([0-9A-Fa-f:]{17}|[0-9A-Fa-f-]{17})")
-            val macMatcher = pureMacPattern.matcher(segment)
-            val isStalkerUrl = urlStr.contains(Regex("/c/?$", RegexOption.IGNORE_CASE))
-            
-            while (macMatcher.find()) {
-                val mac = macMatcher.group(1).clean().replace("-", ":")
+            val macs = globalMacs.filter { closestUrlIndex(it.start, urlPositions) == i }
+            for (macValue in macs) {
+                val mac = macValue.value.cleanValue().replace("-", ":")
                 var stalkerUrl = urlStr.clean()
                 if (!stalkerUrl.contains("/c", ignoreCase = true)) {
                     stalkerUrl = if (stalkerUrl.endsWith("/")) "${stalkerUrl}c/" else "$stalkerUrl/c/"
@@ -161,33 +169,30 @@ class IptvScraper {
             }
 
             // 3. Xtream Check (Multiple User/Pass allowed)
-            val userPattern = Pattern.compile("(?:Username|User|Utilisateur|Login|Account|👤Username|👤User|USER|👤)\\s*[:\\u27A4]?\\s*([^\\s\"'<>]+)", Pattern.CASE_INSENSITIVE)
-            val passPattern = Pattern.compile("(?:Password|Pass|Pwd|Mot\\s*de\\s*passe|Motdepasse|🔑Password|🔑Pass|Password🔑|PASS|🔑)\\s*[:\\u27A4]?\\s*([^\\s\"'<>]+)", Pattern.CASE_INSENSITIVE)
-            
-            val userM = userPattern.matcher(segment)
-            val passM = passPattern.matcher(segment)
-            
-            // Find all user/pass pairs in the segment
-            while (userM.find()) {
-                val user = userM.group(1).clean()
-                if (passM.find(userM.end())) { // Look for pass after this user
-                    val pass = passM.group(1).clean()
-                    results.add(LinkEntity(
-                        type = "XTREAM",
-                        url = urlStr.trimEnd('/'),
-                        username = user,
-                        password = pass,
-                        sourceUrl = sourceUrl
-                    ))
-                    foundSomething = true
-                }
+            val pairs = credentialPairs.filter { closestUrlIndex(it.center, urlPositions) == i }
+
+            for (pair in pairs) {
+                results.add(LinkEntity(
+                    type = "XTREAM",
+                    url = urlStr.trimEnd('/'),
+                    username = pair.user,
+                    password = pair.password,
+                    sourceUrl = sourceUrl
+                ))
+                foundSomething = true
             }
             
             // 4. Last-ditch: if no labels but the segment looks like it has credentials
             if (!foundSomething) {
-                val lines = segment.split("\n").map { it.trim() }.filter { it.isNotEmpty() }
-                // Skip the first line if it's just the URL
-                val dataLines = if (lines.isNotEmpty() && lines[0].startsWith("http")) lines.drop(1) else lines
+                val lines = segment.split("\n")
+                    .map { it.cleanValue() }
+                    .filter { it.isNotEmpty() && !it.startsWith("http", ignoreCase = true) }
+                    .filterNot { line ->
+                        URL_LABELS.any { label -> line.equals(label, ignoreCase = true) } ||
+                            USER_LABELS.any { label -> line.equals(label, ignoreCase = true) } ||
+                            PASSWORD_LABELS.any { label -> line.equals(label, ignoreCase = true) }
+                    }
+                val dataLines = lines.filterNot { it.contains(":") && extractMacs(it).isNotEmpty() }
                 
                 if (dataLines.size >= 2) {
                     val line1 = dataLines[0]
@@ -207,6 +212,98 @@ class IptvScraper {
         }
         
         return results.distinctBy { "${it.type}|${it.url}|${it.username}|${it.mac}" }
+    }
+
+    private data class LocatedValue(val start: Int, val end: Int, val value: String)
+    private data class CredentialPair(val user: String, val password: String, val center: Int)
+
+    private companion object {
+        val URL_LABELS = listOf("url", "host", "server", "portal", "dns", "panel", "real")
+        val USER_LABELS = listOf("username", "user", "utilisateur", "login", "account", "compte")
+        val PASSWORD_LABELS = listOf("password", "pass", "pwd", "mot de passe", "motdepasse", "senha")
+    }
+
+    private fun String.normalizeParserText(): String {
+        return replace("\u00A0", " ")
+            .replace("&nbsp;", " ")
+            .replace("&amp;", "&")
+            .replace("&lt;", "<")
+            .replace("&gt;", ">")
+            .replace("\u200B", "")
+            .replace("\u200C", "")
+            .replace("\u200D", "")
+            .replace("\r\n", "\n")
+            .replace("\r", "\n")
+            .replace(Regex("[\\t ]+"), " ")
+    }
+
+    private fun extractLabeledValues(segment: String, labels: List<String>): List<LocatedValue> {
+        val labelRegex = labels.joinToString("|") { label ->
+            label.trim().split(Regex("\\s+")).joinToString("\\s*") { Regex.escape(it) }
+        }
+        val pattern = Pattern.compile(
+            "(?:^|[\\s\\p{Punct}\\p{So}])(?:$labelRegex)\\s*[:=\\-–—>➤➡\\u27A4]*\\s*([^\\s\"'<>|;]+)",
+            Pattern.CASE_INSENSITIVE or Pattern.UNICODE_CASE
+        )
+        val matcher = pattern.matcher(segment)
+        val values = mutableListOf<LocatedValue>()
+        while (matcher.find()) {
+            val raw = matcher.group(1).cleanValue()
+            if (raw.isNotBlank() && !raw.startsWith("http", ignoreCase = true)) {
+                values.add(LocatedValue(matcher.start(1), matcher.end(1), raw))
+            }
+        }
+        return values
+    }
+
+    private fun extractMacs(segment: String): List<LocatedValue> {
+        val macPattern = Pattern.compile(
+            "(?:mac(?:\\s*address)?\\s*[:=\\-–—>➤➡\\u27A4]*\\s*)?([0-9A-Fa-f]{2}(?:[:-][0-9A-Fa-f]{2}){5})",
+            Pattern.CASE_INSENSITIVE
+        )
+        val matcher = macPattern.matcher(segment)
+        val values = mutableListOf<LocatedValue>()
+        while (matcher.find()) {
+            values.add(LocatedValue(matcher.start(1), matcher.end(1), matcher.group(1)))
+        }
+        return values.distinctBy { it.value.lowercase().replace("-", ":") }
+    }
+
+    private fun pairCredentialsLocated(users: List<LocatedValue>, passwords: List<LocatedValue>): List<CredentialPair> {
+        if (users.isEmpty() || passwords.isEmpty()) return emptyList()
+
+        val remainingPasswords = passwords.toMutableList()
+        val pairs = mutableListOf<CredentialPair>()
+        for (user in users) {
+            val pass = remainingPasswords.minByOrNull { kotlin.math.abs(it.start - user.start) } ?: continue
+            remainingPasswords.remove(pass)
+            pairs.add(CredentialPair(
+                user = user.value.cleanValue(),
+                password = pass.value.cleanValue(),
+                center = (user.start + pass.start) / 2
+            ))
+        }
+        return pairs.filter { it.user.isNotBlank() && it.password.isNotBlank() }
+    }
+
+    private fun closestUrlIndex(position: Int, urls: List<LocatedValue>): Int {
+        return urls.indices.minByOrNull { index ->
+            val url = urls[index]
+            val center = (url.start + url.end) / 2
+            kotlin.math.abs(center - position)
+        } ?: -1
+    }
+
+    private fun String.cleanValue(): String {
+        return clean()
+            .trim()
+            .trim { it.isWhitespace() || it in charArrayOf(':', '=', '-', '–', '—', '>', '➤', '➡', '\u27A4', '"', '\'', ',', ';') }
+    }
+
+    private fun String.cleanUrl(): String {
+        return clean()
+            .trim()
+            .trimEnd('.', ',', ';', '"', '\'', ')', ']', '}', '>', '➤', '➡', '\u27A4')
     }
 
     private fun decomposeM3u(url: String): LinkEntity? {

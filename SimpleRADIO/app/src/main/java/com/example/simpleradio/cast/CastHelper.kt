@@ -39,11 +39,20 @@ class CastHelper(
                 }
 
                 override fun onSessionStarting(session: CastSession) {}
-                override fun onSessionStartFailed(session: CastSession, error: Int) {}
+                override fun onSessionStartFailed(session: CastSession, error: Int) {
+                    castSession = null
+                    onSessionStatusChanged(null)
+                }
                 override fun onSessionEnding(session: CastSession) {}
-                override fun onSessionResumeFailed(session: CastSession, error: Int) {}
+                override fun onSessionResumeFailed(session: CastSession, error: Int) {
+                    castSession = null
+                    onSessionStatusChanged(null)
+                }
                 override fun onSessionResuming(session: CastSession, sessionId: String) {}
-                override fun onSessionSuspended(session: CastSession, reason: Int) {}
+                override fun onSessionSuspended(session: CastSession, reason: Int) {
+                    castSession = null
+                    onSessionStatusChanged(null)
+                }
             }
 
     fun initCast(): Boolean {

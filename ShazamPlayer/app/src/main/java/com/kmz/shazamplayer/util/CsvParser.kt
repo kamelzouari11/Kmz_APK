@@ -1,83 +1,69 @@
 package com.kmz.shazamplayer.util
 
 import com.kmz.shazamplayer.model.Track
-import java.io.BufferedReader
 import java.io.InputStream
-import java.io.InputStreamReader
+import java.util.Locale
 
+/** Reads the official privacy export, minimal date/artist/title CSV and legacy library export. */
 object CsvParser {
     fun parse(inputStream: InputStream): List<Track> {
-        val tracks = mutableListOf<Track>()
-        val reader = BufferedReader(InputStreamReader(inputStream))
-
-        var line: String?
-        var lineCount = 0
-
-        while (reader.readLine().also { line = it } != null) {
-            lineCount++
-            val currentLine = line ?: continue
-
-            // Log pour débogage (sera visible dans Logcat)
-            android.util.Log.d("CsvParser", "Line $lineCount: $currentLine")
-
-            // Ignorer l'en-tête "Shazam Library" ou la ligne vide
-            if (currentLine.contains("Shazam Library", ignoreCase = true) ||
-                            currentLine.trim().isEmpty()
-            ) {
-                continue
-            }
-
-            // Ignorer la ligne des colonnes "Index,TagTime,Title,Artist,URL,TrackKey"
-            if (currentLine.contains("Index,TagTime", ignoreCase = true)) {
-                continue
-            }
-
-            val parts = parseCsvLine(currentLine)
-            if (parts.size >= 6) {
-                try {
-                    tracks.add(
-                            Track(
-                                    index = parts[0].trim(),
-                                    tagTime = parts[1].trim(),
-                                    title = parts[2].trim(),
-                                    artist = parts[3].trim(),
-                                    shazamUrl = parts[4].trim(),
-                                    trackKey = parts[5].trim()
-                            )
-                    )
-                } catch (e: Exception) {
-                    android.util.Log.e("CsvParser", "Error parsing line $lineCount: ${e.message}")
-                }
-            }
+        val rows = inputStream.bufferedReader(Charsets.UTF_8).use { records(it.readText()) }
+                .filter { row -> row.any { it.isNotBlank() } }
+                .dropWhile { it.size == 1 && it[0].trim().equals("Shazam Library", true) }
+        require(rows.isNotEmpty()) { "Le fichier CSV est vide." }
+        val header = rows.first().map { it.trim().removePrefix("\uFEFF").lowercase(Locale.ROOT) }
+        fun column(vararg names: String) = header.indexOfFirst { it in names }
+        val date = column("date", "tagtime")
+        val artist = column("artist", "artiste")
+        val title = column("title", "titre")
+        require(date >= 0 && artist >= 0 && title >= 0) {
+            "CSV non reconnu : colonnes date, artist et title requises (SyncedSongs.csv)."
         }
-        android.util.Log.d("CsvParser", "Total tracks parsed: ${tracks.size}")
+        val index = column("index")
+        val url = column("url")
+        val key = column("trackkey")
+        val tracks = rows.drop(1).mapIndexed { position, row ->
+            require(row.size == header.size) { "Ligne ${position + 2} : nombre de colonnes incorrect." }
+            fun value(i: Int) = row.getOrNull(i)?.trim().orEmpty().takeUnless { it == "N/A" }.orEmpty()
+            require(value(artist).isNotEmpty() && value(title).isNotEmpty() &&
+                    DATE.matches(value(date))) {
+                "Ligne ${position + 2} : artiste, titre ou date invalide (date attendue : AAAA-MM-JJ)."
+            }
+            Track(
+                index = value(index).ifEmpty { (position + 1).toString() },
+                tagTime = value(date), title = value(title), artist = value(artist),
+                shazamUrl = value(url), trackKey = value(key)
+            )
+        }
+        require(tracks.isNotEmpty()) { "Le CSV ne contient aucun morceau." }
         return tracks
     }
 
-    private fun parseCsvLine(line: String): List<String> {
-        val result = mutableListOf<String>()
-        var curVal = StringBuilder()
-        var inQuotes = false
+    private val DATE = Regex("\\d{4}-\\d{2}-\\d{2}(?:[T ].*)?")
 
-        for (ch in line.toCharArray()) {
-            if (inQuotes) {
-                if (ch == '\"') {
-                    inQuotes = false
-                } else {
-                    curVal.append(ch)
+    // Quoted fields may contain commas, escaped quotes and line breaks.
+    private fun records(text: String): List<List<String>> {
+        val result = mutableListOf<List<String>>()
+        var row = mutableListOf<String>()
+        val field = StringBuilder()
+        var quoted = false
+        var i = 0
+        while (i < text.length) {
+            val c = text[i]
+            when {
+                c == '"' && quoted && text.getOrNull(i + 1) == '"' -> { field.append('"'); i++ }
+                c == '"' -> quoted = !quoted
+                c == ',' && !quoted -> { row.add(field.toString()); field.setLength(0) }
+                (c == '\n' || c == '\r') && !quoted -> {
+                    row.add(field.toString()); field.setLength(0); result.add(row); row = mutableListOf()
+                    if (c == '\r' && text.getOrNull(i + 1) == '\n') i++
                 }
-            } else {
-                if (ch == '\"') {
-                    inQuotes = true
-                } else if (ch == ',') {
-                    result.add(curVal.toString())
-                    curVal = StringBuilder()
-                } else {
-                    curVal.append(ch)
-                }
+                else -> field.append(c)
             }
+            i++
         }
-        result.add(curVal.toString())
+        require(!quoted) { "CSV invalide : guillemets non fermés." }
+        if (field.isNotEmpty() || row.isNotEmpty()) { row.add(field.toString()); result.add(row) }
         return result
     }
 }

@@ -2,7 +2,6 @@ package com.kmz.taskmanager.util
 
 import com.kmz.taskmanager.data.AlarmLevel
 import com.kmz.taskmanager.data.Folder
-import com.kmz.taskmanager.data.Priority
 import com.kmz.taskmanager.data.RepeatUnit
 import com.kmz.taskmanager.data.Task
 import com.kmz.taskmanager.data.TaskType
@@ -33,7 +32,6 @@ object DataManagementHelper {
             t.put("type", task.type.name)
             t.put("dueDate", task.dueDate?.format(formatter))
             t.put("alarmLevel", task.alarmLevel.name)
-            t.put("priority", task.priority.name)
             t.put("isDone", task.isDone)
             t.put("repeatInterval", task.repeatInterval)
             t.put("repeatUnit", task.repeatUnit?.name)
@@ -68,11 +66,10 @@ object DataManagementHelper {
                         type = TaskType.valueOf(t.getString("type")),
                         dueDate = if (t.isNull("dueDate")) null else LocalDateTime.parse(t.getString("dueDate"), formatter),
                         alarmLevel = AlarmLevel.valueOf(t.getString("alarmLevel")),
-                        priority = Priority.valueOf(t.getString("priority")),
                         isDone = t.getBoolean("isDone"),
                         repeatInterval = if (t.isNull("repeatInterval")) null else t.getInt("repeatInterval"),
                         repeatUnit = if (t.isNull("repeatUnit")) null else RepeatUnit.valueOf(t.getString("repeatUnit")),
-                        warningInterval = t.optInt("warningInterval", 15),
+                        warningInterval = t.optInt("warningInterval", 0),
                         warningUnit = if (t.isNull("warningUnit")) RepeatUnit.MINUTES else RepeatUnit.valueOf(t.getString("warningUnit")),
                         warningRepeatInterval = if (t.isNull("warningRepeatInterval")) null else t.getInt("warningRepeatInterval"),
                         warningRepeatUnit = if (t.isNull("warningRepeatUnit")) null else RepeatUnit.valueOf(t.getString("warningRepeatUnit"))

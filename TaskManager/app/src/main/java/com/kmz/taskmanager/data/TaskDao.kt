@@ -5,11 +5,11 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TaskDao {
-    @Query("SELECT * FROM tasks ORDER BY isDone ASC, priority DESC, dueDate ASC")
+    @Query("SELECT * FROM tasks ORDER BY isDone ASC, dueDate ASC")
     fun getAllTasks(): Flow<List<Task>>
 
     @Query(
-            "SELECT * FROM tasks WHERE folderId = :folderId ORDER BY isDone ASC, priority DESC, dueDate ASC"
+            "SELECT * FROM tasks WHERE folderId = :folderId ORDER BY isDone ASC, dueDate ASC"
     )
     fun getTasksByFolder(folderId: Long): Flow<List<Task>>
 
