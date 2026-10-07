@@ -251,7 +251,7 @@ private fun CachedTeamSearchScreen(
                 ).any { teamName ->
                     normalizeSearchText(teamName).contains(normalizedQuery)
                 }
-            }.sortedByDescending { it.utcDate }
+            }.sortedBy { it.utcDate }
         }
     }
     val matchesByDate = remember(results) {
@@ -689,7 +689,7 @@ private fun FlagFilterRow(
     val countriesByName = countries.associateBy { it.name }
     val enabled = enabledCountries.map { countryName ->
         countriesByName[countryName] ?: fallbackCountry(countryName)
-    }
+    }.sortedBy { FLAG_COUNTRY_ORDER[it.name] ?: Int.MAX_VALUE }
 
     val allOn = enabled.isNotEmpty() && enabled.all { it.name in activeFilters }
 
@@ -736,6 +736,16 @@ private fun FlagFilterRow(
         }
     }
 }
+
+private val FLAG_COUNTRY_ORDER = mapOf(
+    "France" to 1,
+    "Spain" to 2,
+    "England" to 3,
+    "Italy" to 4,
+    "Germany" to 5,
+    "Tunisia" to 6,
+    "World" to 7
+)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -1135,6 +1145,7 @@ private fun StatusChip(status: MatchStatus, label: String, minute: Int?) {
         Text(text, color = fg, fontWeight = FontWeight.SemiBold, fontSize = 10.sp)
     }
 }
+
 
 @Composable
 private fun TeamSide(

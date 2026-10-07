@@ -26,7 +26,7 @@ fun StopStreamButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
             .size(48.dp)
             .onFocusChanged { focused = it.isFocused }
             .clip(shape)
-            .background(MyIptvPalette.Surface.copy(alpha = 0.88f))
+            .background(MyIptvPalette.ButtonBackground)
             .border(
                 width = if (focused) 3.dp else 1.dp,
                 color = if (focused) MyIptvPalette.Negative else MyIptvPalette.Border,

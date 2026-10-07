@@ -76,10 +76,12 @@ fun EpgCountriesDialog(
                             categories = options.flatMap { it.categories }.map { it.key }
                         },
                         modifier = Modifier.tvFocusBorder(MaterialTheme.shapes.small),
+                        colors = androidx.compose.material3.ButtonDefaults.textButtonColors(containerColor = MyIptvPalette.ButtonBackground, disabledContainerColor = MyIptvPalette.ButtonBackground),
                     ) { Text("Tout activer") }
                     TextButton(
                         onClick = { countries = emptyList() },
                         modifier = Modifier.tvFocusBorder(MaterialTheme.shapes.small),
+                        colors = androidx.compose.material3.ButtonDefaults.textButtonColors(containerColor = MyIptvPalette.ButtonBackground, disabledContainerColor = MyIptvPalette.ButtonBackground),
                     ) {
                         Text("Tout désactiver")
                     }
@@ -138,6 +140,7 @@ fun EpgCountriesDialog(
                                             }
                                         },
                                         modifier = Modifier.tvFocusBorder(MaterialTheme.shapes.small),
+                                        colors = androidx.compose.material3.ButtonDefaults.textButtonColors(containerColor = MyIptvPalette.ButtonBackground, disabledContainerColor = MyIptvPalette.ButtonBackground),
                                     ) {
                                         Text(if (expandedCountry == country.code) "Masquer" else "Catégories")
                                     }

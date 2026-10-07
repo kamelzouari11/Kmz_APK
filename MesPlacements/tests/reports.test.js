@@ -23,9 +23,10 @@ test('filtres combinés, plusieurs exercices et résultat vide', () => {
 test('chaque pièce est conservée dans le détail, état de déclaration regroupé', () => {
   const report = buildReport(records, options);
   const tables = reportTables(report, options);
-  assert.equal(tables[0].rows.length, 3);
-  assert.equal(tables[0].rows[0].at(-2), '100,001');
-  assert.equal(tables[0].rows[1].at(-2), '-20,002');
+  const detailRows = tables[0].rows.filter(row => row.kind === 'detail');
+  assert.equal(detailRows.length, 3);
+  assert.equal(detailRows[0].values.at(-2), '100,001');
+  assert.equal(detailRows[1].values.at(-2), '-20,002');
   const detail = buildReport(records, { ...options, type: 'detail' });
   assert.deepEqual(detail.totals, report.totals);
   const statuses = buildReport(records, { ...options, type: 'declaration' });
@@ -50,9 +51,34 @@ test('imposition et déclaration figurent uniquement sur les pièces', () => {
   const report = buildReport([base, { ...base, declaration: 'Déjà déclaré', imposition: 'Exonéré' }], options);
   assert.equal(report.sections.length, 1);
   const table = reportTables(report, options)[0];
-  assert.equal(table.title, '2025 · BT');
+  assert.equal(table.title, 'Regroupement hiérarchique');
   assert.equal(table.declarationLabel, undefined);
   assert.equal(table.imposition, undefined);
-  assert.equal(table.rows[1][table.head.indexOf('Imposition')], 'Exonéré');
-  assert.equal(table.rows[1][table.head.indexOf('Déclaration')], 'Déjà déclaré');
+  const details = table.rows.filter(row => row.kind === 'detail');
+  assert.equal(details[1].values[table.head.indexOf('Imposition')], 'Exonéré');
+  assert.equal(details[1].values[table.head.indexOf('Déclaration')], 'Déjà déclaré');
+});
+
+test('trois niveaux hiérarchiques avec un total pour chaque groupe', () => {
+  const settings = { ...options, years: ['2024', '2025'], group1: 'exercice', group2: 'declaration', group3: 'imposition' };
+  const report = buildReport(records, settings);
+  assert.equal(report.groups.length, 2);
+  assert.equal(report.groups[0].level, 1);
+  assert.equal(report.groups[0].children[0].level, 2);
+  assert.equal(report.groups[0].children[0].children[0].level, 3);
+  const totalRows = reportTables(report, settings)[0].rows.filter(row => row.kind === 'total');
+  assert.ok(totalRows.some(row => row.level === 1));
+  assert.ok(totalRows.some(row => row.level === 2));
+  assert.ok(totalRows.some(row => row.level === 3));
+});
+
+test('les détails commencent par exercice quand il ne sert pas au regroupement', () => {
+  const withoutYear = { ...options, group1: 'declaration', group2: 'imposition', group3: 'revenu' };
+  const table = reportTables(buildReport(records, withoutYear), withoutYear)[0];
+  assert.equal(table.head[0], 'Exercice');
+  assert.equal(table.rows.find(row => row.kind === 'detail').values[0], '2025');
+
+  const withYear = { ...withoutYear, group3: 'exercice' };
+  const groupedByYear = reportTables(buildReport(records, withYear), withYear)[0];
+  assert.equal(groupedByYear.head[0], 'Établissement');
 });

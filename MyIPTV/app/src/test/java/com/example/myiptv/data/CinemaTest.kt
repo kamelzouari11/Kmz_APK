@@ -64,6 +64,23 @@ class CinemaTest {
         )
     }
 
+    @Test fun periodSortingStillAppliesAfterSearchFiltering() {
+        val now = Instant.parse("2026-09-13T20:00:00Z")
+        val older = program("2026-09-13T16:00:00Z", "2026-09-13T18:00:00Z")
+        val recent = program("2026-09-13T18:30:00Z", "2026-09-13T19:30:00Z")
+        val justStarted = program("2026-09-13T19:55:00Z", "2026-09-13T22:00:00Z")
+        val matching = listOf(older, justStarted, recent)
+
+        assertEquals(
+            listOf(justStarted),
+            cinemaProgramsInPeriod(matching, CinemaPeriod.NOW, now),
+        )
+        assertEquals(
+            listOf(recent, older),
+            cinemaProgramsInPeriod(matching, CinemaPeriod.PAST, now),
+        )
+    }
+
     @Test fun sportsCatalogueAcceptsSportsChannelsWithoutMixingCinema() = runBlocking {
         val xml = """
             <tv>

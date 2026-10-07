@@ -107,18 +107,35 @@ internal fun cinemaName(value: String): String = Normalizer.normalize(value, Nor
     .replace("+", " plus ").replace(cinemaSeparators, " ").trim()
     .replace(cinemaCountryWord, "")
 
-internal fun catalogueMatches(program: CinemaProgram, query: String): Boolean {
-    val terms = cinemaName(query).split(' ').filter(String::isNotBlank)
-    if (terms.isEmpty()) return true
-    val searchable = cinemaName(
-        listOf(program.title, program.description, program.genres, program.channelName, program.year)
-            .joinToString(" "),
-    )
-    val words = searchable.split(' ').filter(String::isNotBlank)
-    return terms.all { term ->
-        searchable.contains(term) ||
-            (term.length >= 5 && words.any { word -> differsByAtMostOneCharacter(term, word) })
+internal data class CinemaSearchEntry(
+    val program: CinemaProgram,
+    val searchable: String,
+    val words: List<String>,
+)
+
+internal fun cinemaSearchIndex(programs: List<CinemaProgram>): List<CinemaSearchEntry> =
+    programs.map { program ->
+        val searchable = cinemaName(
+            listOf(program.title, program.description, program.genres, program.channelName, program.year)
+                .joinToString(" "),
+        )
+        CinemaSearchEntry(program, searchable, searchable.split(' ').filter(String::isNotBlank))
     }
+
+internal fun catalogueSearchTerms(query: String): List<String> =
+    cinemaName(query).split(' ').filter(String::isNotBlank)
+
+internal fun catalogueMatches(entry: CinemaSearchEntry, terms: List<String>): Boolean {
+    if (terms.isEmpty()) return true
+    return terms.all { term ->
+        entry.searchable.contains(term) ||
+            (term.length >= 5 && entry.words.any { word -> differsByAtMostOneCharacter(term, word) })
+    }
+}
+
+internal fun catalogueMatches(program: CinemaProgram, query: String): Boolean {
+    val entry = cinemaSearchIndex(listOf(program)).single()
+    return catalogueMatches(entry, catalogueSearchTerms(query))
 }
 
 private fun differsByAtMostOneCharacter(first: String, second: String): Boolean {
@@ -340,8 +357,9 @@ private val sportsChannelPattern = Regex(
 )
 private val nonFilmCategory = Regex("series|serie|episode|sport|news|magazine|talk.show", RegexOption.IGNORE_CASE)
 private val xmltvTime = DateTimeFormatter.ofPattern("yyyyMMddHHmmss xx", Locale.ROOT)
+private val xmltvWhitespace = Regex("\\s+")
 internal fun cinemaXmlTime(value: String?): Long? = value?.trim()?.let {
-    runCatching { OffsetDateTime.parse(it.replace(Regex("\\s+"), " "), xmltvTime).toEpochSecond() }.getOrNull()
+    runCatching { OffsetDateTime.parse(it.replace(xmltvWhitespace, " "), xmltvTime).toEpochSecond() }.getOrNull()
 }
 
 /** Streaming parser: never loads the complete country XML in memory. Missing offsets/stops are not guessed. */
@@ -357,13 +375,16 @@ internal suspend fun parseCinemaXml(
     parser.setInput(input, null)
     val names = mutableMapOf<String, String>()
     val output = mutableListOf<CinemaProgram>()
+    var eventCount = 0
     while (parser.eventType != XmlPullParser.END_DOCUMENT) {
-        coroutineContext.ensureActive()
+        // Checking cancellation on every XML token is noticeably expensive on
+        // large XMLTV feeds. Keep the parser responsive without paying that cost.
+        if ((eventCount++ and 0xFF) == 0) coroutineContext.ensureActive()
         if (parser.eventType == XmlPullParser.START_TAG && parser.name == "channel") {
             val id = parser.getAttributeValue(null, "id").orEmpty()
             var name = ""
             while (!(parser.next() == XmlPullParser.END_TAG && parser.name == "channel")) {
-                coroutineContext.ensureActive()
+                if ((eventCount++ and 0xFF) == 0) coroutineContext.ensureActive()
                 if (parser.eventType == XmlPullParser.END_DOCUMENT) error("XML incomplet")
                 if (parser.eventType == XmlPullParser.START_TAG && parser.name == "display-name") {
                     val candidate = parser.nextText()
@@ -385,9 +406,9 @@ internal suspend fun parseCinemaXml(
             val stop = cinemaXmlTime(parser.getAttributeValue(null, "stop"))
             val wanted = id in names && start != null && stop != null && stop > start
             var title = ""; var description = ""; var image = ""; var year = ""
-            val categories = mutableListOf<String>()
+            val categories = linkedSetOf<String>()
             while (!(parser.next() == XmlPullParser.END_TAG && parser.name == "programme")) {
-                coroutineContext.ensureActive()
+                if ((eventCount++ and 0xFF) == 0) coroutineContext.ensureActive()
                 if (parser.eventType == XmlPullParser.END_DOCUMENT) error("XML incomplet")
                 if (wanted && parser.eventType == XmlPullParser.START_TAG) when (parser.name) {
                     "title" -> { val text = parser.nextText(); if (title.isEmpty()) title = text }
@@ -400,7 +421,7 @@ internal suspend fun parseCinemaXml(
             val acceptedProgram = if (sports) true else categories.none { nonFilmCategory.containsMatchIn(it) }
             if (wanted && title.isNotBlank() && acceptedProgram) {
                 output += CinemaProgram(source, id, names.getValue(id), country, title, description,
-                    start!!, stop!!, image, year, categories.distinct().joinToString(" · "))
+                    start!!, stop!!, image, year, categories.joinToString(" · "))
             }
         }
         parser.next()

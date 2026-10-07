@@ -81,6 +81,10 @@ class TaskAlarmActivity : ComponentActivity() {
                             PostponeActivity.EXTRA_TASK_LABEL,
                             intent.getStringExtra(EXTRA_TASK_LABEL).orEmpty()
                     )
+                    putExtra(
+                            PostponeActivity.EXTRA_PREVIOUS_DUE_DATE,
+                            intent.getStringExtra(PostponeActivity.EXTRA_PREVIOUS_DUE_DATE)
+                    )
                 }
         )
         // Keep the newly opened picker in the task; only close this alarm screen.

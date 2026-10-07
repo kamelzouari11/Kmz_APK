@@ -1,16 +1,24 @@
 package com.example.myiptv.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -34,11 +42,13 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
+import androidx.media3.exoplayer.ExoPlayer
 import com.example.myiptv.data.EpgGuidePage
 import com.example.myiptv.data.EpgSearch
 import com.example.myiptv.data.EpgSearchResult
@@ -52,6 +62,8 @@ private enum class EpgPage { GUIDE, SEARCH }
 
 @Composable
 fun EpgSearchScreen(
+    state: MainUiState,
+    player: ExoPlayer,
     onLoadCountries: () -> Unit,
     onLoadGuideChannels: (Boolean) -> Unit,
     onApplyFilters: (Set<String>, Set<String>) -> Unit,
@@ -63,7 +75,7 @@ fun EpgSearchScreen(
     onRefreshSearch: () -> Unit,
     onExportDatabase: () -> Unit,
     onImportDatabase: () -> Unit,
-    onUseSearchChannels: () -> Unit,
+    onResultsAvailable: () -> Unit,
     onLoadGuide: (SavedChannel, Boolean) -> Unit,
     onCancelLoading: () -> Unit,
     onPlay: (SavedChannel) -> Unit,
@@ -79,52 +91,59 @@ fun EpgSearchScreen(
     var showChannelPicker by rememberSaveable { mutableStateOf(false) }
     val page = EpgPage.valueOf(pageName)
     val keyboard = LocalSoftwareKeyboardController.current
+    val tvLandscape = isTvLandscape()
+    val portrait = LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_PORTRAIT
     val selection = searchState.countries
     val canUseGuide = !searchState.loading && !searchState.countriesLoading &&
         selection?.hasEpgChannels == true
-    val searchMatches = query == searchState.query
-    val searchResults = searchState.page.takeIf { searchMatches }
+    var searchSubmitted by rememberSaveable { mutableStateOf(false) }
     val guide = searchState.guide
-    val playingResultId = searchResults?.results?.firstOrNull { result ->
-        result.channels.any { it.sameStreamAs(playingChannel) }
-    }?.id
     val currentGuideProgramId = guide?.programs?.firstOrNull { program ->
         val now = Instant.now().epochSecond
         now >= program.start && now < program.stop
     }?.id ?: guide?.programs?.firstOrNull()?.id
 
     LaunchedEffect(Unit) { onLoadCountries() }
-    LaunchedEffect(page, searchResults, guide, playingResultId, currentGuideProgramId) {
+    LaunchedEffect(page, guide, currentGuideProgramId) {
         val targetIndex = when (page) {
-            EpgPage.SEARCH -> if (searchResults?.results?.isNotEmpty() == true) 1 else 0
+            EpgPage.SEARCH -> 0
             EpgPage.GUIDE -> if (guide?.programs?.isNotEmpty() == true) 2 else 0
         }
         listState.scrollToItem(targetIndex)
     }
+    LaunchedEffect(searchSubmitted, searchState.loading, searchState.query, searchState.page) {
+        if (searchSubmitted && !searchState.loading && searchState.page != null && searchState.query == query) {
+            searchSubmitted = false
+            onResultsAvailable()
+        }
+    }
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
-    ) {
-        Surface(modifier = Modifier.fillMaxSize(), color = MyIptvPalette.Background) {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize().safeDrawingPadding().imePadding(),
-                contentPadding = PaddingValues(horizontal = 18.dp, vertical = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(18.dp),
+    BackHandler(onBack = onDismiss)
+    Row(Modifier.fillMaxSize().focusGroup()) {
+        Surface(
+            modifier = if (tvLandscape) Modifier.fillMaxHeight().weight(10f) else Modifier.weight(1f),
+            color = MyIptvPalette.Background,
+        ) {
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .safeDrawingPadding()
+                    .padding(start = 12.dp, top = 12.dp, end = 12.dp, bottom = if (portrait) 112.dp else 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                item {
-                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        ) {
-                            MenuButton(text = "Retour", onClick = onDismiss)
-                            Column(Modifier.weight(1f)) {
-                                Text("EPG", style = MaterialTheme.typography.headlineSmall)
-                                Text("STRONG IPTV · Heure de Tunis", color = MyIptvPalette.Primary)
-                            }
-                        }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("EPG", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                    MenuButton("Actualiser", enabled = !searchState.loading, onClick = onRefreshSearch)
+                    MenuButton("Fermer", onClick = onDismiss)
+                }
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.weight(1f).fillMaxWidth().imePadding(),
+                    contentPadding = PaddingValues(vertical = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(18.dp),
+                ) {
+                    item {
+                        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                         Row(
                             Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -206,7 +225,7 @@ fun EpgSearchScreen(
                                 )
                             }
                         }
-                        if (page == EpgPage.GUIDE) {
+                            if (page == EpgPage.GUIDE) {
                             GuideControls(
                                 enabled = canUseGuide,
                                 guide = searchState.guide,
@@ -217,13 +236,14 @@ fun EpgSearchScreen(
                                 onLoad = { channel, refresh -> onLoadGuide(channel, refresh) },
                                 onPlay = onPlay,
                             )
-                        } else {
+                            } else {
                             SearchControls(
                                 query = query,
                                 enabled = canUseGuide,
                                 onQueryChange = onQueryChange,
                                 onSearch = {
                                     keyboard?.hide()
+                                    searchSubmitted = true
                                     onSearch()
                                 },
                             )
@@ -237,39 +257,16 @@ fun EpgSearchScreen(
                                     onLoadGuideChannels(false)
                                 },
                             )
-                            searchResults?.let { resultPage ->
-                                CacheStatus(
-                                    resultPage.syncedAt,
-                                    resultPage.coverage,
-                                    resultPage.cacheBytes,
-                                )
-                                Text(
-                                    "${resultPage.results.size} programme(s) · " +
-                                        "${resultPage.results.flatMap { it.channels }.distinctBy { it.streamId }.size} chaîne(s)",
-                                )
-                                EpgActionButton(
-                                    text = "Ouvrir la liste des chaînes trouvées",
-                                    color = MyIptvPalette.Positive,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    onClick = onUseSearchChannels,
-                                )
-                                MenuButton(
-                                    text = "Actualiser le guide et rechercher",
-                                    enabled = canUseGuide && EpgSearch.words(query).isNotEmpty(),
-                                    active = true,
-                                    onClick = onRefreshSearch,
-                                )
-                                if (resultPage.results.isEmpty()) {
-                                    Text(
-                                        "Aucun des quatre programmes disponibles ne contient tous ces mots.",
-                                        color = MyIptvPalette.TextSecondary,
-                                    )
-                                }
+                            MenuButton(
+                                text = "Actualiser le guide et rechercher",
+                                enabled = canUseGuide && EpgSearch.words(query).isNotEmpty(),
+                                active = true,
+                                onClick = onRefreshSearch,
+                            )
                             }
                         }
                     }
-                }
-                if (page == EpgPage.GUIDE && guide != null) {
+                    if (page == EpgPage.GUIDE && guide != null) {
                     item {
                         Surface(
                             color = MyIptvPalette.Warning.copy(alpha = 0.12f),
@@ -317,27 +314,11 @@ fun EpgSearchScreen(
                             )
                         }
                     }
-                }
-                if (page == EpgPage.SEARCH && searchResults?.results?.isNotEmpty() == true) {
-                    item(key = "search-pages") {
-                        EpgProgramPager(
-                            pageKey = "${searchState.query}:${searchResults.syncedAt}",
-                            count = searchResults.results.size,
-                            initialPage = searchResults.results.indexOfFirst { it.id == playingResultId }.coerceAtLeast(0),
-                            modifier = Modifier.fillParentMaxHeight().fillMaxWidth(),
-                        ) { index ->
-                            val result = searchResults.results[index]
-                            EpgResultCard(
-                                result = result,
-                                playingChannel = playingChannel,
-                                requestFocus = result.id == playingResultId,
-                                onPlay = onPlay,
-                            )
-                        }
                     }
                 }
             }
         }
+        if (tvLandscape) MenuPlayerPane(state, player, Modifier.weight(6f).fillMaxHeight())
     }
 
     if (showFilters && selection != null) {
@@ -434,6 +415,14 @@ private fun SearchControls(
     onSearch: () -> Unit,
 ) {
     val canSearch = enabled && EpgSearch.words(query).isNotEmpty()
+    val context = LocalContext.current
+    var recentQueries by remember {
+        mutableStateOf(RecentSearchCache.load(context, "epg"))
+    }
+    fun rememberQuery() {
+        val value = query.trim().replace(Regex("\\s+"), " ")
+        if (value.isNotEmpty()) recentQueries = RecentSearchCache.add(context, "epg", value)
+    }
     Surface(
         color = MyIptvPalette.Surface,
         border = BorderStroke(1.dp, MyIptvPalette.Border),
@@ -459,8 +448,15 @@ private fun SearchControls(
                 singleLine = true,
                 colors = epgTextFieldColors(),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = { if (canSearch) onSearch() }),
+                keyboardActions = KeyboardActions(onSearch = { if (canSearch) { rememberQuery(); onSearch() } }),
             )
+            if (recentQueries.isNotEmpty()) {
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    recentQueries.forEach { recent ->
+                        MenuButton(recent, onClick = { onQueryChange(recent) })
+                    }
+                }
+            }
             Text(
                 "Recherche dans le programme actuel et les trois suivants de chaque chaîne.",
                 color = MyIptvPalette.TextSecondary,
@@ -471,7 +467,7 @@ private fun SearchControls(
                 color = MyIptvPalette.Primary,
                 enabled = canSearch,
                 modifier = Modifier.fillMaxWidth(),
-                onClick = onSearch,
+                onClick = { rememberQuery(); onSearch() },
             )
         }
     }
@@ -616,17 +612,8 @@ private fun EpgActionButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
-    val tvLandscape = isTvLandscape()
-    val containerColor = if (tvLandscape && color == MyIptvPalette.Negative) {
-        MyIptvPalette.CardHover
-    } else {
-        color
-    }
-    val contentColor = if (tvLandscape && color == MyIptvPalette.Negative) {
-        MyIptvPalette.Negative
-    } else {
-        MyIptvPalette.Background
-    }
+    val containerColor = MyIptvPalette.ButtonBackground
+    val contentColor = color
     Button(
         onClick = onClick,
         enabled = enabled,
@@ -635,7 +622,7 @@ private fun EpgActionButton(
         colors = ButtonDefaults.buttonColors(
             containerColor = containerColor,
             contentColor = contentColor,
-            disabledContainerColor = MyIptvPalette.CardHover,
+            disabledContainerColor = MyIptvPalette.ButtonBackground,
             disabledContentColor = MyIptvPalette.Disabled,
         ),
     ) {
@@ -647,8 +634,9 @@ private fun EpgActionButton(
 private fun epgTextFieldColors() = OutlinedTextFieldDefaults.colors(
     focusedTextColor = MyIptvPalette.White,
     unfocusedTextColor = MyIptvPalette.White,
-    focusedContainerColor = MyIptvPalette.ActiveSurface,
-    unfocusedContainerColor = MyIptvPalette.CardHover,
+    focusedContainerColor = MyIptvPalette.TextFieldBackground,
+    unfocusedContainerColor = MyIptvPalette.TextFieldBackground,
+    disabledContainerColor = MyIptvPalette.TextFieldBackground,
     cursorColor = MyIptvPalette.Primary,
     focusedBorderColor = if (isTvLandscape()) MyIptvPalette.Negative else MyIptvPalette.Primary,
     unfocusedBorderColor = MyIptvPalette.Info,
@@ -656,5 +644,89 @@ private fun epgTextFieldColors() = OutlinedTextFieldDefaults.colors(
     unfocusedLabelColor = MyIptvPalette.Info,
 )
 
-private fun SavedChannel.sameStreamAs(other: SavedChannel?): Boolean =
+internal fun SavedChannel.sameStreamAs(other: SavedChannel?): Boolean =
     other != null && profileId == other.profileId && streamId == other.streamId
+
+@Composable
+internal fun EpgResultsScreen(
+    state: MainUiState,
+    player: ExoPlayer,
+    searchState: EpgSearchUiState,
+    playingChannel: SavedChannel?,
+    onPlay: (SavedChannel) -> Unit,
+    onBack: () -> Unit,
+) {
+    val results = searchState.page?.results.orEmpty()
+    var selectedResult by remember(results) { mutableStateOf(results.firstOrNull()) }
+    val now = rememberCurrentEpgEpochSeconds()
+    BackHandler(onBack = onBack)
+    Row(Modifier.fillMaxSize().focusGroup()) {
+        Surface(
+            modifier = Modifier.weight(1f).fillMaxHeight(),
+            color = MyIptvPalette.Background,
+        ) {
+            Column(
+                Modifier.fillMaxSize().safeDrawingPadding().padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    MenuButton("← Recherche", onClick = onBack)
+                    Column(Modifier.weight(1f)) {
+                        Text("Résultats EPG", style = MaterialTheme.typography.headlineSmall)
+                        Text(searchState.query, color = MyIptvPalette.Primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+                if (results.isEmpty()) {
+                    EmptyPanelText("Aucun résultat EPG")
+                } else {
+                    LazyColumn(
+                        Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        items(results, key = EpgSearchResult::id) { result ->
+                            val channel = result.channels.firstOrNull()
+                            val isLive = now >= result.start && now < result.stop
+                            val progress = ((now - result.start).toFloat() / (result.stop - result.start).coerceAtLeast(1L)).coerceIn(0f, 1f)
+                            TvListItem(
+                                selected = isLive || result.channels.any { it.sameStreamAs(playingChannel) },
+                                onClick = { channel?.let(onPlay) },
+                                onFocused = { selectedResult = result },
+                            ) { _, color ->
+                                Row(
+                                    Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                                ) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text(result.title, color = color, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Text(
+                                            "${result.timeRange} · ${channel?.name.orEmpty()} · ${channel?.countryCode?.uppercase().orEmpty()}",
+                                            color = MyIptvPalette.TextSecondary,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                        if (isLive) {
+                                            Text("● EN DIRECT", color = MyIptvPalette.Positive, style = MaterialTheme.typography.labelSmall)
+                                            LinearProgressIndicator(
+                                                progress = { progress },
+                                                modifier = Modifier.fillMaxWidth().height(3.dp),
+                                            )
+                                        }
+                                    }
+                                    Text("▶", color = MyIptvPalette.EmeraldAccent, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        SearchResultsSidePane(
+            state = state,
+            player = player,
+            artworkTitle = selectedResult?.title,
+            modifier = Modifier.weight(1f).fillMaxHeight(),
+        )
+    }
+}

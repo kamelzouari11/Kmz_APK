@@ -107,7 +107,7 @@ private fun EpgArtworkPanel(
     val artwork = state.artwork
     Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Surface(color = MyIptvPalette.Surface, shape = MaterialTheme.shapes.medium) {
-            Box(Modifier.fillMaxWidth().height((if (artwork?.clubs == true) minOf(imageHeight, 160) else imageHeight).dp), contentAlignment = Alignment.Center) {
+            Box(Modifier.fillMaxWidth().height(imageHeight.dp), contentAlignment = Alignment.Center) {
                 if (artwork == null && state.loading) {
                     Text(
                         "Recherche d’une illustration…",
@@ -154,6 +154,7 @@ private fun EpgArtworkPanel(
                 TextButton(
                     onClick = { runCatching { uriHandler.openUri(picture.sourceUrl) } },
                     modifier = Modifier.tvFocusBorder(),
+                    colors = androidx.compose.material3.ButtonDefaults.textButtonColors(containerColor = MyIptvPalette.ButtonBackground, disabledContainerColor = MyIptvPalette.ButtonBackground),
                     contentPadding = PaddingValues(4.dp),
                 ) {
                     Text("Source", color = MyIptvPalette.TextSecondary, style = MaterialTheme.typography.labelSmall)

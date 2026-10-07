@@ -50,6 +50,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.example.myiptv.data.EpgProgram
 import com.example.myiptv.data.FavoriteGroup
 import com.example.myiptv.data.SavedChannel
+import com.example.myiptv.data.ProfileProtocol
 import com.example.myiptv.data.XtreamProfile
 import com.example.myiptv.ui.theme.MyIptvPalette
 import java.text.DateFormat
@@ -129,7 +130,7 @@ fun ProfileDialog(
     isLoading: Boolean,
     onDismiss: () -> Unit,
     onActivate: (XtreamProfile) -> Unit,
-    onSave: (Int?, String, String, String, String, Boolean) -> Unit,
+    onSave: (Int?, String, String, String, String, ProfileProtocol, String?, Boolean) -> Unit,
     onDelete: (XtreamProfile) -> Unit,
 ) {
     var showEditor by remember(profiles.isEmpty()) { mutableStateOf(profiles.isEmpty()) }
@@ -140,6 +141,10 @@ fun ProfileDialog(
     var server by remember(editorKey) { mutableStateOf(editedProfile?.serverUrl.orEmpty()) }
     var username by remember(editorKey) { mutableStateOf(editedProfile?.username.orEmpty()) }
     var password by remember(editorKey) { mutableStateOf(editedProfile?.password.orEmpty()) }
+    var macAddress by remember(editorKey) { mutableStateOf(editedProfile?.macAddress.orEmpty()) }
+    var protocol by remember(editorKey) {
+        mutableStateOf(runCatching { ProfileProtocol.valueOf(editedProfile?.protocol.orEmpty()) }.getOrDefault(ProfileProtocol.XTREAM))
+    }
     var countryGroupingEnabled by remember(editorKey) {
         mutableStateOf(editedProfile?.countryGroupingEnabled ?: true)
     }
@@ -160,8 +165,8 @@ fun ProfileDialog(
         title = {
             Text(
                 when {
-                    !showEditor -> "Profils Xtream"
-                    editedProfile == null -> "Nouveau profil Xtream"
+                    !showEditor -> "Profils IPTV"
+                    editedProfile == null -> "Nouveau profil"
                     else -> "Modifier ${editedProfile?.name}"
                 },
             )
@@ -180,6 +185,21 @@ fun ProfileDialog(
                         color = MyIptvPalette.TextSecondary,
                         style = MaterialTheme.typography.bodyMedium,
                     )
+                    Text("Type de connexion", color = MyIptvPalette.EmeraldLight, style = MaterialTheme.typography.titleMedium)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        MenuButton(
+                            text = "Xtream Codes",
+                            active = protocol == ProfileProtocol.XTREAM,
+                            onClick = { protocol = ProfileProtocol.XTREAM },
+                            modifier = Modifier.weight(1f),
+                        )
+                        MenuButton(
+                            text = "Stalker / MAC",
+                            active = protocol == ProfileProtocol.STALKER,
+                            onClick = { protocol = ProfileProtocol.STALKER },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
                     TvTextField(
                         value = name,
                         onValueChange = { name = it },
@@ -194,24 +214,39 @@ fun ProfileDialog(
                         value = server,
                         onValueChange = { server = it },
                         modifier = Modifier.fillMaxWidth().tvFocusBorder(),
-                        label = { Text("Serveur (http://…)") },
+                        label = { Text(if (protocol == ProfileProtocol.STALKER) "URL du portail Stalker" else "Serveur Xtream (http://…)") },
                         singleLine = true,
                     )
-                    TvTextField(
-                        value = username,
-                        onValueChange = { username = it },
-                        modifier = Modifier.fillMaxWidth().tvFocusBorder(),
-                        label = { Text("Utilisateur") },
-                        singleLine = true,
-                    )
-                    TvTextField(
-                        value = password,
-                        onValueChange = { password = it },
-                        modifier = Modifier.fillMaxWidth().tvFocusBorder(),
-                        label = { Text("Mot de passe") },
-                        singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(),
-                    )
+                    if (protocol == ProfileProtocol.STALKER) {
+                        TvTextField(
+                            value = macAddress,
+                            onValueChange = { macAddress = it },
+                            modifier = Modifier.fillMaxWidth().tvFocusBorder(),
+                            label = { Text("Adresse MAC (AA:BB:CC:DD:EE:FF)") },
+                            singleLine = true,
+                        )
+                        Text(
+                            "La MAC identifie l’abonnement. Le portail reste obligatoire.",
+                            color = MyIptvPalette.TextSecondary,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    } else {
+                        TvTextField(
+                            value = username,
+                            onValueChange = { username = it },
+                            modifier = Modifier.fillMaxWidth().tvFocusBorder(),
+                            label = { Text("Utilisateur") },
+                            singleLine = true,
+                        )
+                        TvTextField(
+                            value = password,
+                            onValueChange = { password = it },
+                            modifier = Modifier.fillMaxWidth().tvFocusBorder(),
+                            label = { Text("Mot de passe") },
+                            singleLine = true,
+                            visualTransformation = PasswordVisualTransformation(),
+                        )
+                    }
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
                             "Organisation des chaînes",
@@ -268,9 +303,10 @@ fun ProfileDialog(
                                 overflow = TextOverflow.Ellipsis,
                             )
                             Text(
-                                text = profile.lastSyncedAt?.let {
-                                    "Dernière sync : ${DateFormat.getDateTimeInstance().format(Date(it))}"
-                                } ?: "Jamais synchronisé",
+                                text = "${if (profile.protocol == ProfileProtocol.STALKER.name) "Stalker / MAC" else "Xtream Codes"} · " +
+                                    (profile.lastSyncedAt?.let {
+                                        "Dernière sync : ${DateFormat.getDateTimeInstance().format(Date(it))}"
+                                    } ?: "Jamais synchronisé"),
                                 color = MyIptvPalette.TextSecondary,
                                 style = MaterialTheme.typography.bodyMedium,
                             )
@@ -329,7 +365,8 @@ fun ProfileDialog(
                 MenuButton(
                     text = if (isLoading) "Enregistrement…" else "Enregistrer",
                     enabled = !isLoading && name.isNotBlank() && server.isNotBlank() &&
-                        username.isNotBlank() && password.isNotBlank(),
+                        if (protocol == ProfileProtocol.STALKER) macAddress.matches(Regex("(?i)^[0-9a-f]{2}(:[0-9a-f]{2}){5}$"))
+                        else username.isNotBlank() && password.isNotBlank(),
                     onClick = {
                         onSave(
                             editedProfile?.id,
@@ -337,6 +374,8 @@ fun ProfileDialog(
                             server,
                             username,
                             password,
+                            protocol,
+                            macAddress.takeIf { protocol == ProfileProtocol.STALKER },
                             countryGroupingEnabled,
                         )
                         onDismiss()
@@ -396,14 +435,13 @@ fun ProfileDialog(
 @Composable
 fun SearchDialog(
     query: String,
-    resultCount: Int,
     searchHistory: List<String>,
-    onQueryChange: (String) -> Unit,
     onSubmit: (String) -> Unit,
     onClearHistoryRequest: () -> Unit,
     onClear: () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    var draftQuery by remember { mutableStateOf(query) }
     var editing by remember { mutableStateOf(searchHistory.isEmpty()) }
     val searchFieldFocusRequester = remember { FocusRequester() }
     val firstHistoryFocusRequester = remember { FocusRequester() }
@@ -428,7 +466,7 @@ fun SearchDialog(
     }
 
     val startNewSearch = {
-        onQueryChange("")
+        draftQuery = ""
         editing = true
     }
     val returnToHistory = {
@@ -454,8 +492,8 @@ fun SearchDialog(
             if (editing) {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     TvTextField(
-                        value = query,
-                        onValueChange = onQueryChange,
+                        value = draftQuery,
+                        onValueChange = { draftQuery = it },
                         modifier = Modifier
                             .fillMaxWidth()
                             .focusRequester(searchFieldFocusRequester)
@@ -465,15 +503,15 @@ fun SearchDialog(
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                         keyboardActions = KeyboardActions(
                             onSearch = {
-                                if (query.isNotBlank()) onSubmit(query)
+                                if (draftQuery.isNotBlank()) onSubmit(draftQuery)
                             },
                         ),
                     )
                     Text(
-                        text = if (query.isBlank()) {
+                        text = if (draftQuery.isBlank()) {
                             "Saisissez un ou plusieurs mots."
                         } else {
-                            "$resultCount résultat(s)"
+                            "Appuyez sur la loupe du clavier pour rechercher."
                         },
                         color = MyIptvPalette.TextSecondary,
                         style = MaterialTheme.typography.bodyMedium,
@@ -499,7 +537,7 @@ fun SearchDialog(
                     ) {
                         items(searchHistory, key = { it }) { historyQuery ->
                             TvListItem(
-                                selected = historyQuery.equals(query, ignoreCase = true),
+                                selected = historyQuery.equals(draftQuery, ignoreCase = true),
                                 onClick = { onSubmit(historyQuery) },
                                 modifier = if (historyQuery == searchHistory.first()) {
                                     Modifier.focusRequester(firstHistoryFocusRequester)
@@ -524,8 +562,8 @@ fun SearchDialog(
             if (editing) {
                 MenuButton(
                     text = "Rechercher",
-                    enabled = query.isNotBlank(),
-                    onClick = { onSubmit(query) },
+                    enabled = draftQuery.isNotBlank(),
+                    onClick = { onSubmit(draftQuery) },
                 )
             } else {
                 MenuButton(text = "Fermer", onClick = onDismiss)

@@ -1,6 +1,7 @@
 package com.example.myiptv.ui
 
 import android.content.res.Configuration
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -15,11 +16,14 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -30,14 +34,18 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.media3.exoplayer.ExoPlayer
 import com.example.myiptv.data.*
 import com.example.myiptv.ui.theme.MyIptvPalette
 import coil.compose.AsyncImage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -47,22 +55,26 @@ import java.time.format.DateTimeFormatter
 /** Independent cinema catalogue; kept composed during playback to preserve the current card. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-internal fun CinemaScreen(visible: Boolean, onPlay: (SavedChannel) -> Unit, onDismiss: () -> Unit) {
-    ProgrammeCatalogueScreen(sports = false, visible = visible, onPlay = onPlay, onDismiss = onDismiss)
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-internal fun SportsScreen(visible: Boolean, onPlay: (SavedChannel) -> Unit, onDismiss: () -> Unit) {
-    ProgrammeCatalogueScreen(sports = true, visible = visible, onPlay = onPlay, onDismiss = onDismiss)
+internal fun CinemaScreen(
+    state: MainUiState,
+    player: ExoPlayer,
+    visible: Boolean,
+    onPlay: (SavedChannel) -> Unit,
+    onResults: (String, List<CinemaProgram>, List<SavedChannel>) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    ProgrammeCatalogueScreen(state, player, sports = false, visible = visible, onPlay = onPlay, onResults = onResults, onDismiss = onDismiss)
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ProgrammeCatalogueScreen(
+    state: MainUiState,
+    player: ExoPlayer,
     sports: Boolean,
     visible: Boolean,
     onPlay: (SavedChannel) -> Unit,
+    onResults: (String, List<CinemaProgram>, List<SavedChannel>) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current.applicationContext
@@ -95,6 +107,9 @@ private fun ProgrammeCatalogueScreen(
     var periodName by rememberSaveable { mutableStateOf(initialPeriod) }
     var catalogueQuery by rememberSaveable { mutableStateOf("") }
     var appliedCatalogueQuery by rememberSaveable { mutableStateOf("") }
+    var recentCatalogueQueries by remember {
+        mutableStateOf(RecentSearchCache.load(context, "cinema"))
+    }
     var refresh by remember { mutableIntStateOf(0) }
     var consumedRefresh by remember { mutableIntStateOf(0) }
     var loading by remember { mutableStateOf(false) }
@@ -117,7 +132,7 @@ private fun ProgrammeCatalogueScreen(
     }
     val day = now.atZone(EpgSearch.tunis).toLocalDate()
     LaunchedEffect(Unit) {
-        while (true) { now = Instant.now(); delay(30_000) }
+        while (true) { now = Instant.now(); delay(60_000) }
     }
     LaunchedEffect(selectedCountryCodes) {
         filterPreferences.edit()
@@ -126,14 +141,6 @@ private fun ProgrammeCatalogueScreen(
     }
     LaunchedEffect(periodName) {
         filterPreferences.edit().putString(CINEMA_FILTER_PERIOD, periodName).apply()
-    }
-    LaunchedEffect(catalogueQuery) {
-        if (catalogueQuery.isBlank()) {
-            appliedCatalogueQuery = ""
-        } else {
-            delay(450)
-            appliedCatalogueQuery = catalogueQuery
-        }
     }
     LaunchedEffect(Unit) {
         channels = runCatching { repository.strongChannels() }.getOrDefault(emptyList())
@@ -145,9 +152,11 @@ private fun ProgrammeCatalogueScreen(
         loading = true
         page = CinemaPage(emptyList(), emptyList())
         try {
-            page = repository.load(selectedCountryCodes.toSet(), force, sports) {
-                // Repository runs on IO; snapshot state is safe to update across threads.
-                status = it
+            withContext(NonCancellable) {
+                page = repository.load(selectedCountryCodes.toSet(), force, sports) {
+                    // Repository runs on IO; snapshot state is safe to update across threads.
+                    status = it
+                }
             }
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) {
@@ -158,20 +167,36 @@ private fun ProgrammeCatalogueScreen(
         }
         finally { loading = false }
     }
+    val searchIndex by produceState<List<CinemaSearchEntry>?>(null, page.programs) {
+        value = withContext(Dispatchers.Default) { cinemaSearchIndex(page.programs) }
+    }
+    val searchTerms = remember(appliedCatalogueQuery) {
+        catalogueSearchTerms(appliedCatalogueQuery)
+    }
     var programs by remember { mutableStateOf(emptyList<CinemaProgram>()) }
-    LaunchedEffect(page, periodName, now, appliedCatalogueQuery) {
+    LaunchedEffect(searchIndex, periodName, now, searchTerms) {
+        val indexed = searchIndex ?: return@LaunchedEffect
+        val selectedPeriod = CinemaPeriod.valueOf(periodName)
         programs = withContext(Dispatchers.Default) {
-            if (appliedCatalogueQuery.isBlank()) {
-                cinemaProgramsInPeriod(page.programs, CinemaPeriod.valueOf(periodName), now)
+            val candidates = if (searchTerms.isEmpty()) {
+                indexed.map(CinemaSearchEntry::program)
             } else {
-                page.programs.filter { program -> catalogueMatches(program, appliedCatalogueQuery) }
-                    .sortedWith(compareBy<CinemaProgram> { it.start }.thenBy { it.title })
+                indexed.filter { entry -> catalogueMatches(entry, searchTerms) }
+                    .map(CinemaSearchEntry::program)
             }
+            cinemaProgramsInPeriod(candidates, selectedPeriod, now)
         }
     }
     LaunchedEffect(programs) {
         focusedProgram = focusedProgram?.takeIf { focused -> programs.any { it.key == focused.key } }
             ?: programs.firstOrNull()
+    }
+    LaunchedEffect(programs, appliedCatalogueQuery, channelsLoaded) {
+        if (appliedCatalogueQuery.isBlank() || !channelsLoaded) return@LaunchedEffect
+        val resultChannels = programs
+            .flatMap { repository.variants(it, channels) }
+            .distinctBy { "${it.profileId}:${it.streamId}" }
+        onResults(appliedCatalogueQuery, programs, resultChannels)
     }
     val play: (CinemaProgram, SavedChannel) -> Unit = { p, c ->
         repository.rememberVariant(p, c)
@@ -179,13 +204,15 @@ private fun ProgrammeCatalogueScreen(
         variantProgram = null
         onPlay(c)
     }
-    if (visible) Dialog(
-        onDismissRequest = {
+    if (visible) {
+        BackHandler {
             if (selectedProgram != null) selectedProgram = null else onDismiss()
-        },
-        properties = DialogProperties(usePlatformDefaultWidth = false),
-    ) {
-        Surface(Modifier.fillMaxSize(), color = MyIptvPalette.Background) {
+        }
+        Row(Modifier.fillMaxSize().focusGroup()) {
+        Surface(
+            modifier = if (tvLandscape) Modifier.fillMaxHeight().weight(10f) else Modifier.weight(1f),
+            color = MyIptvPalette.Background,
+        ) {
             Column(
                 Modifier
                     .fillMaxSize()
@@ -205,7 +232,22 @@ private fun ProgrammeCatalogueScreen(
                         label = { Text("Rechercher · toutes périodes, pays actifs") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                        keyboardActions = KeyboardActions(
+                            onSearch = {
+                                val value = catalogueQuery.trim().replace(Regex("\\s+"), " ")
+                                if (value.isNotEmpty()) recentCatalogueQueries = RecentSearchCache.add(context, "cinema", value)
+                                appliedCatalogueQuery = value
+                            },
+                        ),
                     )
+                    if (recentCatalogueQueries.isNotEmpty()) {
+                        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            recentCatalogueQueries.forEach { recent ->
+                                MenuButton(recent, onClick = { catalogueQuery = recent; appliedCatalogueQuery = recent })
+                            }
+                        }
+                    }
                     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         CinemaPeriod.entries.forEach { period ->
                             MenuButton(period.label, active = periodName == period.name, onClick = { periodName = period.name })
@@ -313,7 +355,7 @@ private fun ProgrammeCatalogueScreen(
                             )
                             if (variants.isNotEmpty()) MenuButton("Changer de variante", onClick = { variantProgram = p }, modifier = Modifier.fillMaxWidth())
                             MenuButton("Associer / modifier les chaînes", enabled = channels.isNotEmpty(), onClick = { association = p }, modifier = Modifier.fillMaxWidth())
-                            TextButton(onClick = { runCatching { uriHandler.openUri(if (p.source.contains("xmltvfr.fr")) "https://xmltvfr.fr/" else "https://epgshare01.online/") } }) {
+                            TextButton(onClick = { runCatching { uriHandler.openUri(if (p.source.contains("xmltvfr.fr")) "https://xmltvfr.fr/" else "https://epgshare01.online/") } }, colors = androidx.compose.material3.ButtonDefaults.textButtonColors(containerColor = MyIptvPalette.ButtonBackground, disabledContainerColor = MyIptvPalette.ButtonBackground)) {
                                 Text(if (p.source.contains("xmltvfr.fr")) "Programmes : XMLTV France" else "Programmes : EPGShare01")
                             }
                             if (!current) Text("Ce bouton ouvre le direct actuel, pas cette diffusion en différé.", style = MaterialTheme.typography.bodySmall)
@@ -327,6 +369,8 @@ private fun ProgrammeCatalogueScreen(
                 }
             }
         }
+        if (tvLandscape) MenuPlayerPane(state, player, Modifier.weight(6f).fillMaxHeight())
+    }
     }
     if (visible) variantProgram?.let { p ->
         val variants = repository.variants(p, channels)
@@ -372,7 +416,7 @@ private fun CinemaPosterCard(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth().tvFocusBorder().clickable(onClick = onClick),
-        color = MyIptvPalette.Card,
+        color = MyIptvPalette.ButtonBackground,
         shape = MaterialTheme.shapes.medium,
         border = BorderStroke(1.dp, MyIptvPalette.Border),
     ) {
@@ -555,7 +599,7 @@ private fun CinemaCountryToggle(text: String, selected: Boolean, onClick: () -> 
     val color = if (selected) MyIptvPalette.Positive else MyIptvPalette.White
     Surface(
         modifier = Modifier.tvFocusBorder().clickable(onClick = onClick),
-        color = MyIptvPalette.Card,
+        color = MyIptvPalette.ButtonBackground,
         shape = MaterialTheme.shapes.small,
         border = BorderStroke(if (selected) 2.dp else 1.dp, color),
     ) {
@@ -570,18 +614,23 @@ private fun CinemaAssociationDialog(
 ) {
     val portrait = LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
     var query by remember(program.channelKey) { mutableStateOf(program.channelName) }
+    var submittedQuery by remember(program.channelKey) { mutableStateOf<String?>(null) }
     var selected by remember(program.channelKey) { mutableStateOf(initial.map { it.streamId }.toSet()) }
     var candidates by remember(program.channelKey) { mutableStateOf(initial) }
     var searching by remember(program.channelKey) { mutableStateOf(true) }
-    LaunchedEffect(query, indexedChannels, program.country) {
+    LaunchedEffect(submittedQuery, indexedChannels, program.country) {
+        val searchQuery = submittedQuery ?: run {
+            candidates = initial
+            searching = false
+            return@LaunchedEffect
+        }
         val index = indexedChannels
         if (index == null) {
             searching = true
             return@LaunchedEffect
         }
         searching = true
-        delay(180)
-        val normalizedQuery = withContext(Dispatchers.Default) { cinemaName(query) }
+        val normalizedQuery = withContext(Dispatchers.Default) { cinemaName(searchQuery) }
         val words = normalizedQuery.split(' ').filter(String::isNotBlank)
         candidates = if (words.isEmpty()) {
             initial
@@ -627,9 +676,17 @@ private fun CinemaAssociationDialog(
                     MenuButton("Enregistrer", onClick = { onSave(selected) })
                 }
                 Text("Cochez toutes les variantes utiles. Le pays, les numéros, +1 et East/West doivent correspondre.")
-                TvTextField(query, { query = it }, label = { Text("Rechercher dans Strong IPTV") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                TvTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    label = { Text("Rechercher dans Strong IPTV") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = { submittedQuery = query.trim() }),
+                )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    MenuButton("Nom EPG", onClick = { query = program.channelName })
+                    MenuButton("Nom EPG", onClick = { query = program.channelName; submittedQuery = program.channelName })
                     MenuButton("Cocher les résultats", enabled = candidates.isNotEmpty() && !searching, onClick = { selected = selected + candidates.map { it.streamId } })
                     MenuButton("Vider", onClick = { selected = emptySet() })
                 }
@@ -672,3 +729,96 @@ private const val CINEMA_FILTER_PREFERENCES = "cinema_filters"
 private const val SPORTS_FILTER_PREFERENCES = "sports_filters"
 private const val CINEMA_FILTER_COUNTRIES = "selected_countries"
 private const val CINEMA_FILTER_PERIOD = "selected_period"
+
+@Composable
+internal fun CinemaResultsScreen(
+    state: MainUiState,
+    player: ExoPlayer,
+    query: String,
+    programs: List<CinemaProgram>,
+    channels: List<SavedChannel>,
+    onPlay: (SavedChannel) -> Unit,
+    onBack: () -> Unit,
+) {
+    val context = LocalContext.current.applicationContext
+    val repository = remember { CinemaRepository(context) }
+    val format = remember { DateTimeFormatter.ofPattern("dd/MM HH:mm").withZone(EpgSearch.tunis) }
+    var selectedProgram by remember(programs) { mutableStateOf(programs.firstOrNull()) }
+    var channelsReady by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        repository.strongChannels()
+        channelsReady = true
+    }
+    val now = rememberCurrentEpgEpochSeconds()
+    BackHandler(onBack = onBack)
+    Row(Modifier.fillMaxSize().focusGroup()) {
+        Surface(
+            modifier = Modifier.weight(1f).fillMaxHeight(),
+            color = MyIptvPalette.Background,
+        ) {
+            Column(
+                Modifier.fillMaxSize().safeDrawingPadding().padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    MenuButton("← Recherche", onClick = onBack)
+                    Column(Modifier.weight(1f)) {
+                        Text("Résultats Cinéma", style = MaterialTheme.typography.headlineSmall)
+                        Text(query, color = MyIptvPalette.Primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+                LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(programs, key = CinemaProgram::key) { program ->
+                        val variants = remember(program.key, channels, channelsReady) { repository.variants(program, channels) }
+                        val channel = variants.firstOrNull()
+                        val isLive = now >= program.start && now < program.stop
+                        val progress = ((now - program.start).toFloat() / (program.stop - program.start).coerceAtLeast(1L)).coerceIn(0f, 1f)
+                        TvListItem(
+                            selected = isLive || channel?.sameStreamAs(state.playingChannel) == true,
+                            onClick = {
+                                selectedProgram = program
+                                channel?.let(onPlay)
+                            },
+                            onFocused = { selectedProgram = program },
+                        ) { _, color ->
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                            ) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(program.title, color = color, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(
+                                        "${format.format(Instant.ofEpochSecond(program.start))} · ${program.channelName}",
+                                        color = MyIptvPalette.TextSecondary,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        )
+                                    if (isLive) {
+                                        Text("● EN DIRECT · ${program.country.uppercase()}", color = MyIptvPalette.Positive, style = MaterialTheme.typography.labelSmall)
+                                        LinearProgressIndicator(
+                                            progress = { progress },
+                                            modifier = Modifier.fillMaxWidth().height(3.dp),
+                                        )
+                                    } else {
+                                        Text(program.country.uppercase(), color = MyIptvPalette.TextSecondary, style = MaterialTheme.typography.labelSmall)
+                                    }
+                                }
+                                Text("▶", color = MyIptvPalette.EmeraldAccent, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        SearchResultsSidePane(
+            state = state,
+            player = player,
+            artworkTitle = selectedProgram?.title,
+            artworkCountry = selectedProgram?.country.orEmpty(),
+            movieOnly = true,
+            modifier = Modifier.weight(1f).fillMaxHeight(),
+        )
+    }
+}

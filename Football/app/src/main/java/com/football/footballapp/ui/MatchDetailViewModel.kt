@@ -44,6 +44,7 @@ class MatchDetailViewModel(
                 homeTeamLogo = match.homeTeam.logoUrl,
                 awayTeamLogo = match.awayTeam.logoUrl,
                 utcDate = match.utcDate,
+                matchStatus = match.status,
                 tvSourceUrl = match.tvSourceUrl,
                 forceRefresh = forceRefresh
             ).onSuccess { detail ->

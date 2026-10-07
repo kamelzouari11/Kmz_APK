@@ -69,7 +69,7 @@ data class ApiFootballLineupsResponse(val response: List<ApiFootballTeamLineupDt
 @JsonClass(generateAdapter = true)
 data class ApiFootballTeamLineupDto(
     val team: ApiFootballTeamDto,
-    val coach: ApiFootballCoachDto,
+    val coach: ApiFootballCoachDto?,
     val formation: String?,
     val startXI: List<ApiFootballLineupPlayerDto>,
     val substitutes: List<ApiFootballLineupPlayerDto>

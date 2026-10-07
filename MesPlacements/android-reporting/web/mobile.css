@@ -37,6 +37,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-v
 #reset-report { min-height: 44px; font-size: 14px; }
 .report-document { min-width: 0; padding: 20px; }
 .report-table { font-size: 13px; }
+.report-row-detail td[data-label="Revenu"] { font-size: 12px; }
 @media (max-width: 599px) {
   .unlock-fields { flex-direction: column; }
   .report-heading, .report-actions { width: 100%; }
@@ -50,6 +51,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-v
   .report-table td, .report-table td.number { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 8px 0; text-align: right; white-space: normal; font-size: 13px; }
   .report-table td::before { content: attr(data-label); flex: 0 0 42%; color: #607467; text-align: left; font-size: 12px; }
   .report-table td:last-child { border-bottom: 0; }
+  .report-row-group td { display: block; padding: 10px 4px; text-align: left; }
+  .report-row-group td::before, .report-row-total td:first-child::before { content: none; }
+  .report-row-total td:first-child { display: block; padding: 10px 4px; text-align: left; }
   .report-grand-total { padding: 16px; gap: 12px; }
   .total-value > strong { font-size: 18px; }
 }

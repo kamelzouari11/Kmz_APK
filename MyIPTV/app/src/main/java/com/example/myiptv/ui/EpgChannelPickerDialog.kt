@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -23,6 +25,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -46,6 +49,7 @@ fun EpgChannelPickerDialog(
     var countryCode by rememberSaveable { mutableStateOf<String?>(null) }
     var categoryKey by rememberSaveable { mutableStateOf<String?>(null) }
     var channelQuery by rememberSaveable { mutableStateOf("") }
+    var submittedChannelQuery by rememberSaveable { mutableStateOf("") }
     var expandedEpgId by rememberSaveable { mutableStateOf<String?>(null) }
     val page = EpgPickerPage.valueOf(pageName)
     val country = selection.orderedOptions.firstOrNull { it.code == countryCode }
@@ -114,11 +118,14 @@ fun EpgChannelPickerDialog(
                         modifier = Modifier.fillMaxWidth().tvFocusBorder(),
                         label = { Text("Filtrer les chaînes") },
                         singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                        keyboardActions = KeyboardActions(onSearch = { submittedChannelQuery = channelQuery.trim() }),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = MyIptvPalette.White,
                             unfocusedTextColor = MyIptvPalette.White,
-                            focusedContainerColor = MyIptvPalette.ActiveSurface,
-                            unfocusedContainerColor = MyIptvPalette.CardHover,
+                            focusedContainerColor = MyIptvPalette.TextFieldBackground,
+                            unfocusedContainerColor = MyIptvPalette.TextFieldBackground,
+                            disabledContainerColor = MyIptvPalette.TextFieldBackground,
                             cursorColor = MyIptvPalette.Primary,
                             focusedBorderColor = if (isTvLandscape()) {
                                 MyIptvPalette.Negative
@@ -150,6 +157,7 @@ fun EpgChannelPickerDialog(
                                         countryCode = null
                                         categoryKey = null
                                         channelQuery = ""
+                                        submittedChannelQuery = ""
                                         expandedEpgId = null
                                         pageName = EpgPickerPage.CHANNELS.name
                                     },
@@ -177,6 +185,7 @@ fun EpgChannelPickerDialog(
                                     onClick = {
                                         categoryKey = option.key
                                         channelQuery = ""
+                                        submittedChannelQuery = ""
                                         expandedEpgId = null
                                         pageName = EpgPickerPage.CHANNELS.name
                                     },
@@ -184,7 +193,7 @@ fun EpgChannelPickerDialog(
                             }
                         }
                         EpgPickerPage.CHANNELS -> {
-                            val terms = channelQuery.trim().split(Regex("\\s+"))
+                            val terms = submittedChannelQuery.split(Regex("\\s+"))
                                 .filter(String::isNotBlank)
                             val availableChannels = category?.channels ?: selection.activeOptions
                                 .flatMap { countryOption -> countryOption.categories.flatMap { it.channels } }

@@ -12,6 +12,7 @@ if (sharedLocalPropertiesFile.exists()) {
     sharedLocalPropertiesFile.inputStream().use { localProperties.load(it) }
 }
 val githubToken: String = localProperties.getProperty("github.token", "")
+val tmdbApiKey: String = localProperties.getProperty("tmdb.api.key", "")
 
 android {
     namespace = "com.example.myiptv"
@@ -24,6 +25,7 @@ android {
         versionCode = 2
         versionName = "0.2.0"
         buildConfigField("String", "GITHUB_TOKEN", "\"$githubToken\"")
+        buildConfigField("String", "TMDB_API_KEY", "\"$tmdbApiKey\"")
 
         ndk {
             abiFilters += listOf("armeabi-v7a", "arm64-v8a")

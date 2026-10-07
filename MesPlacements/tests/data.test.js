@@ -20,7 +20,13 @@ test('import invalide rejeté intégralement', () => {
 });
 test('validation des champs et RS par défaut', () => {
   assert.equal(validateRecord({ ...record, rs: '' }).rs, '0.000');
-  for (const change of [{ exercice: 2025.5 }, { etablissement: '  ' }, { revenu: '' }, { imposition: 'Autre' }]) assert.throws(() => validateRecord({ ...record, ...change }));
+  assert.equal(validateRecord({ ...record, imposition: 'Net d’impôts' }).imposition, 'Net d’impôts');
+  assert.equal(validateRecord({ ...record, revenu: 'DIVIDENDES', imposition: 'Imposable' }).imposition, 'Imposable');
+  assert.equal(validateRecord({ ...record, imposition: 'Imposable 10%' }).imposition, 'Imposable 10%');
+  assert.throws(() => validateRecord({ ...record, exercice: 2025.5 }));
+  assert.throws(() => validateRecord({ ...record, etablissement: '  ' }));
+  assert.throws(() => validateRecord({ ...record, revenu: '' }));
+  assert.throws(() => validateRecord({ ...record, imposition: '  ' }));
 });
 test('détection des doublons indépendante de leur identifiant', () => {
   assert.equal(fingerprint(record), fingerprint({ ...record, id: 'autre' }));

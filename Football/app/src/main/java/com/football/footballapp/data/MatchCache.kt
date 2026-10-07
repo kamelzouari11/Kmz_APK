@@ -4,6 +4,7 @@ import android.util.Log
 import com.football.footballapp.data.model.Match
 import com.squareup.moshi.Types
 import java.io.File
+import java.time.LocalDate
 
 /**
  * Cache disque des matchs par date.
@@ -29,7 +30,9 @@ class MatchCache(rootDir: File) {
     }
 
     /** Charge toutes les journées JSON disponibles pour la recherche locale. */
-    fun loadAll(): Map<String, List<Match>> = dir.listFiles()
+    fun loadAll(): Map<String, List<Match>> {
+        prune()
+        return dir.listFiles()
         .orEmpty()
         .asSequence()
         .filter { it.isFile && CACHE_FILE.matches(it.name) }
@@ -39,6 +42,7 @@ class MatchCache(rootDir: File) {
             load(date)?.let { matches -> date to matches }
         }
         .toMap()
+    }
 
     @Synchronized
     fun save(date: String, matches: List<Match>) {
@@ -50,6 +54,7 @@ class MatchCache(rootDir: File) {
                 target.writeText(temporary.readText())
                 temporary.delete()
             }
+            prune()
         } catch (e: Exception) {
             Log.w(TAG, "save $date failed: ${e.message}")
         }
@@ -66,10 +71,29 @@ class MatchCache(rootDir: File) {
         dir.listFiles()?.forEach { it.delete() }
     }
 
+    /** Garde une fenêtre utile pour la recherche sans laisser grossir le cache. */
+    @Synchronized
+    fun prune(today: LocalDate = LocalDate.now()) {
+        val oldest = today.minusDays(14)
+        val newest = today.plusDays(14)
+        val files = dir.listFiles().orEmpty()
+            .filter { it.isFile && CACHE_FILE.matches(it.name) }
+        files.forEach { file ->
+            val date = runCatching { LocalDate.parse(file.name.removeSuffix(".json")) }.getOrNull()
+            if (date == null || date.isBefore(oldest) || date.isAfter(newest)) file.delete()
+        }
+        dir.listFiles().orEmpty()
+            .filter { it.isFile && CACHE_FILE.matches(it.name) }
+            .sortedByDescending { it.lastModified() }
+            .drop(MAX_DAILY_FILES)
+            .forEach { it.delete() }
+    }
+
     private fun fileFor(date: String) = File(dir, "$date.json")
 
     companion object {
         private const val TAG = "MatchCache"
         private val CACHE_FILE = Regex("\\d{4}-\\d{2}-\\d{2}\\.json")
+        private const val MAX_DAILY_FILES = 60
     }
 }

@@ -9,6 +9,7 @@ github_token.txt
 *secret*.txt
 **/local.properties
 local.properties
+**/keystore/
 
 # Android / Gradle
 **/.gradle/

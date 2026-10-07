@@ -24,8 +24,8 @@ export function validateRecord(data) {
   }
   result.montant = amount(data.montant);
   result.rs = amount(String(data.rs ?? '').trim() || '0', { allowNegative: false });
-  if (!['Imposable', 'Exonéré'].includes(data.imposition)) throw new Error('L’imposition doit être « Imposable » ou « Exonéré ».');
-  result.imposition = data.imposition;
+  result.imposition = String(data.imposition ?? '').trim();
+  if (!result.imposition) throw new Error('Renseignez l’imposition.');
   result.declaration = data.declaration ?? DECLARATIONS[0];
   if (!DECLARATIONS.includes(result.declaration)) throw new Error('Choisissez « Non encore déclaré » ou « Déjà déclaré ».');
   return result;
@@ -73,7 +73,7 @@ const frenchOrder = new Intl.Collator('fr', { sensitivity: 'base', numeric: true
 export function sortRecords(records, criteria) {
   return [...records].sort((a, b) => {
     for (const { field, direction } of criteria) {
-      if (!Object.hasOwn(SORT_FIELDS, field)) continue;
+      if (!['exercice', 'etablissement', 'placement', 'revenu', 'imposition', 'declaration'].includes(field)) continue;
       const difference = field === 'exercice'
         ? a.exercice - b.exercice
         : frenchOrder.compare(a[field], b[field]);

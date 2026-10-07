@@ -52,53 +52,58 @@ data class MatchUiState(
     val isSearchLoading: Boolean = false
 ) {
     fun recompute(): MatchUiState {
-        val visibleMatches = matches.filterNot { it.isWomenMatch() }
+        val shouldApplyLiveOnly = liveOnly && !date.isAfter(LocalDate.now())
+        val favoriteMatchCache = HashMap<String, Boolean>()
+        // Apply the most selective, cheap filters first. This avoids running the
+        // competition and elite-team checks on the whole day's schedule when a
+        // user has selected Live or Favoris.
+        val prefilteredMatches = matches
+            .let { source ->
+                if (shouldApplyLiveOnly) {
+                    source.filter {
+                        it.status == MatchStatus.LIVE || it.status == MatchStatus.HALF_TIME
+                    }
+                } else source
+            }
+            .let { source ->
+                if (favoritesOnly) {
+                    source.filter { match ->
+                        val key = "${match.source}|${match.homeTeam.id}|${match.homeTeam.logoUrl}|${match.homeTeam.name}|" +
+                            "${match.awayTeam.id}|${match.awayTeam.logoUrl}|${match.awayTeam.name}"
+                        favoriteMatchCache.getOrPut(key) {
+                            match.homeTeam.matchesFavorite(favoriteTeamKeys, match.source) ||
+                                match.awayTeam.matchesFavorite(favoriteTeamKeys, match.source)
+                        }
+                    }
+                } else source
+            }
+            // isWomenMatch() normalise plusieurs noms d'équipes/compétitions :
+            // ne l'appliquer qu'après les filtres sélectifs.
+            .filterNot { it.isWomenMatch() }
         // Un pays retiré des réglages ne doit jamais rester actif à cause d'un
         // ancien flag mémorisé. Les drapeaux sont un sous-ensemble des pays ON.
         val activeCountries = flagFilters.intersect(settingsCountries)
-        val eligibleEliteTeamNames = activeCountries
-            .mapNotNull { country ->
-                topDivisionCatalogsByCountry[country]
-            }
-            .flatMap { it.teamNames }
-            .filterNot { name ->
-                isReserveOrYouthTeamName(name) || isWomenTeamName(name)
-            }
-            .toSet()
-        val bySelectedFilters = visibleMatches.filter { match ->
+        // Une même compétition apparaît souvent sur plusieurs matchs. Éviter de
+        // renormaliser et de reparcourir les ligues sélectionnées pour chaque ligne.
+        val selectedCompetitionCache = HashMap<String, Boolean>()
+        val bySelectedFilters = prefilteredMatches.filter { match ->
             val competitionCountry = match.effectiveCompetitionCountry()
-            val selectedCompetition = match.isSelectedCompetition(
-                activeCountries = activeCountries,
-                leaguesByCountry = settingsLeaguesByCountry
-            )
+            val competitionKey = "$competitionCountry|${match.competitionName}"
+            val selectedCompetition = selectedCompetitionCache.getOrPut(competitionKey) {
+                match.isSelectedCompetition(
+                    activeCountries = activeCountries,
+                    leaguesByCountry = settingsLeaguesByCountry
+                )
+            }
             val hasReserveOrYouthTeam =
                 match.homeTeam.isReserveOrYouthTeam() || match.awayTeam.isReserveOrYouthTeam()
-            val selectedTopDivisionClub =
-                match.homeTeam.identityNames().any(eligibleEliteTeamNames::contains) ||
-                    match.awayTeam.identityNames().any(eligibleEliteTeamNames::contains)
             val normalizedCompetition = normalizeCompetition(match.competitionName)
             val isClubFriendly = "friendl" in normalizedCompetition &&
                 normalizedCompetition.friendlyCategory() == "clubs"
             selectedCompetition && !hasReserveOrYouthTeam &&
-                ((competitionCountry == "World" && !isClubFriendly) || selectedTopDivisionClub)
+                !(competitionCountry == "World" && isClubFriendly)
         }
-        val bySelectedMode = if (favoritesOnly) {
-            // Le mode Favoris affine la sélection courante ; il ne doit pas
-            // réintroduire les matchs provenant de pays désactivés.
-            bySelectedFilters.filter { match ->
-                match.homeTeam.matchesFavorite(favoriteTeamKeys, match.source) ||
-                    match.awayTeam.matchesFavorite(favoriteTeamKeys, match.source)
-            }
-        } else {
-            bySelectedFilters
-        }
-        val shouldApplyLiveOnly = liveOnly && !date.isAfter(LocalDate.now())
-        val byLive = if (shouldApplyLiveOnly) {
-            bySelectedMode.filter {
-                it.status == MatchStatus.LIVE || it.status == MatchStatus.HALF_TIME
-            }
-        } else bySelectedMode
-        return copy(filteredMatches = byLive.sortedBy { it.utcDate })
+        return copy(filteredMatches = bySelectedFilters.sortedBy { it.utcDate })
     }
 }
 
@@ -144,6 +149,7 @@ private fun Match.isSelectedCompetition(
 }
 
 private fun Match.effectiveCompetitionCountry(): String? = when {
+    competitionName.contains("africa cup of nations", ignoreCase = true) -> "World"
     competitionName.contains("friendl", ignoreCase = true) -> "World"
     competitionName.contains("uefa", ignoreCase = true) -> "World"
     competitionName.contains("fifa", ignoreCase = true) -> "World"
@@ -293,9 +299,10 @@ class MatchViewModel(
                 )
                 result.fold(
                     onSuccess = { list ->
-                        val usesApiFootball = requestedDate.usesApiFootballWindow()
-                        val needsRenderSchedule = needsLiveSoccerTv &&
-                            (!usesApiFootball || list.isNotEmpty())
+                        // Si API-FOOTBALL répond sans erreur mais sans match,
+                        // utiliser le calendrier de secours au lieu d'afficher
+                        // une journée vide.
+                        val needsRenderSchedule = needsLiveSoccerTv
                         publishMatches(requestedDate, list, refreshing = needsRenderSchedule)
                         if (needsRenderSchedule) {
                             // J-1/J/J+1 : Render complète seulement les données TV.

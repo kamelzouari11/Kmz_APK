@@ -11,6 +11,8 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import java.time.OffsetDateTime
+import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.ConcurrentHashMap
 
@@ -33,18 +35,43 @@ class MatchDetailRepository(
         homeTeamLogo: String?,
         awayTeamLogo: String?,
         utcDate: String,
+        matchStatus: MatchStatus = MatchStatus.UNKNOWN,
         tvSourceUrl: String? = null,
         forceRefresh: Boolean = false
     ): Result<MatchDetail> = withContext(Dispatchers.IO) {
-        val cacheKey = "$source|$matchId|$utcDate|$tvSourceUrl"
+        // v2 invalide les anciennes entrées qui pouvaient contenir un détail
+        // vide après un échec réseau.
+        val cacheKey = "v2|$source|$matchId|$utcDate|$tvSourceUrl"
+        val today = java.time.LocalDate.now()
+        val parsedMatchDate = runCatching {
+            OffsetDateTime.parse(utcDate).atZoneSameInstant(ZoneId.systemDefault()).toLocalDate()
+        }.getOrNull()
+        val tvAllowed = parsedMatchDate != null &&
+            !parsedMatchDate.isBefore(today) &&
+            !parsedMatchDate.isAfter(today.plusDays(14))
         if (!forceRefresh) {
             detailCache[cacheKey]
                 ?.takeIf { it.expiresAt > SystemClock.elapsedRealtime() }
-                ?.let { return@withContext Result.success(it.detail) }
+                ?.let {
+                    val detail = if (tvAllowed) it.detail else it.detail.copy(
+                        tvChannels = emptyList(),
+                        tvStatus = TvCoverageStatus.UNKNOWN,
+                        tvSource = null,
+                        tvSourceUrl = null,
+                        tvVerifiedAt = null
+                    )
+                    return@withContext Result.success(detail)
+                }
         }
 
         runCatching {
             coroutineScope {
+                val matchDate = runCatching {
+                    OffsetDateTime.parse(utcDate).atZoneSameInstant(ZoneId.systemDefault()).toLocalDate()
+                }.getOrNull()
+                val detailsAllowed = matchDate != null &&
+                    !matchDate.isBefore(today.minusDays(1)) &&
+                    !matchDate.isAfter(today.plusDays(1))
                 // Le serveur TV indexe le match par la journée UTC du fournisseur.
                 // L'écran, lui, reste groupé par journée locale via Match.localCalendarDate().
                 val formattedDate = runCatching {
@@ -54,7 +81,7 @@ class MatchDetailRepository(
                 }
 
                 val tvCoverageDeferred = async {
-                    if (tvChannelsApi == null) {
+                    if (!tvAllowed || tvChannelsApi == null) {
                         TvFetchResult()
                     } else {
                         runCatching {
@@ -122,7 +149,7 @@ class MatchDetailRepository(
                 }
 
                 val lineupsDeferred = async {
-                    if (source == "api-football" && matchDetailApi != null) {
+                    if (detailsAllowed && source == "api-football" && matchDetailApi != null) {
                         runCatching {
                             val response = matchDetailApi.getLineups(matchId).response
                             if (response.size >= 2) {
@@ -136,9 +163,9 @@ class MatchDetailRepository(
                                         teamLogo = homeDto.team.logo,
                                         formation = homeDto.formation,
                                         coach = Coach(
-                                            id = homeDto.coach.id,
-                                            name = homeDto.coach.name,
-                                            photo = homeDto.coach.photo
+                                        id = homeDto.coach?.id,
+                                            name = homeDto.coach?.name,
+                                            photo = homeDto.coach?.photo
                                         ),
                                         startXI = homeDto.startXI.map {
                                             LineupPlayer(
@@ -165,9 +192,9 @@ class MatchDetailRepository(
                                         teamLogo = awayDto.team.logo,
                                         formation = awayDto.formation,
                                         coach = Coach(
-                                            id = awayDto.coach.id,
-                                            name = awayDto.coach.name,
-                                            photo = awayDto.coach.photo
+                                        id = awayDto.coach?.id,
+                                            name = awayDto.coach?.name,
+                                            photo = awayDto.coach?.photo
                                         ),
                                         startXI = awayDto.startXI.map {
                                             LineupPlayer(
@@ -201,7 +228,7 @@ class MatchDetailRepository(
                 }
 
                 val eventsDeferred = async {
-                    if (source == "api-football" && matchDetailApi != null) {
+                    if (detailsAllowed && source == "api-football" && matchDetailApi != null) {
                         runCatching {
                             matchDetailApi.getEvents(matchId).response.map { eventDto ->
                                 MatchEvent(
@@ -253,8 +280,17 @@ class MatchDetailRepository(
                     detailCache.entries.removeAll { it.value.expiresAt <= now }
                     val hasCoverage = detail.tvChannels.isNotEmpty() ||
                         detail.events.isNotEmpty() ||
+                        detail.lineups != null ||
                         !detail.eventsSnapshot.isNullOrBlank()
-                    val cacheDuration = if (hasCoverage) 5 * 60_000L else 60_000L
+                    // Un match terminé ne change plus : on le garde en cache
+                    // longtemps (événements + compositions + TV). Les matchs
+                    // live restent courts pour conserver le score à jour.
+                    val cacheDuration = when {
+                        matchStatus == MatchStatus.FINISHED && hasCoverage -> 30L * 24 * 60 * 60_000L
+                        hasCoverage -> 6 * 60 * 60_000L
+                        matchStatus == MatchStatus.LIVE || matchStatus == MatchStatus.HALF_TIME -> 60_000L
+                        else -> 15 * 60_000L
+                    }
                     // Empty listings are retried quickly; useful detail survives
                     // navigation between the list and the match screen.
                     detailCache[cacheKey] = CachedDetail(

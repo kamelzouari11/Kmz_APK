@@ -1,5 +1,6 @@
 package com.kmz.taskmanager.ui
 
+import android.content.Intent
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -24,6 +25,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
@@ -33,6 +36,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kmz.taskmanager.R
 import com.kmz.taskmanager.data.*
 import com.kmz.taskmanager.util.NotificationHelper
+import com.kmz.taskmanager.util.PostponeActivity
 import com.kmz.taskmanager.util.UnifiedParser
 import com.kmz.taskmanager.viewmodel.TaskViewModel
 import com.kmz.taskmanager.viewmodel.ViewType
@@ -66,7 +70,6 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel()) {
         val folders by taskViewModel.folders.collectAsState(initial = emptyList())
 
         var taskToEdit by remember { mutableStateOf<Task?>(null) }
-        var taskToQuickPostpone by remember { mutableStateOf<Task?>(null) }
         val context = androidx.compose.ui.platform.LocalContext.current
 
         val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -439,7 +442,16 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel()) {
                                         onClick = { showAddTaskDialog = true },
                                         containerColor = Secondary,
                                         contentColor = Color.White
-                                ) { Icon(Icons.Default.Add, contentDescription = "Ajouter Tâche") }
+                                ) {
+                                        Text(
+                                                "+",
+                                                fontSize = 44.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.semantics {
+                                                        contentDescription = "Ajouter Tâche"
+                                                }
+                                        )
+                                }
                         },
                         containerColor = Black
                 ) { padding ->
@@ -471,7 +483,6 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel()) {
                                                                         ViewType.MONTH -> "1M"
                                                                         ViewType.YEAR -> "1Y"
                                                                         ViewType.LATER -> "AFT"
-                                                                        else -> ""
                                                                 }
                                                         val viewColor = viewTypeColor(view)
                                                         val isSelected = selectedView == view
@@ -767,8 +778,14 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel()) {
                                                                                 datePicker.show()
                                                                         },
                                                                         onQuickPostpone = { t ->
-                                                                                taskToQuickPostpone =
-                                                                                        t
+                                                                                context.startActivity(
+                                                                                        Intent(context, PostponeActivity::class.java).apply {
+                                                                                                putExtra(NotificationHelper.EXTRA_TASK_ID, t.id)
+                                                                                                putExtra(PostponeActivity.EXTRA_TASK_LABEL, t.label)
+                                                                                                putExtra(PostponeActivity.EXTRA_PREVIOUS_DUE_DATE, t.dueDate?.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")))
+                                                                                                putExtra(PostponeActivity.EXTRA_FROM_TASK_CARD, true)
+                                                                                        }
+                                                                                )
                                                                         }
                                                                 )
                                                         }
@@ -967,26 +984,6 @@ fun MainScreen(taskViewModel: TaskViewModel = viewModel()) {
                         )
                 }
 
-                taskToQuickPostpone?.let { task ->
-                        QuickPostponeDialog(
-                                currentDueDate = task.dueDate,
-                                onDismiss = { taskToQuickPostpone = null },
-                                onApply = { input ->
-                                        val newDate = UnifiedParser.parse(input, base = task.dueDate)
-                                        if (newDate != null) {
-                                                taskViewModel.postponeTask(task, newDate)
-                                                taskToQuickPostpone = null
-                                        } else {
-                                                android.widget.Toast.makeText(
-                                                                context,
-                                                                "Format invalide ou date dans le passé",
-                                                                android.widget.Toast.LENGTH_SHORT
-                                                        )
-                                                        .show()
-                                        }
-                                }
-                        )
-                }
         }
 }
 
@@ -1039,76 +1036,6 @@ fun bucketColorForDueDate(dueDate: LocalDateTime?, now: java.time.LocalDate): Co
                 !date.isAfter(now.plusYears(1)) -> ViewYearColor
                 else -> ViewLaterColor
         }
-}
-
-@Composable
-fun QuickPostponeDialog(
-        currentDueDate: LocalDateTime?,
-        onDismiss: () -> Unit,
-        onApply: (String) -> Unit
-) {
-        var shortcut by remember { mutableStateOf("") }
-        AlertDialog(
-                onDismissRequest = onDismiss,
-                modifier = Modifier.fillMaxWidth(),
-                properties = DialogProperties(usePlatformDefaultWidth = false),
-                containerColor = SelectedTaskBg,
-                title = { Text("Reporter la tâche", color = Color.White) },
-                text = {
-                        Column {
-                                Text(
-                                        "Date libre ou raccourci [p|+][n][h|j|s|m] / [m|-][n][h|j|s|m]",
-                                        color = Color.Gray,
-                                        fontSize = 12.sp
-                                )
-                                Spacer(Modifier.height(4.dp))
-                                Text(
-                                        "p2s (+2 sem.)  +3j (+3 jours)  m1j (-1 jour)  -1m (-1 mois)  demain 14h  dans 3 jours",
-                                        color = Color.Gray,
-                                        fontSize = 12.sp
-                                )
-                                Spacer(Modifier.height(12.dp))
-                                TextField(
-                                        value = shortcut,
-                                        onValueChange = { shortcut = it },
-                                        singleLine = true,
-                                        modifier = Modifier.fillMaxWidth(),
-                                        shape = RoundedCornerShape(8.dp),
-                                        colors =
-                                                TextFieldDefaults.colors(
-                                                        focusedContainerColor = InputFieldBg,
-                                                        unfocusedContainerColor = InputFieldBg,
-                                                        focusedTextColor = Color.White,
-                                                        unfocusedTextColor = Color.White,
-                                                        focusedIndicatorColor = Color.Transparent,
-                                                        unfocusedIndicatorColor = Color.Transparent,
-                                                        cursorColor = Secondary
-                                                )
-                                )
-                                if (currentDueDate != null) {
-                                        Spacer(Modifier.height(8.dp))
-                                        Text(
-                                                "Échéance actuelle : " +
-                                                        currentDueDate.format(
-                                                                DateTimeFormatter.ofPattern(
-                                                                        "dd/MM/yyyy HH:mm"
-                                                                )
-                                                        ),
-                                                color = Color.Gray,
-                                                fontSize = 11.sp
-                                        )
-                                }
-                        }
-                },
-                confirmButton = {
-                        TextButton(onClick = { onApply(shortcut) }) {
-                                Text("Valider", color = Secondary)
-                        }
-                },
-                dismissButton = {
-                        TextButton(onClick = onDismiss) { Text("Annuler", color = Color.Gray) }
-                }
-        )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -1383,18 +1310,15 @@ fun TaskItem(
                                                                 IconButton(
                                                                         onClick = { onEdit(task) },
                                                                         modifier =
-                                                                                Modifier.size(32.dp)
+                                                                                Modifier.size(44.dp).semantics {
+                                                                                        contentDescription = "Modifier"
+                                                                                }
                                                                 ) {
-                                                                        Icon(
-                                                                                Icons.Default
-                                                                                        .MoreVert,
-                                                                                contentDescription =
-                                                                                        "Modifier",
-                                                                                tint = Color.Gray,
-                                                                                modifier =
-                                                                                        Modifier.size(
-                                                                                                22.dp
-                                                                                        )
+                                                                        Text(
+                                                                                "⋮",
+                                                                                color = Color.Gray,
+                                                                                fontSize = 33.sp,
+                                                                                fontWeight = FontWeight.Bold
                                                                         )
                                                                 }
 
@@ -1407,17 +1331,15 @@ fun TaskItem(
                                                                                 )
                                                                         },
                                                                         modifier =
-                                                                                Modifier.size(32.dp)
+                                                                                Modifier.size(44.dp).semantics {
+                                                                                        contentDescription = "Reporter"
+                                                                                }
                                                                 ) {
-                                                                        Icon(
-                                                                                Icons.Default.Add,
-                                                                                contentDescription =
-                                                                                        "Reporter",
-                                                                                tint = Secondary,
-                                                                                modifier =
-                                                                                        Modifier.size(
-                                                                                                22.dp
-                                                                                        )
+                                                                        Text(
+                                                                                "+",
+                                                                                color = Secondary,
+                                                                                fontSize = 33.sp,
+                                                                                fontWeight = FontWeight.Bold
                                                                         )
                                                                 }
                                                         }
@@ -1825,14 +1747,14 @@ fun AddTaskDialog(
                                                                 )
                                                         datePicker.show()
                                                 },
-                                                modifier = Modifier.size(48.dp)
+                                                modifier = Modifier.size(56.dp)
                                         ) {
                                                 Icon(
                                                         Icons.Default.AccessTime,
                                                         contentDescription =
                                                                 "Choisir date et heure",
-                                                        tint = Secondary,
-                                                        modifier = Modifier.size(32.dp)
+                                                        tint = Color(0xFFD8C9EF),
+                                                        modifier = Modifier.size(40.dp)
                                                 )
                                         }
                                 }

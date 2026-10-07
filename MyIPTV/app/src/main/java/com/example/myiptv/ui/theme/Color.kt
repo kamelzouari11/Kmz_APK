@@ -7,6 +7,8 @@ object MyIptvPalette {
     val Surface = Color(0xFF04070B)
     val Card = Color(0xFF080C12)
     val CardHover = Color(0xFF101820)
+    val ButtonBackground = Color(0xFF263640)
+    val TextFieldBackground = Color(0xFF526C7A)
     val ActiveSurface = Color(0xFF082522)
     val Border = Color(0xFF18242E)
 
@@ -22,6 +24,15 @@ object MyIptvPalette {
     val Warning = Color(0xFFF59E0B)
     val Negative = Color(0xFFEF4444)
     val Info = Color(0xFF38BDF8)
+
+    // Pastels sombres et désaturés : visibles sur le fond noir sans rompre le thème.
+    val FavoritePastels = listOf(
+        Color(0xFF7DD3C7), // turquoise
+        Color(0xFF93C5FD), // bleu
+        Color(0xFFC4B5FD), // violet
+        Color(0xFFF9A8D4), // rose
+        Color(0xFFFCD89B), // ambre
+    )
 
     // Alias conservés pour les composants existants.
     val DarkEmerald = Background

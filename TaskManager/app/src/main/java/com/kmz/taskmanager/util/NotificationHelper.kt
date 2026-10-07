@@ -9,7 +9,6 @@ import android.content.Intent
 import android.media.RingtoneManager
 import android.os.Build
 import android.provider.Settings
-import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import com.kmz.taskmanager.R
 import com.kmz.taskmanager.data.Task
@@ -20,6 +19,7 @@ import java.time.format.DateTimeFormatter
 object NotificationHelper {
         private const val ALERT_CHANNEL_ID = "task_alerts_v3"
         private const val SILENT_CHANNEL_ID = "task_alerts_silent_v3"
+        private const val TASK_NOTIFICATION_GROUP = "task_due_dates"
 
         const val ACTION_SNOOZE = "com.kmz.taskmanager.action.SNOOZE"
         const val ACTION_DONE = "com.kmz.taskmanager.action.DONE"
@@ -320,9 +320,6 @@ object NotificationHelper {
                 createNotificationChannel(context)
                 val taskId = task.id
                 val silenceIntent = actionPendingIntent(context, ACTION_SILENCE, taskId, type, 10)
-                val postponeIntent = postponePendingIntent(context, taskId, type, task.label)
-                val doneIntent = actionPendingIntent(context, ACTION_DONE, taskId, type, 30)
-                val deleteIntent = actionPendingIntent(context, ACTION_DELETE, taskId, type, 40)
 
                 val channelId = if (silent) SILENT_CHANNEL_ID else ALERT_CHANNEL_ID
                 val dueText = task.dueDate?.format(dueTimeFormatter) ?: "--:--"
@@ -332,6 +329,7 @@ object NotificationHelper {
                                 putExtra(EXTRA_NOTIFICATION_TYPE, type)
                                 putExtra(TaskAlarmActivity.EXTRA_TASK_LABEL, task.label)
                                 putExtra(TaskAlarmActivity.EXTRA_TASK_TIME, dueText)
+                                putExtra(PostponeActivity.EXTRA_PREVIOUS_DUE_DATE, task.dueDate?.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")))
                                 flags =
                                         Intent.FLAG_ACTIVITY_NEW_TASK or
                                                 Intent.FLAG_ACTIVITY_CLEAR_TOP or
@@ -344,43 +342,22 @@ object NotificationHelper {
                                 fullScreenIntent,
                                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                         )
-                val notificationView =
-                        RemoteViews(context.packageName, R.layout.notification_task).apply {
-                                setTextViewText(R.id.notification_task_label, task.label)
-                                setTextViewText(R.id.notification_task_time, dueText)
-                                setOnClickPendingIntent(R.id.notification_root, silenceIntent)
-                                setOnClickPendingIntent(R.id.notification_postpone, postponeIntent)
-                                setOnClickPendingIntent(R.id.notification_done, doneIntent)
-                                setOnClickPendingIntent(R.id.notification_delete, deleteIntent)
-                        }
-                val expandedNotificationView =
-                        RemoteViews(context.packageName, R.layout.notification_task_big).apply {
-                                setTextViewText(R.id.notification_task_label, task.label)
-                                setTextViewText(R.id.notification_task_time, dueText)
-                                setOnClickPendingIntent(R.id.notification_root, silenceIntent)
-                                setOnClickPendingIntent(R.id.notification_postpone, postponeIntent)
-                                setOnClickPendingIntent(R.id.notification_done, doneIntent)
-                                setOnClickPendingIntent(R.id.notification_delete, deleteIntent)
-                        }
                 val builder =
                         NotificationCompat.Builder(context, channelId)
                                 .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
                                 .setContentTitle(task.label)
-                                .setContentText(dueText)
-                                .setStyle(NotificationCompat.DecoratedCustomViewStyle())
-                                .setCustomContentView(notificationView)
-                                .setCustomBigContentView(expandedNotificationView)
-                                .setCustomHeadsUpContentView(notificationView)
+                                .setContentText("Échéance : $dueText")
                                 .setColor(android.graphics.Color.rgb(64, 245, 155))
                                 .setPriority(
                                         if (silent) NotificationCompat.PRIORITY_LOW
                                         else NotificationCompat.PRIORITY_MAX
                                 )
                                 .setCategory(NotificationCompat.CATEGORY_ALARM)
+                                .setGroup(TASK_NOTIFICATION_GROUP)
                                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                                 .setContentIntent(silenceIntent)
-                                .setAutoCancel(false)
-                                .setOngoing(true)
+                                .setAutoCancel(true)
+                                .setOngoing(false)
                                 .setOnlyAlertOnce(silent)
 
                 if (!silent && type == "ALARM") {
@@ -410,13 +387,15 @@ object NotificationHelper {
                 context: Context,
                 taskId: Long,
                 type: String,
-                taskLabel: String
+                taskLabel: String,
+                previousDueDate: String?
         ): PendingIntent {
                 val intent =
                         Intent(context, PostponeActivity::class.java).apply {
                                 putExtra(EXTRA_TASK_ID, taskId)
                                 putExtra(EXTRA_NOTIFICATION_TYPE, type)
                                 putExtra(PostponeActivity.EXTRA_TASK_LABEL, taskLabel)
+                                putExtra(PostponeActivity.EXTRA_PREVIOUS_DUE_DATE, previousDueDate)
                                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                         }
                 val typeOffset = if (type == "WARNING") 1_000_000 else 0

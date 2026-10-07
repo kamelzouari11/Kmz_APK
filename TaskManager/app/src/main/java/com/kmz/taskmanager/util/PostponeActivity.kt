@@ -21,6 +21,8 @@ class PostponeActivity : ComponentActivity() {
     private var weeks = 0L
     private var months = 0L
     private var completed = false
+    private var fromTaskCard = false
+    private var previousDueDate: String? = null
 
     private lateinit var hourButton: TextView
     private lateinit var dayButton: TextView
@@ -32,26 +34,30 @@ class PostponeActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        fromTaskCard = intent.getBooleanExtra(EXTRA_FROM_TASK_CARD, false)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-            setShowWhenLocked(true)
-            setTurnScreenOn(true)
-        } else {
+            setShowWhenLocked(!fromTaskCard)
+            setTurnScreenOn(!fromTaskCard)
+        } else if (!fromTaskCard) {
             @Suppress("DEPRECATION")
             window.addFlags(
                     WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
                             WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
             )
         }
-        window.addFlags(
-                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
-                        WindowManager.LayoutParams.FLAG_ALLOW_LOCK_WHILE_SCREEN_ON
-        )
+        if (!fromTaskCard) {
+            window.addFlags(
+                    WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
+                            WindowManager.LayoutParams.FLAG_ALLOW_LOCK_WHILE_SCREEN_ON
+            )
+        }
         requestWindowFeature(Window.FEATURE_NO_TITLE)
         setFinishOnTouchOutside(false)
         setContentView(R.layout.activity_postpone)
 
         taskId = intent.getLongExtra(NotificationHelper.EXTRA_TASK_ID, 0L)
         type = intent.getStringExtra(NotificationHelper.EXTRA_NOTIFICATION_TYPE) ?: "ALARM"
+        previousDueDate = intent.getStringExtra(EXTRA_PREVIOUS_DUE_DATE)
         if (taskId == 0L) {
             finish()
             return
@@ -66,7 +72,7 @@ class PostponeActivity : ComponentActivity() {
         )
 
         // Cancelling the insistent notification is the fastest and most reliable sound stop.
-        NotificationHelper.cancelDisplayedNotifications(this, taskId)
+        if (!fromTaskCard) NotificationHelper.cancelDisplayedNotifications(this, taskId)
 
         hours = savedInstanceState?.getLong(STATE_HOURS) ?: 0L
         days = savedInstanceState?.getLong(STATE_DAYS) ?: 0L
@@ -112,6 +118,10 @@ class PostponeActivity : ComponentActivity() {
     }
 
     private fun handleSystemBack() {
+        if (fromTaskCard) {
+            finish()
+            return
+        }
         if (hasSelection()) {
             validateSelection()
         } else {
@@ -129,7 +139,8 @@ class PostponeActivity : ComponentActivity() {
         validateButton.isEnabled = selected
         validateButton.alpha = if (selected) 1f else 0.4f
         if (!selected) {
-            summary.text = "Appuyez plusieurs fois pour cumuler"
+                summary.text = previousDueDate?.let { "Échéance prévue : $it" }
+                    ?: "Aucune échéance prévue"
             newDate.text = "H = heure  •  J = jour  •  S = semaine  •  M = mois"
             return
         }
@@ -139,7 +150,9 @@ class PostponeActivity : ComponentActivity() {
         if (weeks > 0L) parts += "$weeks sem"
         if (days > 0L) parts += "$days j"
         if (hours > 0L) parts += "$hours h"
-        summary.text = "Report : +${parts.joinToString("  •  +")}"
+        val previousDueText = previousDueDate?.let { "Échéance prévue : $it" }
+            ?: "Aucune échéance prévue"
+        summary.text = "$previousDueText\nReport : +${parts.joinToString("  •  +")}"
         val postponedDate =
                 LocalDateTime.now().plusMonths(months).plusWeeks(weeks).plusDays(days).plusHours(hours)
         newDate.text = "Nouveau rappel : ${postponedDate.format(DATE_FORMATTER)}"
@@ -178,6 +191,8 @@ class PostponeActivity : ComponentActivity() {
 
     companion object {
         const val EXTRA_TASK_LABEL = "POSTPONE_TASK_LABEL"
+        const val EXTRA_PREVIOUS_DUE_DATE = "POSTPONE_PREVIOUS_DUE_DATE"
+        const val EXTRA_FROM_TASK_CARD = "POSTPONE_FROM_TASK_CARD"
         private const val STATE_HOURS = "state_hours"
         private const val STATE_DAYS = "state_days"
         private const val STATE_WEEKS = "state_weeks"

@@ -66,6 +66,7 @@ internal fun EpgTranslatedText(
             TextButton(
                 enabled = !loading,
                 modifier = buttonModifier,
+                colors = androidx.compose.material3.ButtonDefaults.textButtonColors(containerColor = MyIptvPalette.ButtonBackground, disabledContainerColor = MyIptvPalette.ButtonBackground),
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
                 onClick = onTranslate,
             ) {

@@ -27,6 +27,14 @@ try {
     await disk.save(records);
   } else {
     records = stored.records;
+    const migrated = records.map(record => ({
+      ...validateRecord(record),
+      id: record.id,
+      ...(record.createdAt ? { createdAt: record.createdAt } : {}),
+    }));
+    if (JSON.stringify(migrated) !== JSON.stringify(records)) {
+      records = (await disk.save(migrated)).records;
+    }
   }
 } catch (error) { storageError = error.message; }
 
@@ -43,6 +51,7 @@ app.innerHTML = `
         <span class="save-state"><i></i><span id="save-state-label">Fichier local</span></span>
         <button class="icon-button" id="import-button" title="Importer un fichier CSV" aria-label="Importer un fichier CSV">⇩ Importer</button>
         <button class="icon-button" id="export-button" title="Exporter en CSV" aria-label="Exporter en CSV">⇧ Exporter</button>
+        <button class="icon-button" id="calculator-button" type="button" title="Ouvrir la calculatrice système" aria-label="Ouvrir la calculatrice système">🖩 Calculatrice</button>
         <button class="icon-button" id="github-button" type="button" title="Sauvegarder ou restaurer avec GitHub">GitHub</button>
         <input id="file-input" type="file" accept=".csv,text/csv" hidden />
       </div>
@@ -65,7 +74,7 @@ app.innerHTML = `
           <label class="field"><span>Revenu <em>*</em></span><input name="revenu" list="revenus" placeholder="Dividendes, intérêts..." required /><datalist id="revenus"></datalist></label>
           <label class="field"><span>Montant <em>*</em></span><div class="input-with-suffix"><input name="montant" type="text" inputmode="decimal" autocomplete="off" placeholder="0.000" required /><span>TND</span></div></label>
           <label class="field"><span>Retenue à la source (RS)</span><div class="input-with-suffix"><input name="rs" type="text" inputmode="decimal" autocomplete="off" placeholder="0.000" /><span>TND</span></div></label>
-          <fieldset class="field field-wide"><legend>Imposition <em>*</em></legend><div class="choice-row"><label class="choice"><input type="radio" name="imposition" value="Imposable" checked /><span>Imposable</span></label><label class="choice"><input type="radio" name="imposition" value="Exonéré" /><span>Exonéré</span></label></div></fieldset>
+          <label class="field field-wide"><span>Imposition <em>*</em></span><input name="imposition" list="impositions" placeholder="Ex. Imposable, Exonéré, Net d’impôts..." required /><datalist id="impositions"></datalist></label>
           <fieldset class="field field-wide"><legend>Déclaration <em>*</em></legend><div class="choice-row">${DECLARATIONS.map((value, index) => `<label class="choice"><input type="radio" name="declaration" value="${value}" ${index === 0 ? 'checked' : ''} /><span>${value}</span></label>`).join('')}</div></fieldset>
         </div>
         <p id="entry-notice" class="entry-notice" role="status" hidden>Saisie en cours : enregistrez ou annulez avant de quitter cette fiche.</p><p id="form-error" class="error-message" role="alert" hidden></p><div class="form-footer"><p class="tip"><span>i</span> Entrée : champ suivant. Cliquez sur Enregistrer pour valider.</p><button class="text-button" id="cancel-edit" type="button">Annuler</button><button class="primary-button" id="save-entry" type="button"><span>Enregistrer</span><b>↗</b></button></div>
@@ -74,7 +83,7 @@ app.innerHTML = `
       <aside class="side-panel"><div class="side-icon">▤</div><h3>Votre suivi commence ici</h3><p>Chaque entrée sera conservée sur cet appareil et pourra être exportée en CSV pour vos archives ou votre déclaration.</p><div class="side-line"></div><div class="side-note"><span>⌁</span><div><strong>Format prêt pour la suite</strong><small>Les rapports fiscaux pourront s’appuyer sur ces données.</small></div></div></aside>
     </section>
 
-    <section class="recent-section"><div class="recent-heading"><div><p class="section-kicker">HISTORIQUE</p><h2>Vos entrées</h2></div><button class="text-button" id="clear-button" type="button">Effacer l’historique</button></div><div class="history-tools"><input id="search" type="search" placeholder="Rechercher… ex. BT DIV CEA" title="Tous les mots sont recherchés, dans n’importe quel ordre et dans les différents champs." aria-label="Rechercher dans les entrées" /><select id="year-filter" aria-label="Filtrer par exercice"><option value="">Tous les exercices</option></select><span id="visible-count" aria-live="polite"></span></div><details class="sort-panel"><summary>Trier les entrées <span id="sort-summary"></span></summary><div id="sort-criteria"></div><button type="button" class="text-button" id="add-sort">+ Ajouter un critère</button></details><div id="records-list"></div></section>
+    <section class="recent-section"><div class="recent-heading"><div><p class="section-kicker">HISTORIQUE</p><h2>Vos entrées</h2></div><button class="text-button" id="clear-button" type="button">Effacer l’historique</button></div><div class="history-tools"><input id="search" type="search" placeholder="Rechercher… ex. BT DIV CEA" title="Tous les mots sont recherchés, dans n’importe quel ordre et dans les différents champs." aria-label="Rechercher dans les entrées" /><fieldset class="history-years"><legend>Exercices</legend><div id="journal-years"></div></fieldset><span id="visible-count" aria-live="polite"></span></div><details class="sort-panel"><summary>Trier les entrées <span id="sort-summary"></span></summary><div id="sort-criteria"></div><button type="button" class="text-button" id="add-sort">+ Ajouter un critère</button></details><div id="records-list"></div></section>
     </div><section id="reports-view" hidden aria-label="Rapports"></section>
   </main>
   <div class="toast" id="toast" role="status"></div>
@@ -108,6 +117,18 @@ const githubDialog = createGithubDialog({
   notify: showToast,
 });
 document.querySelector('#github-button').addEventListener('click', () => githubDialog.open());
+document.querySelector('#calculator-button').addEventListener('click', async () => {
+  if (!window.__TAURI_INTERNALS__) {
+    showToast('La calculatrice système est disponible dans l’application de bureau.');
+    return;
+  }
+  try {
+    const { invoke } = await import('@tauri-apps/api/core');
+    await invoke('open_calculator');
+  } catch (error) {
+    showToast(error?.toString?.() || 'Impossible d’ouvrir la calculatrice système.');
+  }
+});
 const entryForm = document.querySelector('#entry-form');
 resetForm();
 // Select numeric values on entry, including when focus comes from Enter or Tab.
@@ -184,7 +205,12 @@ document.querySelector('#sort-criteria').addEventListener('click', event => {
   document.querySelector('#add-sort').focus();
 });
 document.querySelector('#search').addEventListener('input', render);
-document.querySelector('#year-filter').addEventListener('change', render);
+document.querySelector('#journal-years').addEventListener('change', event => {
+  if (event.target.matches('[data-all-journal-years]')) {
+    for (const input of document.querySelectorAll('[name="journal-years"]')) input.checked = event.target.checked;
+  }
+  render();
+});
 document.querySelector('#clear-button').addEventListener('click', async () => {
   if (entryActive) return;
   if (!records.length || !window.confirm('Effacer définitivement toutes les entrées de cet appareil ? Pensez à exporter un CSV avant de continuer.')) return;
@@ -258,12 +284,20 @@ function render() {
   document.querySelector('#record-count').textContent = records.length;
   document.querySelector('#record-plural').textContent = records.length === 1 ? '' : 's';
   renderSuggestions();
-  const yearFilter = document.querySelector('#year-filter');
-  const selected = yearFilter.value;
-  yearFilter.innerHTML = '<option value="">Tous les exercices</option>' + [...new Set([new Date().getFullYear(), ...records.map(record => record.exercice)])].sort((a, b) => b - a).map(year => `<option value="${year}">${year}</option>`).join('');
-  yearFilter.value = [...yearFilter.options].some(option => option.value === selected) ? selected : '';
+  const yearFilter = document.querySelector('#journal-years');
+  const previousInputs = [...yearFilter.querySelectorAll('[name="journal-years"]')];
+  const previous = previousInputs.filter(input => input.checked).map(input => input.value);
+  const wasAll = !previousInputs.length || previousInputs.every(input => input.checked);
+  const years = [...new Set([new Date().getFullYear(), ...records.map(record => record.exercice)])].sort((a, b) => b - a);
+  const selected = wasAll ? years.map(String) : previous;
+  yearFilter.innerHTML = `<label class="all-years"><input type="checkbox" data-all-journal-years /> Tous</label>` + years.map(year => `<label><input type="checkbox" name="journal-years" value="${year}" ${selected.includes(String(year)) ? 'checked' : ''} /> ${year}</label>`).join('');
+  const yearInputs = [...yearFilter.querySelectorAll('[name="journal-years"]')];
+  const allYears = yearFilter.querySelector('[data-all-journal-years]');
+  allYears.checked = yearInputs.length > 0 && yearInputs.every(input => input.checked);
+  allYears.indeterminate = yearInputs.some(input => input.checked) && !allYears.checked;
   const query = document.querySelector('#search').value;
-  const visible = sortRecords(records.filter(record => (!yearFilter.value || String(record.exercice) === yearFilter.value) && matchesSearch(record, query)), sortCriteria);
+  const selectedYears = yearInputs.filter(input => input.checked).map(input => input.value);
+  const visible = sortRecords(records.filter(record => selectedYears.includes(String(record.exercice)) && matchesSearch(record, query)), sortCriteria);
   document.querySelector('#visible-count').textContent = `${visible.length} / ${records.length}`;
   const list = document.querySelector('#records-list');
   if (!records.length) {
@@ -271,9 +305,14 @@ function render() {
     return;
   }
   if (!visible.length) { list.innerHTML = '<p class="empty-state">Aucune entrée ne correspond à votre recherche.</p>'; return; }
-  list.innerHTML = visible.map((record) => `
-    <article class="record-row"><div class="record-main"><span class="record-year">${record.exercice}</span><div><strong>${escapeHtml(record.etablissement)}</strong><small>${escapeHtml(record.placement)} · ${escapeHtml(record.revenu)}</small></div></div><div class="record-amount"><strong>${formatAmount(record.montant)} <small>TND</small></strong><span>RS ${formatAmount(record.rs)} · ${escapeHtml(record.imposition)}</span></div><label class="record-declaration"><span>Déclaration</span><select class="declaration-select${record.declaration === 'Déjà déclaré' ? ' is-declared' : ''}" data-id="${escapeHtml(record.id)}" aria-label="Déclaration de ${escapeHtml(record.etablissement)} (${record.exercice})">${DECLARATIONS.map(value => `<option value="${value}" ${record.declaration === value ? 'selected' : ''}>${value}</option>`).join('')}</select></label><button class="text-button edit-button" data-id="${escapeHtml(record.id)}" aria-label="Modifier cette entrée">Modifier</button><button class="delete-button" data-id="${escapeHtml(record.id)}" title="Supprimer" aria-label="Supprimer cette entrée">×</button></article>
-  `).join('');
+  list.innerHTML = visible.map((record) => {
+    const impositionClass = record.imposition === 'Exonéré' ? 'record-imposition record-imposition-exempt'
+      : record.imposition === 'Net d’impôts' ? 'record-imposition record-imposition-net-tax'
+      : 'record-imposition';
+    return `
+    <article class="record-row"><div class="record-main"><span class="record-year">${record.exercice}</span><div><strong>${escapeHtml(record.etablissement)}</strong><small>${escapeHtml(record.placement)} · ${escapeHtml(record.revenu)}</small></div></div><div class="record-amount"><strong>${formatAmount(record.montant)} <small>TND</small></strong><span>RS ${formatAmount(record.rs)} · <span class="${impositionClass}">${escapeHtml(record.imposition)}</span></span></div><label class="record-declaration"><span>Déclaration</span><select class="declaration-select${record.declaration === 'Déjà déclaré' ? ' is-declared' : ''}" data-id="${escapeHtml(record.id)}" aria-label="Déclaration de ${escapeHtml(record.etablissement)} (${record.exercice})">${DECLARATIONS.map(value => `<option value="${value}" ${record.declaration === value ? 'selected' : ''}>${value}</option>`).join('')}</select></label><button class="text-button edit-button" data-id="${escapeHtml(record.id)}" aria-label="Modifier cette entrée">Modifier</button><button class="delete-button" data-id="${escapeHtml(record.id)}" title="Supprimer" aria-label="Supprimer cette entrée">×</button></article>
+  `;
+  }).join('');
   list.querySelectorAll('.declaration-select').forEach(select => select.addEventListener('change', async () => {
     const record = records.find(item => item.id === select.dataset.id);
     if (entryActive || !DECLARATIONS.includes(select.value)) { select.value = record.declaration; return; }
@@ -307,7 +346,7 @@ function render() {
 }
 
 function renderSuggestions() {
-  const fields = { etablissements: 'etablissement', placements: 'placement', revenus: 'revenu' };
+  const fields = { etablissements: 'etablissement', placements: 'placement', revenus: 'revenu', impositions: 'imposition' };
   Object.entries(fields).forEach(([id, key]) => { document.querySelector(`#${id}`).innerHTML = [...new Set(records.map((record) => record[key]).filter(Boolean))].sort().map((value) => `<option value="${escapeHtml(value)}"></option>`).join(''); });
 }
 function loadRecords() {

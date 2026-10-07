@@ -1,0 +1,1 @@
+{"main-window":{"identifier":"main-window","description":"Écouter et protéger la fermeture de la fenêtre de saisie.","local":true,"windows":["main"],"permissions":["core:event:default","core:window:allow-destroy"]}}

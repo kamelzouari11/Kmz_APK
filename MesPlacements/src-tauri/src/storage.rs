@@ -16,17 +16,37 @@ pub struct DataRequest {
     revision: Option<u64>,
 }
 
-fn validate(records: &[Value]) -> Result<(), String> {
+fn normalize_records(records: &[Value]) -> Result<Vec<Value>, String> {
+    let mut normalized = Vec::with_capacity(records.len());
     let mut ids = HashSet::new();
-    for record in records {
-        let id = record["id"]
-            .as_str()
-            .filter(|id| !id.is_empty())
-            .ok_or("Identifiant manquant.")?;
-        if !ids.insert(id) {
-            return Err("Identifiant dupliqué.".into());
-        }
-        let year = record["exercice"].as_u64().ok_or("Exercice invalide.")?;
+    for (index, record) in records.iter().enumerate() {
+        let mut next = record.clone();
+        let provided = next["id"].as_str().filter(|id| !id.trim().is_empty());
+        let id = match provided {
+            Some(id) => {
+                if !ids.insert(id.to_string()) {
+                    return Err("Identifiant d’entrée manquant ou dupliqué.".into());
+                }
+                id.to_string()
+            }
+            None => {
+                let generated = format!(
+                    "legacy-{}-{}",
+                    SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .map_err(|_| "Horloge invalide.")?
+                        .as_nanos(),
+                    index
+                );
+                next["id"] = json!(generated);
+                if !ids.insert(generated.clone()) {
+                    return Err("Identifiant d’entrée manquant ou dupliqué.".into());
+                }
+                generated
+            }
+        };
+        next["id"] = json!(id);
+        let year = next["exercice"].as_u64().ok_or("Exercice invalide.")?;
         if !(1900..=2100).contains(&year) {
             return Err("Exercice invalide.".into());
         }
@@ -39,16 +59,18 @@ fn validate(records: &[Value]) -> Result<(), String> {
             "imposition",
             "declaration",
         ] {
-            if record[field]
+            if next[field]
                 .as_str()
                 .is_none_or(|value| value.trim().is_empty())
             {
                 return Err("Entrée incomplète.".into());
             }
         }
+        normalized.push(next);
     }
-    Ok(())
+    Ok(normalized)
 }
+
 fn load(path: &Path) -> Result<Value, String> {
     let text = match fs::read_to_string(path) {
         Ok(text) => text,
@@ -65,11 +87,11 @@ fn load(path: &Path) -> Result<Value, String> {
     {
         return Err("Format du fichier local invalide. Aucune donnée écrasée.".into());
     }
-    validate(
-        data["records"]
-            .as_array()
-            .ok_or("Liste des entrées invalide.")?,
-    )?;
+    let records = data["records"]
+        .as_array()
+        .ok_or("Liste des entrées invalide.")?;
+    let normalized = normalize_records(records)?;
+    data["records"] = json!(normalized);
     data["path"] = json!(path);
     Ok(data)
 }
@@ -111,8 +133,7 @@ pub fn data_request(app: tauri::AppHandle, request: DataRequest) -> Result<Value
     if request.action != "save" {
         return Err("Opération inconnue.".into());
     }
-    let records = request.records.ok_or("Entrées manquantes.")?;
-    validate(&records)?;
+    let records = normalize_records(&request.records.ok_or("Entrées manquantes.")?)?;
     fs::create_dir_all(&dir).map_err(|_| "Impossible de créer le dossier de données.")?;
     let lock = dir.join(".write-lock");
     let lock_file = private_file(&lock).map_err(|_| "Le fichier local est verrouillé. Réessayez ; après un arrêt brutal, vérifiez data/.write-lock.")?;

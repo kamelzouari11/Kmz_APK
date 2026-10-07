@@ -7,11 +7,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.ByteArrayInputStream
@@ -21,7 +20,6 @@ import java.time.Instant
 import java.time.format.DateTimeFormatter
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
-import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.TimeUnit
 import java.util.zip.GZIPInputStream
 import java.util.zip.GZIPOutputStream
@@ -48,12 +46,11 @@ class EpgSearchRepository(
         }
     }
 
-    private suspend fun strongProfile() = database.profileDao().getAll().firstOrNull {
-        it.name.trim().equals("strong iptv", ignoreCase = true)
-    } ?: error("Le profil STRONG IPTV est introuvable.")
+    private suspend fun activeProfile() = database.profileDao().getActive()
+        ?: error("Aucun profil IPTV actif n’est disponible.")
 
     suspend fun countries(): EpgCountrySelection = withContext(Dispatchers.IO) {
-        val profile = strongProfile()
+        val profile = activeProfile()
         val epgChannels = database.channelDao().getForEpg(profile.id)
             .filter { !it.epgChannelId.isNullOrBlank() }
         val options = epgChannels.groupBy { it.countryCode }.map { (countryCode, countryChannels) ->
@@ -76,15 +73,17 @@ class EpgSearchRepository(
         EpgCountrySelection(profile.id, options, selectedCountries, selectedCategories)
     }
 
-    /** Reads the local short-EPG database only; it never starts an EPG download. */
+    /** Reads the local short-EPG database and mirrors it to the indexed runtime cache; no network. */
     suspend fun cachedAvailableChannelKeys(): Set<String> = withContext(Dispatchers.IO) {
         mutex.withLock {
-            val profile = runCatching { strongProfile() }.getOrNull() ?: return@withLock emptySet()
+            val profile = runCatching { activeProfile() }.getOrNull() ?: return@withLock emptySet()
             val file = cacheFile(profile)
             if (!file.exists() || file.length() == 0L) return@withLock emptySet()
             val availableIds = runCatching {
                 SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READONLY).use { db ->
-                    availableProgramChannels(db)
+                    val ids = availableProgramChannels(db)
+                    runCatching { mirrorMissingEpgCache(db, cacheSpec()) }
+                    ids
                 }
             }.getOrDefault(emptySet())
             database.channelDao().getForEpg(profile.id)
@@ -122,6 +121,25 @@ class EpgSearchRepository(
                 SQLiteDatabase.OPEN_READWRITE,
             ).use { db ->
                 validatePortableDatabase(db, spec)
+                db.execSQL("CREATE TABLE IF NOT EXISTS filter_selection (kind TEXT NOT NULL, value TEXT NOT NULL)")
+                db.beginTransaction()
+                try {
+                    db.execSQL("DELETE FROM filter_selection")
+                    val selectedCountries = preferences.getStringSet(countryKey(spec.profile.id), null)
+                        ?: spec.allChannels.map { it.countryCode }.toSet()
+                    val selectedCategories = preferences.getStringSet(categoryKey(spec.profile.id), null)
+                        ?: spec.allChannels.filter { !it.epgChannelId.isNullOrBlank() }
+                            .map(::categorySelectionKey).toSet()
+                    selectedCountries.forEach { country ->
+                        db.execSQL("INSERT INTO filter_selection VALUES(?,?)", arrayOf("country", country))
+                    }
+                    selectedCategories.forEach { category ->
+                        db.execSQL("INSERT INTO filter_selection VALUES(?,?)", arrayOf("category", category))
+                    }
+                    db.setTransactionSuccessful()
+                } finally {
+                    db.endTransaction()
+                }
                 db.rawQuery("PRAGMA wal_checkpoint(FULL)", null).use { it.moveToFirst() }
             }
             ByteArrayOutputStream().use { output ->
@@ -134,17 +152,20 @@ class EpgSearchRepository(
     suspend fun importDatabase(compressed: ByteArray) = withContext(Dispatchers.IO) {
         mutex.withLock {
             check(compressed.isNotEmpty()) { "La base EPG GitHub est vide." }
-            val spec = cacheSpec()
+            val spec = cacheSpec(requireSelection = false)
             val temporary = File(directory, "${spec.file.name}.importing")
             try {
                 GZIPInputStream(ByteArrayInputStream(compressed)).use { gzip ->
                     temporary.outputStream().use { output -> gzip.copyTo(output) }
                 }
-                SQLiteDatabase.openDatabase(
+                val importedSelection = SQLiteDatabase.openDatabase(
                     temporary.path,
                     null,
                     SQLiteDatabase.OPEN_READONLY,
-                ).use { db -> validatePortableDatabase(db, spec) }
+                ).use { db ->
+                    validatePortableDatabase(db, spec)
+                    readFilterSelection(db)
+                }
                 listOf(
                     File("${spec.file.path}-wal"),
                     File("${spec.file.path}-shm"),
@@ -155,6 +176,21 @@ class EpgSearchRepository(
                     spec.file.toPath(),
                     StandardCopyOption.REPLACE_EXISTING,
                 )
+                importedSelection?.let { (countries, categories) ->
+                    val localCountries = spec.allChannels.map { it.countryCode }.toSet()
+                    val localCategories = spec.allChannels.filter { !it.epgChannelId.isNullOrBlank() }
+                        .map(::categorySelectionKey).toSet()
+                    check(preferences.edit()
+                        .putStringSet(countryKey(spec.profile.id), countries.intersect(localCountries))
+                        .putStringSet(categoryKey(spec.profile.id), categories.intersect(localCategories))
+                        .commit()) { "Impossible de restaurer la sélection EPG." }
+                }
+                repository.clearEpgCache(spec.profile.id)
+                SQLiteDatabase.openDatabase(
+                    spec.file.path,
+                    null,
+                    SQLiteDatabase.OPEN_READONLY,
+                ).use { db -> mirrorMissingEpgCache(db, spec) }
             } finally {
                 if (temporary.exists()) temporary.delete()
             }
@@ -164,8 +200,9 @@ class EpgSearchRepository(
     suspend fun search(
         query: String,
         refresh: Boolean,
+        priorityCategoryId: String? = null,
         progress: (String) -> Unit,
-    ): EpgSearchPage = withCache(refresh, progress) { db, spec, synced ->
+    ): EpgSearchPage = withCache(refresh, progress, priorityCategoryId = priorityCategoryId) { db, spec, synced ->
         progress("Recherche dans les programmes…")
         val now = Instant.now().epochSecond
         val words = EpgSearch.words(query).distinct()
@@ -192,8 +229,11 @@ class EpgSearchRepository(
     }
 
     private fun availableProgramChannels(db: SQLiteDatabase): Set<String> = db.rawQuery(
-        "SELECT DISTINCT channel FROM programmes WHERE stop > ? AND stop > start",
-        arrayOf(Instant.now().epochSecond.toString()),
+        // La présence d'un EPG doit rester visible même si tous ses
+        // programmes sont déjà terminés. La date sert à afficher le
+        // programme courant, pas à déterminer si la chaîne possède un EPG.
+        "SELECT DISTINCT channel FROM programmes WHERE stop > start",
+        null,
     ).use { cursor ->
         buildSet { while (cursor.moveToNext()) add(cursor.getString(0)) }
     }
@@ -227,6 +267,7 @@ class EpgSearchRepository(
         refresh: Boolean,
         progress: (String) -> Unit,
         onlyEpgId: String? = null,
+        priorityCategoryId: String? = null,
         block: suspend (SQLiteDatabase, CacheSpec, Long) -> T,
     ): T = withContext(Dispatchers.IO) {
         mutex.withLock {
@@ -236,24 +277,25 @@ class EpgSearchRepository(
                 val syncSpec = if (onlyEpgId == null) spec else spec.copy(
                     channelsByEpg = spec.channelsByEpg.filterKeys { it == onlyEpgId },
                 )
-                val synced = ensureCache(db, syncSpec, refresh, progress)
+                val synced = ensureCache(db, syncSpec, progress, priorityCategoryId)
+                mirrorMissingEpgCache(db, spec)
                 block(db, spec, synced)
             }
         }
     }
 
-    private suspend fun cacheSpec(): CacheSpec {
-        val profile = strongProfile()
+    private suspend fun cacheSpec(requireSelection: Boolean = true): CacheSpec {
+        val profile = activeProfile()
         val allChannels = database.channelDao().getForEpg(profile.id)
         val selectedCountries = preferences.getStringSet(countryKey(profile.id), null)
         val selectedCategories = preferences.getStringSet(categoryKey(profile.id), null)
         val selectedChannels = allChannels.filter { channel ->
-            !channel.epgChannelId.isNullOrBlank() &&
+            !channel.epgChannelId?.trim().isNullOrEmpty() &&
                 (selectedCountries == null || channel.countryCode in selectedCountries) &&
                 (selectedCategories == null || categorySelectionKey(channel) in selectedCategories)
         }
         val channelsByEpg = selectedChannels.groupBy { it.epgChannelId!!.trim() }
-        check(channelsByEpg.isNotEmpty()) {
+        check(!requireSelection || channelsByEpg.isNotEmpty()) {
             "Sélectionnez au moins un pays et une catégorie contenant des chaînes EPG."
         }
         val scope = sha256(channelsByEpg.keys.sorted().joinToString("\u0000"))
@@ -297,13 +339,33 @@ class EpgSearchRepository(
         db.execSQL("CREATE TABLE IF NOT EXISTS channel_sync (channel TEXT PRIMARY KEY, synced INTEGER)")
         // Additive table: older portable caches remain compatible.
         db.execSQL("CREATE TABLE IF NOT EXISTS channel_attempt (channel TEXT PRIMARY KEY, attempted INTEGER)")
+        db.execSQL("CREATE TABLE IF NOT EXISTS filter_selection (kind TEXT NOT NULL, value TEXT NOT NULL)")
+    }
+
+    private fun readFilterSelection(db: SQLiteDatabase): Pair<Set<String>, Set<String>>? {
+        val exists = db.rawQuery(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='filter_selection'",
+            null,
+        ).use { it.moveToFirst() }
+        if (!exists) return null // Older exports contain programmes only.
+        val countries = mutableSetOf<String>()
+        val categories = mutableSetOf<String>()
+        db.rawQuery("SELECT kind,value FROM filter_selection", null).use { cursor ->
+            while (cursor.moveToNext()) {
+                when (cursor.getString(0)) {
+                    "country" -> countries += cursor.getString(1)
+                    "category" -> categories += cursor.getString(1)
+                }
+            }
+        }
+        return countries to categories
     }
 
     private suspend fun ensureCache(
         db: SQLiteDatabase,
         spec: CacheSpec,
-        refresh: Boolean,
         progress: (String) -> Unit,
+        priorityCategoryId: String?,
     ): Long {
         val oldScope = db.rawQuery("SELECT value FROM country_scope", null).use {
             if (it.moveToFirst()) it.getString(0) else null
@@ -322,12 +384,19 @@ class EpgSearchRepository(
                 while (cursor.moveToNext()) put(cursor.getString(0), cursor.getLong(1))
             }
         }
-        val staleBefore = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(3)
+        val staleBefore = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(6)
         val available = availableProgramChannels(db)
-        // Empty guides and failed attempts also wait three hours unless explicitly refreshed.
-        val requests = spec.channelsByEpg.entries.filter { (epgId, _) ->
+        // Even an explicit refresh respects the provider cooldown.
+        val requests = spec.channelsByEpg.entries.mapNotNull { (epgId, variants) ->
             val lastChecked = maxOf(syncedChannels[epgId] ?: 0L, attemptedChannels[epgId] ?: 0L)
-            refresh || lastChecked <= staleBefore
+            if (lastChecked > staleBefore) return@mapNotNull null
+            EpgRequest(
+                epgId = epgId,
+                variants = variants.distinctBy(SavedChannel::streamId)
+                    .sortedByDescending { categorySelectionKey(it) == priorityCategoryId },
+            )
+        }.sortedByDescending { request ->
+            priorityCategoryId != null && request.variants.any { categorySelectionKey(it) == priorityCategoryId }
         }
         if (requests.isEmpty()) {
             if (scopeChanged) {
@@ -336,43 +405,46 @@ class EpgSearchRepository(
             }
             return spec.channelsByEpg.keys.mapNotNull(syncedChannels::get).minOrNull() ?: synced
         }
-        val completed = AtomicInteger(0)
-        val semaphore = Semaphore(SHORT_EPG_PARALLEL_REQUESTS)
         val loader = repository.shortEpgLoader(spec.profile)
-        progress("EPG court · 0/${requests.size} chaînes…")
-        val guides = coroutineScope {
-            requests.map { (epgId, variants) ->
-                async {
-                    val guide = loadShortGuide(epgId, variants) { channel ->
-                        semaphore.withPermit { loader(channel) }
-                    }
-                    val done = completed.incrementAndGet()
-                    if (done == requests.size || done % PROGRESS_UPDATE_INTERVAL == 0) {
-                        progress("EPG court · $done/${requests.size} chaînes…")
-                    }
-                    guide
-                }
-            }.awaitAll().filterNotNull()
-        }
-        val attemptedAt = System.currentTimeMillis()
-        db.beginTransaction()
-        try {
-            requests.forEach { (epgId, _) ->
+        val totalIdentifiers = requests.size
+        progress("EPG court · 0/$totalIdentifiers identifiants…")
+        var downloadedAnyGuide = false
+        var completedIdentifiers = 0
+        requests.chunked(SHORT_EPG_PARALLEL_REQUESTS).forEachIndexed { batchIndex, batch ->
+            if (batchIndex > 0) delay(SHORT_EPG_REQUEST_PAUSE_MS)
+            val attemptedAt = System.currentTimeMillis()
+            batch.forEach { request ->
                 db.execSQL(
                     "INSERT OR REPLACE INTO channel_attempt(channel,attempted) VALUES(?,?)",
-                    arrayOf<Any>(epgId, attemptedAt),
+                    arrayOf<Any>(request.epgId, attemptedAt),
                 )
             }
-            db.setTransactionSuccessful()
-        } finally {
-            db.endTransaction()
-        }
-        if (guides.isEmpty()) {
-            if (spec.channelsByEpg.keys.none { it in available }) {
-                throw java.io.IOException("EPG requests failed")
+            val guides = coroutineScope {
+                batch.map { request ->
+                    async {
+                        loadShortGuide(request.epgId, request.variants, loader)
+                    }
+                }.awaitAll().filterNotNull()
             }
-            return spec.channelsByEpg.keys.mapNotNull(syncedChannels::get).minOrNull() ?: synced
+            if (guides.isNotEmpty()) {
+                downloadedAnyGuide = true
+                synced = saveGuides(db, spec, guides)
+            }
+            completedIdentifiers += batch.size
+            progress("EPG court · $completedIdentifiers/$totalIdentifiers identifiants…")
         }
+        if (!downloadedAnyGuide && spec.channelsByEpg.keys.none { it in available }) {
+            throw java.io.IOException("EPG requests failed")
+        }
+        return if (downloadedAnyGuide) synced
+        else spec.channelsByEpg.keys.mapNotNull(syncedChannels::get).minOrNull() ?: synced
+    }
+
+    private suspend fun saveGuides(
+        db: SQLiteDatabase,
+        spec: CacheSpec,
+        guides: List<ShortChannelGuide>,
+    ): Long {
         val downloadedAt = System.currentTimeMillis()
         db.beginTransaction()
         try {
@@ -400,16 +472,78 @@ class EpgSearchRepository(
                     )
                 }
             }
-            synced = downloadedAt
             db.execSQL("DELETE FROM metadata")
-            db.execSQL("INSERT INTO metadata VALUES(?)", arrayOf(synced))
+            db.execSQL("INSERT INTO metadata VALUES(?)", arrayOf(downloadedAt))
             db.execSQL("DELETE FROM country_scope")
             db.execSQL("INSERT INTO country_scope VALUES(?)", arrayOf(spec.scope))
             db.setTransactionSuccessful()
         } finally {
             db.endTransaction()
         }
-        return synced
+        repository.saveDownloadedEpg(
+            profileId = spec.profile.id,
+            guides = guides.associate { guide ->
+                guide.channel to (
+                    guide.programmes.map { program ->
+                        EpgProgram(
+                            title = program.title,
+                            description = program.description,
+                            timeRange = "${SHORT_TIME_FORMATTER.format(Instant.ofEpochSecond(program.start))}–" +
+                                SHORT_TIME_FORMATTER.format(Instant.ofEpochSecond(program.stop)),
+                            startEpochSeconds = program.start,
+                            stopEpochSeconds = program.stop,
+                        )
+                    } to spec.channelsByEpg[guide.channel]?.firstOrNull()?.streamId
+                )
+            },
+        )
+        return downloadedAt
+    }
+
+    private fun cachedShortGuide(db: SQLiteDatabase, epgId: String): ShortChannelGuide? {
+        val programmes = db.rawQuery(
+            "SELECT title,description,start,stop FROM programmes " +
+                "WHERE channel=? AND stop>? ORDER BY start LIMIT 4",
+            arrayOf(epgId, Instant.now().epochSecond.toString()),
+        ).use { cursor ->
+            buildList {
+                while (cursor.moveToNext()) add(ShortProgramme(
+                    epgId, cursor.getString(0), cursor.getString(1), cursor.getLong(2), cursor.getLong(3),
+                ))
+            }
+        }
+        return programmes.takeIf { it.isNotEmpty() }?.let { ShortChannelGuide(epgId, it) }
+    }
+
+    private suspend fun mirrorMissingEpgCache(db: SQLiteDatabase, spec: CacheSpec) {
+        val missing = availableProgramChannels(db) - repository.cachedEpgIds(spec.profile.id)
+        if (missing.isEmpty()) return
+        val programmes = linkedMapOf<String, MutableList<EpgProgram>>()
+        db.rawQuery(
+            "SELECT channel,title,description,start,stop FROM programmes ORDER BY channel,start",
+            null,
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                val epgId = cursor.getString(0)
+                if (epgId !in missing) continue
+                val start = cursor.getLong(3)
+                val stop = cursor.getLong(4)
+                programmes.getOrPut(epgId) { mutableListOf() } += EpgProgram(
+                    title = cursor.getString(1),
+                    description = cursor.getString(2),
+                    timeRange = "${SHORT_TIME_FORMATTER.format(Instant.ofEpochSecond(start))}–" +
+                        SHORT_TIME_FORMATTER.format(Instant.ofEpochSecond(stop)),
+                    startEpochSeconds = start,
+                    stopEpochSeconds = stop,
+                )
+            }
+        }
+        repository.saveDownloadedEpg(
+            profileId = spec.profile.id,
+            guides = programmes.mapValues { (epgId, entries) ->
+                entries.toList() to spec.channelsByEpg[epgId]?.firstOrNull()?.streamId
+            },
+        )
     }
 
     private suspend fun loadShortGuide(
@@ -418,7 +552,8 @@ class EpgSearchRepository(
         loader: suspend (SavedChannel) -> List<EpgProgram>,
     ): ShortChannelGuide? {
         var failed = false
-        for (channel in variants) {
+        for ((index, channel) in variants.take(MAX_EPG_ID_VARIANTS).withIndex()) {
+            if (index > 0) delay(SHORT_EPG_REQUEST_PAUSE_MS)
             try {
                 val now = Instant.now().epochSecond
                 val programmes = loader(channel).mapNotNull { program ->
@@ -447,7 +582,7 @@ class EpgSearchRepository(
         args: Array<String>,
         channelsByEpg: Map<String, List<SavedChannel>>,
     ): List<EpgSearchResult> = db.rawQuery(sql, args).use { cursor ->
-        buildList {
+        val rows = buildList {
             while (cursor.moveToNext()) {
                 coroutineContext.ensureActive()
                 val variants = channelsByEpg[cursor.getString(1)].orEmpty()
@@ -465,6 +600,7 @@ class EpgSearchRepository(
                 }
             }
         }
+        rows
     }
 
     private fun orderByProvider(
@@ -524,7 +660,7 @@ class EpgSearchRepository(
         }.toSet()
         val requiredMatches = minOf(MINIMUM_PROFILE_MATCHES, importedEpgIds.size)
         check(importedEpgIds.count(localEpgIds::contains) >= requiredMatches) {
-            "La base EPG GitHub ne correspond pas au profil STRONG IPTV local."
+            "La base EPG GitHub ne correspond pas au profil IPTV actif local."
         }
     }
 
@@ -568,12 +704,20 @@ class EpgSearchRepository(
         val programmes: List<ShortProgramme>,
     )
 
+    private data class EpgRequest(
+        val epgId: String,
+        val variants: List<SavedChannel>,
+    )
+
     private companion object {
         const val CACHE_SCHEMA_VERSION = 4
         const val SHORT_EPG_PROGRAM_LIMIT = 4
-        const val SHORT_EPG_PARALLEL_REQUESTS = 24
-        const val PROGRESS_UPDATE_INTERVAL = 25
+        const val SHORT_EPG_PARALLEL_REQUESTS = 8
+        const val SHORT_EPG_REQUEST_PAUSE_MS = 1_000L
+        const val MAX_EPG_ID_VARIANTS = 4
         const val MINIMUM_PROFILE_MATCHES = 10
+        val SHORT_TIME_FORMATTER: DateTimeFormatter =
+            DateTimeFormatter.ofPattern("HH:mm").withZone(EpgSearch.tunis)
         val REQUIRED_CACHE_TABLES = setOf("programmes", "metadata", "country_scope", "channel_sync")
     }
 }

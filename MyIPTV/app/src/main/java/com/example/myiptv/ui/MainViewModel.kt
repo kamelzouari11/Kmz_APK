@@ -1,6 +1,7 @@
 package com.example.myiptv.ui
 
 import android.app.Application
+import android.os.SystemClock
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.myiptv.data.BrowseMode
@@ -12,6 +13,7 @@ import com.example.myiptv.data.EpgProgram
 import com.example.myiptv.data.FavoriteGroup
 import com.example.myiptv.data.MyIptvDatabase
 import com.example.myiptv.data.MyIptvRepository
+import com.example.myiptv.data.ProfileProtocol
 import com.example.myiptv.data.SavedChannel
 import com.example.myiptv.data.XtreamProfile
 import com.example.myiptv.utils.GitHubBackupClient
@@ -57,6 +59,7 @@ data class MainUiState(
     val playingChannel: SavedChannel? = null,
     val streamUrl: String? = null,
     val epg: List<EpgProgram> = emptyList(),
+    val cachedEpgByStreamId: Map<Int, EpgProgram> = emptyMap(),
     /** Channels whose latest short EPG request returned at least one usable programme. */
     val epgAvailableChannels: Set<String> = emptySet(),
     val fullEpgChannel: SavedChannel? = null,
@@ -64,6 +67,7 @@ data class MainUiState(
     val fullEpgLoading: Boolean = false,
     val fullEpgError: String? = null,
     val favoriteGroups: List<FavoriteGroup> = emptyList(),
+    val favoriteGroupIdsByChannel: Map<Int, Set<Long>> = emptyMap(),
     val favoriteGroupIdsForChannel: Set<Long> = emptySet(),
     val selectedFavoriteGroup: FavoriteGroup? = null,
     val browseMode: BrowseMode = BrowseMode.RECENT,
@@ -108,6 +112,50 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val epgSearch: StateFlow<EpgSearchUiState> = _epgSearch.asStateFlow()
     private var pendingEpgChannel: SavedChannel? = null
     private var epgOperationJob: Job? = null
+    private var lastEpgProgressUpdate = 0L
+    private var visibleChannelSource = emptyList<SavedChannel>()
+    private var visibleChannelLimit = 20
+
+    fun loadMoreVisibleChannels() {
+        if (visibleChannelLimit >= visibleChannelSource.size) return
+        visibleChannelLimit = (visibleChannelLimit + 20).coerceAtMost(visibleChannelSource.size)
+        val page = visibleChannelSource.take(visibleChannelLimit)
+        _state.value = _state.value.copy(
+            visibleChannels = page,
+        )
+        cachedVisibleEpgJob?.cancel()
+        cachedVisibleEpgJob = viewModelScope.launch {
+            val cached = repository.loadCachedEpg(page).mapNotNull { (streamId, programs) ->
+                val now = System.currentTimeMillis() / 1_000L
+                programs.firstOrNull { program ->
+                    val start = program.startEpochSeconds
+                    val stop = program.stopEpochSeconds
+                    start != null && stop != null && now >= start && now < stop
+                }?.let { streamId to it }
+            }.toMap()
+            if (_state.value.visibleChannels == page) {
+                val latest = _state.value
+                _state.value = latest.copy(
+                    cachedEpgByStreamId = cached,
+                    epgAvailableChannels = latest.epgAvailableChannels +
+                        page.filter { it.streamId in cached }.map(SavedChannel::epgAvailabilityKey),
+                )
+            }
+        }
+    }
+
+    private fun publishEpgStatus(status: String) {
+        val now = SystemClock.uptimeMillis()
+        val progressMatch = Regex("EPG court · (\\d+)/(\\d+)").find(status)
+        val isFinalProgress = progressMatch?.let {
+            it.groupValues[1] == it.groupValues[2]
+        } == true
+        if (status.startsWith("EPG court") && !isFinalProgress &&
+            now - lastEpgProgressUpdate < 1_000L
+        ) return
+        lastEpgProgressUpdate = now
+        _epgSearch.value = _epgSearch.value.copy(status = status)
+    }
 
     fun loadEpgCountries() {
         if (_epgSearch.value.loading || _epgSearch.value.countriesLoading) return
@@ -128,7 +176,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 throw cancelled
             } catch (_: Exception) {
                 _epgSearch.value = _epgSearch.value.copy(countriesLoading = false, countries = null,
-                    error = "Impossible de lire les pays. Vérifiez le profil STRONG IPTV et la synchronisation de ses chaînes.")
+                    error = "Impossible de lire les pays. Vérifiez le profil actif et la synchronisation de ses chaînes.")
             }
         }
     }
@@ -175,8 +223,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 error = null,
             )
             try {
-                val page = epgSearchRepository.search(query, refresh) { status ->
-                    _epgSearch.value = _epgSearch.value.copy(status = status)
+                val page = epgSearchRepository.search(
+                    query,
+                    refresh,
+                    _state.value.playingChannel?.let { "${it.countryCode}\u0000${it.categoryId}" },
+                ) { status ->
+                    publishEpgStatus(status)
                 }
                 storeEpgSearchResults(query, page.results.flatMap { it.channels })
                 _epgSearch.value = _epgSearch.value.copy(loading = false, page = page, status = "")
@@ -202,7 +254,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             )
             try {
                 val countries = epgSearchRepository.guideCountries(refresh) { status ->
-                    _epgSearch.value = _epgSearch.value.copy(status = status)
+                    publishEpgStatus(status)
                 }
                 _epgSearch.value = _epgSearch.value.copy(
                     loading = false, guideCountries = countries, status = "",
@@ -234,7 +286,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 _epgSearch.value = _epgSearch.value.copy(countries = selection)
                 val guide = epgSearchRepository.guide(channel, refresh) { status ->
-                    _epgSearch.value = _epgSearch.value.copy(status = status)
+                    publishEpgStatus(status)
                 }
                 _epgSearch.value = _epgSearch.value.copy(
                     loading = false,
@@ -297,9 +349,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             )
             try {
                 epgSearchRepository.importDatabase(githubBackupClient.downloadEpgDatabase())
+                val restoredCountries = epgSearchRepository.countries()
                 _epgSearch.value = _epgSearch.value.copy(
                     loading = false,
                     status = "✓ Base EPG importée avec succès depuis GitHub.",
+                    countries = restoredCountries,
+                    guideCountries = null,
                     page = null,
                     guide = null,
                 )
@@ -324,8 +379,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             return "Impossible de charger le guide EPG. Vérifiez la connexion et réessayez."
         }
         return when {
-            error.message?.startsWith("Le profil STRONG") == true ->
-                "Le profil STRONG IPTV est introuvable."
+            error.message?.startsWith("Aucun profil IPTV actif") == true ->
+                "Aucun profil IPTV actif n’est disponible."
             error.message?.startsWith("Sélectionnez") == true ->
                 "Sélectionnez au moins un pays et une catégorie avec des chaînes EPG."
             error.message?.contains("exclue par la sélection") == true ->
@@ -333,7 +388,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             error.message?.contains("identifiant EPG") == true ->
                 "Cette chaîne ne possède pas d’identifiant EPG."
             error.message?.startsWith("Synchronisez") == true ->
-                "Synchronisez d’abord les chaînes du profil STRONG IPTV."
+                "Synchronisez d’abord les chaînes du profil actif."
             else -> "Le guide reçu est vide, incomplet ou incompatible. Réessayez."
         }
     }
@@ -350,7 +405,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     throw cancelled
                 } catch (error: Exception) {
                     pendingEpgChannel = null
-                    _state.value = _state.value.copy(message = "Impossible d’activer le profil STRONG IPTV.")
+                    _state.value = _state.value.copy(message = "Impossible d’activer le profil IPTV sélectionné.")
                 }
             }
         }
@@ -364,6 +419,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var recentChannels: List<SavedChannel> = emptyList()
     private var favoriteChannels: List<SavedChannel> = emptyList()
     private var epgSearchChannels: List<SavedChannel> = emptyList()
+    private var cinemaSearchChannels: List<SavedChannel> = emptyList()
     private var liveCountries: List<String> = emptyList()
     private var liveCategoriesByCountry: Map<String, List<CategoryItem>> = emptyMap()
     private var liveChannelsBySelection: Map<Pair<String, String>, List<SavedChannel>> = emptyMap()
@@ -371,8 +427,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var favoriteMembershipsJob: Job? = null
     private var focusSelectionJob: Job? = null
     private var categorySelectionJob: Job? = null
-    private var focusedDetailsJob: Job? = null
     private var epgJob: Job? = null
+    private var cachedVisibleEpgJob: Job? = null
     private var fullEpgJob: Job? = null
     private var recentChannelsLoaded = false
     private var startupRestored = false
@@ -446,6 +502,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
         }
+        viewModelScope.launch {
+            repository.favoriteMemberships.collect { memberships ->
+                val byChannel = memberships.groupBy { it.streamId }
+                    .mapValues { (_, entries) -> entries.map { it.groupId }.toSet() }
+                _state.value = _state.value.copy(favoriteGroupIdsByChannel = byChannel)
+            }
+        }
     }
 
     private fun refreshCachedEpgAvailability() {
@@ -461,6 +524,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         serverUrl: String,
         username: String,
         password: String,
+        protocol: ProfileProtocol,
+        macAddress: String?,
         countryGroupingEnabled: Boolean,
     ) {
         runLoading {
@@ -470,6 +535,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 serverUrl,
                 username,
                 password,
+                protocol,
+                macAddress,
                 countryGroupingEnabled,
             )
             _state.value = _state.value.copy(
@@ -629,6 +696,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         rebuildHierarchy()
     }
 
+    fun showCinemaSearchResults(query: String, channels: List<SavedChannel>) {
+        val selected = channels.distinctBy { "${it.profileId}:${it.streamId}" }
+        if (query.isBlank() || selected.isEmpty()) return
+        cinemaSearchChannels = selected
+        favoriteChannelsJob?.cancel()
+        _state.value = _state.value.copy(
+            browseMode = BrowseMode.CINEMA_SEARCH,
+            selectedFavoriteGroup = null,
+            searchQuery = query,
+        )
+        rebuildHierarchy()
+    }
+
     fun clearSearchHistory() {
         viewModelScope.launch {
             runCatching { repository.clearSearchHistory() }
@@ -643,10 +723,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun focusChannel(channel: SavedChannel) {
         focusSelectionJob?.cancel()
-        if (_state.value.selectedChannel?.streamId == channel.streamId) {
-            scheduleFocusedChannelDetails(channel)
-            return
-        }
+        if (_state.value.selectedChannel?.streamId == channel.streamId) return
         focusSelectionJob = viewModelScope.launch {
             delay(100)
             commitFocusedChannel(channel)
@@ -655,7 +732,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun focusChannelImmediately(channel: SavedChannel) {
         focusSelectionJob?.cancel()
-        commitFocusedChannel(channel, loadImmediately = true)
+        // Portrait focus events are also emitted while moving the DPAD.
+        // "Immediately" means immediate local selection, never an EPG request.
+        commitFocusedChannel(channel)
     }
 
     fun play(channel: SavedChannel) {
@@ -668,9 +747,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _state.value = _state.value.copy(
             selectedChannel = channel,
             playingChannel = channel,
-            streamUrl = _state.value.profile?.let { repository.streamUrl(it, channel) },
+            streamUrl = null,
+            epg = emptyList(),
             favoriteGroupIdsForChannel = emptySet(),
         )
+        viewModelScope.launch {
+            runCatching {
+                val profile = checkNotNull(_state.value.profile)
+                repository.streamUrl(profile, channel)
+            }.onSuccess { url ->
+                if (_state.value.playingChannel?.streamId == channel.streamId) {
+                    _state.value = _state.value.copy(streamUrl = url)
+                }
+            }.onFailure(::showError)
+        }
         loadChannelDetailsNow(channel)
         viewModelScope.launch { repository.markRecent(channel) }
     }
@@ -819,10 +909,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun uploadBackupToGitHub() {
         runLoading {
-            val json = repository.exportBackupJson()
+            val json = repository.exportBackupJson(githubBackupClient.downloadIfExists())
             githubBackupClient.upload(json)
             _state.value = _state.value.copy(
-                message = "Tous les profils et leurs favoris ont été sauvegardés sur GitHub.",
+                message = "Profils et favoris sauvegardés sur GitHub.",
             )
         }
     }
@@ -932,6 +1022,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 channels = epgSearchChannels,
                 loadSelectedDetails = loadSelectedDetails,
             )
+            BrowseMode.CINEMA_SEARCH -> applyVisible(
+                countries = countries,
+                categories = listOf(
+                    CategoryItem(
+                        id = "@cinema-search",
+                        name = "Résultats Cinéma",
+                        epgChannelCount = cinemaSearchChannels.countWithEpg(),
+                    ),
+                ),
+                country = current.selectedCountry,
+                categoryId = "@cinema-search",
+                channels = cinemaSearchChannels,
+                loadSelectedDetails = loadSelectedDetails,
+            )
         }
     }
 
@@ -948,11 +1052,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // A search result can be rebuilt after a profile/database update. Enforce the
         // provider's numeric channel sequence at the final UI boundary as well.
         val orderedChannels = when (current.browseMode) {
-            BrowseMode.SEARCH, BrowseMode.EPG_SEARCH -> channels.sortedWith(
+            // Les catégories et les recherches suivent toujours la séquence
+            // numérique fournie par le provider. Les résultats dérivés gardent
+            // également cet ordre pour rester cohérents.
+            BrowseMode.LIVE, BrowseMode.FAVORITES, BrowseMode.SEARCH,
+            BrowseMode.EPG_SEARCH, BrowseMode.CINEMA_SEARCH -> channels.sortedWith(
                 compareBy<SavedChannel> { it.providerOrder }.thenBy { it.streamId },
             )
             else -> channels
         }
+        visibleChannelSource = orderedChannels
+        visibleChannelLimit = 20.coerceAtMost(orderedChannels.size)
+        val pagedChannels = orderedChannels.take(visibleChannelLimit)
         val selected = current.selectedChannel
             ?.takeIf { old -> orderedChannels.any { it.streamId == old.streamId } }
             ?: orderedChannels.firstOrNull()
@@ -960,7 +1071,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _state.value = current.copy(
             countries = countries,
             categories = categories,
-            visibleChannels = orderedChannels,
+            visibleChannels = pagedChannels,
             selectedCountry = country,
             selectedCategoryId = categoryId,
             selectedChannel = selected,
@@ -970,14 +1081,34 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             } else {
                 current.favoriteGroupIdsForChannel
             },
+            cachedEpgByStreamId = emptyMap(),
         )
+        cachedVisibleEpgJob?.cancel()
+        cachedVisibleEpgJob = viewModelScope.launch {
+            val cached = repository.loadCachedEpg(pagedChannels).mapNotNull { (streamId, programs) ->
+                val now = System.currentTimeMillis() / 1_000L
+                programs.firstOrNull { program ->
+                    val start = program.startEpochSeconds
+                    val stop = program.stopEpochSeconds
+                    start != null && stop != null && now >= start && now < stop
+                }?.let { streamId to it }
+            }.toMap()
+            if (_state.value.visibleChannels == pagedChannels) {
+                val latest = _state.value
+                _state.value = latest.copy(
+                    cachedEpgByStreamId = cached,
+                    epgAvailableChannels = latest.epgAvailableChannels +
+                        pagedChannels.filter { it.streamId in cached }.map(SavedChannel::epgAvailabilityKey),
+                )
+            }
+        }
         if (selectionChanged) {
             if (selected == null) {
                 cancelChannelDetails()
             } else if (!loadSelectedDetails) {
                 cancelChannelDetails()
             } else {
-                scheduleFocusedChannelDetails(selected)
+                loadEpg(selected)
             }
         }
     }
@@ -1036,7 +1167,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (terms.isEmpty()) return emptyList()
         return allChannels
             .filter { channel -> terms.all { term -> channel.name.contains(term, ignoreCase = true) } }
-            .sortedWith(compareBy<SavedChannel> { it.providerOrder }.thenBy { it.streamId })
     }
 
     private fun startsWithLetterOrDigit(country: String): Boolean =
@@ -1058,10 +1188,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun loadEpg(channel: SavedChannel) {
+    private fun loadEpg(channel: SavedChannel, allowNetwork: Boolean = false) {
         epgJob?.cancel()
         epgJob = viewModelScope.launch {
-            runCatching { repository.loadEpg(channel) }
+            // A focus move must remain local; network is reserved for playback.
+            val cached = repository.loadCachedEpg(channel)
+            if (cached.isNotEmpty() && _state.value.selectedChannel?.streamId == channel.streamId) {
+                val current = _state.value
+                _state.value = current.copy(
+                    epg = cached,
+                    epgAvailableChannels = current.epgAvailableChannels + channel.epgAvailabilityKey(),
+                )
+            }
+            if (!allowNetwork) return@launch
+            // Playback uses the normal cache path first; a forced refresh is
+            // never tied to DPAD navigation.
+            runCatching { repository.loadEpg(channel, refresh = false) }
                 .onSuccess { programs ->
                     val current = _state.value
                     val key = channel.epgAvailabilityKey()
@@ -1078,46 +1220,47 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     } else if (current.epgAvailableChannels != available) {
                         _state.value = current.copy(epgAvailableChannels = available)
                     }
+                    if (programs.isNotEmpty()) {
+                        val visible = _state.value.visibleChannels
+                        val shared = repository.loadCachedEpg(visible)
+                        val latest = _state.value
+                        if (latest.visibleChannels == visible) {
+                            val now = java.time.Instant.now().epochSecond
+                            val currentPrograms = shared.mapNotNull { (streamId, entries) ->
+                                entries.firstOrNull { entry ->
+                                    val start = entry.startEpochSeconds
+                                    val stop = entry.stopEpochSeconds
+                                    start != null && stop != null && now >= start && now < stop
+                                }?.let { streamId to it }
+                            }.toMap()
+                            _state.value = latest.copy(
+                                cachedEpgByStreamId = currentPrograms,
+                                epgAvailableChannels = latest.epgAvailableChannels +
+                                    visible.filter { it.streamId in shared.keys }.map { it.epgAvailabilityKey() },
+                            )
+                        }
+                    }
                 }
         }
     }
 
-    private fun scheduleFocusedChannelDetails(channel: SavedChannel) {
-        cancelChannelDetails()
-        focusedDetailsJob = viewModelScope.launch {
-            delay(150)
-            if (_state.value.selectedChannel?.streamId != channel.streamId) return@launch
-            observeFavoriteMemberships(channel)
-            loadEpg(channel)
-        }
-    }
-
-    private fun commitFocusedChannel(
-        channel: SavedChannel,
-        loadImmediately: Boolean = false,
-    ) {
+    private fun commitFocusedChannel(channel: SavedChannel) {
         if (_state.value.selectedChannel?.streamId == channel.streamId) return
         _state.value = _state.value.copy(
             selectedChannel = channel,
             epg = emptyList(),
             favoriteGroupIdsForChannel = emptySet(),
         )
-        if (loadImmediately) {
-            loadChannelDetailsNow(channel)
-        } else {
-            scheduleFocusedChannelDetails(channel)
-        }
+        loadEpg(channel)
     }
 
     private fun loadChannelDetailsNow(channel: SavedChannel) {
         cancelChannelDetails()
         observeFavoriteMemberships(channel)
-        loadEpg(channel)
+        loadEpg(channel, allowNetwork = true)
     }
 
     private fun cancelChannelDetails() {
-        focusedDetailsJob?.cancel()
-        focusedDetailsJob = null
         favoriteMembershipsJob?.cancel()
         favoriteMembershipsJob = null
         epgJob?.cancel()
@@ -1126,11 +1269,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun updateStreamUrl() {
         val current = _state.value
-        _state.value = current.copy(
-            streamUrl = current.profile?.let { profile ->
-                current.playingChannel?.let { repository.streamUrl(profile, it) }
-            },
-        )
+        val profile = current.profile ?: return
+        val channel = current.playingChannel ?: return
+        viewModelScope.launch {
+            runCatching { repository.streamUrl(profile, channel) }
+                .onSuccess { url -> _state.value = _state.value.copy(streamUrl = url) }
+                .onFailure(::showError)
+        }
     }
 
     private fun restoreStartupSelection() {
@@ -1200,8 +1345,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun showError(error: Throwable) {
+        val detail = error.message?.takeIf { it.isNotBlank() }
+            ?: error.cause?.message?.takeIf { it.isNotBlank() }
+            ?: error::class.simpleName
         _state.value = _state.value.copy(
-            message = error.message ?: "Une erreur inattendue est survenue.",
+            message = detail ?: "Une erreur inattendue est survenue.",
         )
     }
 }

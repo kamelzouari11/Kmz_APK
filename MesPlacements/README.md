@@ -8,10 +8,11 @@ Le projet utilise **Tauri 2 + Vite + JavaScript**. Tauri permet d’obtenir une 
 
 ## Fonctionnalités actuelles
 
-- Saisie de l’exercice, établissement, placement, type de revenu, montant, RS et imposition.
+- Saisie de l’exercice, établissement, placement, type de revenu, montant, RS et imposition. L’imposition est un champ libre avec suggestions des valeurs déjà utilisées (par exemple Exonéré, Net d’impôts, Imposable 10 % ou Imposable 15 %).
 - Montants normalisés à trois décimales en TND.
 - Conservation locale des entrées sur l’appareil.
 - Suggestions automatiques basées sur les établissements, placements et revenus déjà utilisés.
+- Bouton Calculatrice ouvrant la calculatrice système Linux disponible (`gnome-calculator`, `mate-calc` ou `galculator`) pour préparer les montants avant saisie.
 - Historique des dernières entrées et suppression individuelle.
 - Import et export CSV avec séparateur `;`.
 

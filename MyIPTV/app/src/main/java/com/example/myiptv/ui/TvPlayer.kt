@@ -18,16 +18,28 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.example.myiptv.ui.theme.MyIptvPalette
 
+@androidx.annotation.OptIn(UnstableApi::class)
 @Composable
 fun rememberTvPlayer(): ExoPlayer {
     val context = LocalContext.current
     val player = remember(context) {
-        ExoPlayer.Builder(context).build().apply {
+        // Several Xtream providers reject ExoPlayer's default User-Agent even
+        // though the same account works in VLC-based IPTV applications.
+        val httpFactory = DefaultHttpDataSource.Factory()
+            .setUserAgent("VLC/3.0.21 LibVLC/3.0.21")
+            .setAllowCrossProtocolRedirects(true)
+        val dataSourceFactory = DefaultDataSource.Factory(context, httpFactory)
+        ExoPlayer.Builder(context)
+            .setMediaSourceFactory(DefaultMediaSourceFactory(dataSourceFactory))
+            .build().apply {
             repeatMode = Player.REPEAT_MODE_ONE
         }
     }

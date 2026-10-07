@@ -204,13 +204,25 @@ class MatchRepository(
         ).sorted().joinToString("|")
 
         val tvMetadataByMatch = supplementalForDate.associateBy(::matchKey)
-        // Render/LiveSoccerTV ne définit jamais la liste. Il peut uniquement
-        // rattacher son URL TV à un match officiel API-FOOTBALL déjà présent.
-        val merged = officialMatches.map { official ->
-            val tvMatch = tvMetadataByMatch[matchKey(official)]
-            official.copy(
-                tvSourceUrl = official.tvSourceUrl ?: tvMatch?.tvSourceUrl
-            )
+        // Le programme TV ne définit jamais la liste. Il complète les matchs
+        // officiels quand ils existent, mais ne doit pas supprimer un résultat
+        // provenant du fallback football-data.org/OpenFootball.
+        val fallbackMatches = baseMatches.filter {
+            it.source != OFFICIAL_MATCH_SOURCE
+        }
+        val matchesToKeep = mergeMatches(
+            primary = officialMatches,
+            secondary = fallbackMatches
+        )
+        val merged = matchesToKeep.map { match ->
+            if (match.source != OFFICIAL_MATCH_SOURCE) {
+                match
+            } else {
+                val tvMatch = tvMetadataByMatch[matchKey(match)]
+                match.copy(
+                    tvSourceUrl = match.tvSourceUrl ?: tvMatch?.tvSourceUrl
+                )
+            }
         }
         if (merged.isNotEmpty()) persistDate(date, merged)
         merged
@@ -293,6 +305,12 @@ class MatchRepository(
     private suspend fun fetchFromTvSchedule(date: String): List<Match> = coroutineScope {
         val scheduleApi = tvChannelsApi ?: return@coroutineScope emptyList()
         val target = LocalDate.parse(date)
+        // Les programmes TV ne sont utiles que pour aujourd'hui et les 14
+        // prochains jours : aucune requête ni conservation pour l'historique.
+        val today = LocalDate.now()
+        if (target.isBefore(today) || target.isAfter(today.plusDays(14))) {
+            return@coroutineScope emptyList()
+        }
         providerDatesForLocalDate(target).map { providerDate ->
             async {
                 val providerDateText = providerDate.toString()
@@ -378,23 +396,43 @@ class MatchRepository(
         }
         val apiResult = runCatching { fetchFromApiFootball(apiDates) }
             .onFailure { Log.w(TAG, "api-football daily fetch failed: ${it.message}") }
-        if (apiDates.isNotEmpty() && apiResult.isFailure) {
-            throw IllegalStateException(
-                "API-FOOTBALL est indisponible",
-                apiResult.exceptionOrNull()
-            )
-        }
         val apiMatches = apiResult.getOrDefault(emptyList())
-
+        // API-Football peut renvoyer HTTP 200 avec une erreur de quota et une
+        // liste vide. Ne jamais transformer ce cas en journée vide : utiliser
+        // les sources gratuites déjà intégrées comme secours.
+        val fallbackMatches = if (apiMatches.isEmpty()) {
+            runCatching {
+                if (footballDataApi != null) {
+                    fetchFromFootballData(start, end)
+                } else {
+                    emptyList()
+                }
+            }.onFailure {
+                Log.w(TAG, "football-data fallback failed: ${it.message}")
+            }.getOrDefault(emptyList())
+        } else {
+            emptyList()
+        }
+        val staticFallbackMatches = if (apiMatches.isEmpty() && fallbackMatches.isEmpty()) {
+            runCatching {
+                allDates.flatMap { fetchFromOpenFootball(it) }
+            }.onFailure {
+                Log.w(TAG, "openfootball fallback failed: ${it.message}")
+            }.getOrDefault(emptyList())
+        } else {
+            emptyList()
+        }
         Log.d(
             TAG,
             "range $start..$end: api-football=${apiMatches.size}, " +
+                "football-data=${fallbackMatches.size}, openfootball=${staticFallbackMatches.size}, " +
                 "eligibleDates=${apiDates.joinToString()}"
         )
 
         val merged = allDates.associateWith { day ->
             val localDay = LocalDate.parse(day)
-            apiMatches.filter { it.localCalendarDate() == localDay }
+            (apiMatches + fallbackMatches + staticFallbackMatches)
+                .filter { it.localCalendarDate() == localDay }
         }
         val enriched = enrichWithKnownLogos(merged.values.flatten())
             .groupBy { it.localCalendarDate()?.toString() }

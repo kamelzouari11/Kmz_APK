@@ -8,6 +8,11 @@ import androidx.room.PrimaryKey
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
+enum class ProfileProtocol {
+    XTREAM,
+    STALKER,
+}
+
 @Entity(tableName = "profile")
 @JsonClass(generateAdapter = true)
 data class XtreamProfile(
@@ -15,6 +20,8 @@ data class XtreamProfile(
     val serverUrl: String,
     val username: String,
     val password: String,
+    @ColumnInfo(defaultValue = "'XTREAM'") val protocol: String = ProfileProtocol.XTREAM.name,
+    val macAddress: String? = null,
     @ColumnInfo(defaultValue = "1") val countryGroupingEnabled: Boolean = true,
     @ColumnInfo(defaultValue = "1") val isActive: Boolean = false,
     val lastSyncedAt: Long? = null,
@@ -36,7 +43,11 @@ data class XtreamProfile(
             onDelete = ForeignKey.CASCADE,
         ),
     ],
-    indices = [Index("profileId")],
+    indices = [
+        Index("profileId", "providerOrder"),
+        Index("profileId", "countryCode", "providerOrder"),
+        Index("profileId", "epgChannelId", "providerOrder"),
+    ],
 )
 @JsonClass(generateAdapter = true)
 data class SavedChannel(
@@ -54,6 +65,37 @@ data class SavedChannel(
 )
 
 @Entity(
+    tableName = "epg_channel_cache",
+    primaryKeys = ["profileId", "epgChannelId"],
+    foreignKeys = [
+        ForeignKey(
+            entity = XtreamProfile::class,
+            parentColumns = ["id"],
+            childColumns = ["profileId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+    indices = [Index("profileId")],
+)
+data class EpgChannelCache(
+    val profileId: Int,
+    val epgChannelId: String,
+    val programsJson: String,
+    val attemptedAt: Long,
+    val sourceStreamId: Int?,
+)
+
+/** Lightweight projection used by EPG lookup; it intentionally excludes icon URLs. */
+data class EpgChannelRow(
+    val profileId: Int,
+    val streamId: Int,
+    val name: String,
+    val countryCode: String,
+    val epgChannelId: String?,
+    val providerOrder: Int,
+)
+
+@Entity(
     tableName = "recent_channels",
     primaryKeys = ["profileId", "streamId"],
     foreignKeys = [
@@ -64,7 +106,7 @@ data class SavedChannel(
             onDelete = ForeignKey.CASCADE,
         ),
     ],
-    indices = [Index("profileId"), Index("profileId", "lastWatchedAt")],
+    indices = [Index("profileId", "lastWatchedAt")],
 )
 data class RecentChannel(
     val profileId: Int,
@@ -83,7 +125,7 @@ data class RecentChannel(
             onDelete = ForeignKey.CASCADE,
         ),
     ],
-    indices = [Index("profileId"), Index("profileId", "searchedAt")],
+    indices = [Index("profileId", "searchedAt")],
 )
 data class SearchHistoryEntry(
     val profileId: Int,
@@ -101,7 +143,7 @@ data class SearchHistoryEntry(
             onDelete = ForeignKey.CASCADE,
         ),
     ],
-    indices = [Index("profileId")],
+    indices = [Index(value = ["profileId", "id"], unique = true)],
 )
 data class FavoriteGroup(
     val name: String,
@@ -115,8 +157,8 @@ data class FavoriteGroup(
     foreignKeys = [
         ForeignKey(
             entity = FavoriteGroup::class,
-            parentColumns = ["id"],
-            childColumns = ["groupId"],
+            parentColumns = ["profileId", "id"],
+            childColumns = ["profileId", "groupId"],
             onDelete = ForeignKey.CASCADE,
         ),
         ForeignKey(
@@ -126,7 +168,7 @@ data class FavoriteGroup(
             onDelete = ForeignKey.CASCADE,
         ),
     ],
-    indices = [Index("groupId"), Index("profileId", "streamId")],
+    indices = [Index("profileId", "streamId")],
 )
 data class FavoriteMembership(
     val profileId: Int,
@@ -148,6 +190,172 @@ data class XtreamChannelDto(
     @param:Json(name = "stream_icon") val streamIcon: String?,
     @param:Json(name = "epg_channel_id") val epgChannelId: String?,
     @param:Json(name = "container_extension") val containerExtension: String?,
+)
+
+@JsonClass(generateAdapter = true)
+data class XtreamVodDto(
+    @param:Json(name = "stream_id") val streamId: Int,
+    val name: String? = null,
+    @param:Json(name = "category_id") val categoryId: String? = null,
+    @param:Json(name = "stream_icon") val streamIcon: String? = null,
+    @param:Json(name = "container_extension") val containerExtension: String? = null,
+    val plot: String? = null,
+    val country: String? = null,
+    val releasedate: String? = null,
+    val duration: String? = null,
+    @param:Json(name = "duration_secs") val durationSecs: Int? = null,
+    val rating: String? = null,
+    val cast: String? = null,
+    val director: String? = null,
+    val genre: String? = null,
+)
+
+@JsonClass(generateAdapter = true)
+data class XtreamVodInfoResponse(
+    val info: XtreamVodInfoDto? = null,
+)
+
+@JsonClass(generateAdapter = true)
+data class XtreamVodInfoDto(
+    @param:Json(name = "movie_image") val movieImage: String? = null,
+    val plot: String? = null,
+    val cast: String? = null,
+    @param:Json(name = "actors") val actors: String? = null,
+    val director: String? = null,
+    val genre: String? = null,
+    val rating: String? = null,
+    val releasedate: String? = null,
+    val duration: String? = null,
+    @param:Json(name = "duration_secs") val durationSecs: Int? = null,
+)
+
+data class VodMovie(
+    val profileId: Int,
+    val streamId: Int,
+    val name: String,
+    val categoryId: String,
+    val categoryName: String,
+    val country: String,
+    val posterUrl: String?,
+    val extension: String,
+    val description: String,
+    val releaseDate: String?,
+    val duration: String?,
+    val durationSecs: Int?,
+    val rating: String?,
+    val actors: String?,
+    val director: String?,
+    val genre: String?,
+    val categoryOrder: Int,
+    val providerOrder: Int,
+    val detailsLoaded: Boolean = false,
+)
+
+@Entity(
+    tableName = "vod_movies",
+    primaryKeys = ["profileId", "streamId"],
+    foreignKeys = [
+        ForeignKey(
+            entity = XtreamProfile::class,
+            parentColumns = ["id"],
+            childColumns = ["profileId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+    indices = [
+        Index("profileId", "providerOrder"),
+        Index("profileId", "categoryId", "providerOrder"),
+        Index("profileId", "categoryOrder"),
+        Index("profileId", "name"),
+    ],
+)
+data class VodMovieEntity(
+    val profileId: Int,
+    val streamId: Int,
+    val name: String,
+    val categoryId: String,
+    val categoryName: String,
+    val country: String,
+    val posterUrl: String?,
+    val extension: String,
+    val description: String,
+    val releaseDate: String?,
+    val duration: String?,
+    val durationSecs: Int?,
+    val rating: String?,
+    val actors: String?,
+    val director: String?,
+    val genre: String?,
+    val categoryOrder: Int,
+    val providerOrder: Int,
+    val detailsLoaded: Boolean = false,
+)
+
+data class VodCategoryRow(
+    val categoryId: String,
+    val categoryName: String,
+    val categoryOrder: Int,
+)
+
+@Entity(
+    tableName = "vod_categories",
+    primaryKeys = ["profileId", "categoryId"],
+    foreignKeys = [
+        ForeignKey(
+            entity = XtreamProfile::class,
+            parentColumns = ["id"],
+            childColumns = ["profileId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+    indices = [Index("profileId", "categoryOrder")],
+)
+data class VodCategoryEntity(
+    val profileId: Int,
+    val categoryId: String,
+    val categoryName: String,
+    val categoryOrder: Int,
+)
+
+data class VodTitleRow(
+    val streamId: Int,
+    val name: String,
+)
+
+@Entity(
+    tableName = "vod_actor_index",
+    primaryKeys = ["profileId", "actorKey", "streamId"],
+    foreignKeys = [
+        ForeignKey(
+            entity = VodMovieEntity::class,
+            parentColumns = ["profileId", "streamId"],
+            childColumns = ["profileId", "streamId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+    indices = [Index("profileId", "actorKey"), Index("profileId", "streamId")],
+)
+data class VodActorIndexEntity(
+    val profileId: Int,
+    val actorKey: String,
+    val actorName: String,
+    val streamId: Int,
+)
+
+@Entity(
+    tableName = "vod_catalog_meta",
+    foreignKeys = [
+        ForeignKey(
+            entity = XtreamProfile::class,
+            parentColumns = ["id"],
+            childColumns = ["profileId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+)
+data class VodCatalogMeta(
+    @PrimaryKey val profileId: Int,
+    val syncedAt: Long,
 )
 
 @JsonClass(generateAdapter = true)
@@ -175,12 +383,12 @@ data class EpgProgram(
 
 @JsonClass(generateAdapter = true)
 data class MyIptvBackup(
-    val version: Int = 2,
+    val version: Int = 4,
     val date: Long = System.currentTimeMillis(),
     // Champs V1 conservés pour pouvoir lire les anciennes sauvegardes.
     val profile: XtreamProfile? = null,
     val favoriteGroups: List<BackupFavoriteGroup> = emptyList(),
-    // Format V2 multi-profils.
+    // Format multi-profils.
     val profiles: List<BackupProfile> = emptyList(),
     val activeProfileId: Int? = null,
 )
@@ -203,4 +411,5 @@ enum class BrowseMode {
     FAVORITES,
     SEARCH,
     EPG_SEARCH,
+    CINEMA_SEARCH,
 }

@@ -42,7 +42,20 @@ fun MatchDetailScreen(
     val state by viewModel.state.collectAsState()
     var showRefreshConfirmation by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Chaînes TV", "Événements", "Compositions")
+    val matchDate = runCatching {
+        OffsetDateTime.parse(match.utcDate)
+            .atZoneSameInstant(ZoneId.systemDefault())
+            .toLocalDate()
+    }.getOrNull()
+    val today = java.time.LocalDate.now()
+    val detailedDataAllowed = matchDate != null &&
+        !matchDate.isBefore(today.minusDays(1)) &&
+        !matchDate.isAfter(today.plusDays(1))
+    val tabs = if (detailedDataAllowed) {
+        listOf("Chaînes TV", "Événements", "Compositions")
+    } else {
+        listOf("Détails indisponibles")
+    }
 
     LaunchedEffect(match.id) {
         viewModel.loadMatchDetail()
@@ -100,7 +113,13 @@ fun MatchDetailScreen(
                     )
                 } else {
                     val detail = state.matchDetail
-                    when (selectedTab) {
+                    if (!detailedDataAllowed) {
+                        Text(
+                            text = "Les chaînes TV, événements et compositions sont disponibles uniquement pour les matchs de J−1 à J+1.",
+                            modifier = Modifier.padding(24.dp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else when (selectedTab) {
                         0 -> TvChannelsTab(
                             tvChannels = detail?.tvChannels.orEmpty(),
                             status = detail?.tvStatus ?: TvCoverageStatus.UNKNOWN,
@@ -556,6 +575,7 @@ private fun StatusBadge(status: MatchStatus, statusLabel: String, elapsed: Int?)
 
 
 
+
 @Composable
 private fun EventsTab(
     events: List<MatchEvent>,
@@ -572,10 +592,15 @@ private fun EventsTab(
             verticalArrangement = Arrangement.spacedBy(9.dp),
             modifier = Modifier.fillMaxSize()
         ) {
+            item {
+                TeamSidesHeader(homeLabel = "Domicile", awayLabel = "Extérieur")
+            }
             items(snapshotLines, key = { it.index }) { eventLine ->
                 val isHome = eventLine.side == SnapshotSide.HOME
                 val eventIcon = eventLine.icon
                 val isScoreChange = eventIcon == "⚽"
+                val substitutionParts = eventLine.text.split(" / ", limit = 2)
+                val isSubstitution = substitutionParts.size == 2
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = if (isHome) {
@@ -588,7 +613,9 @@ private fun EventsTab(
                         modifier = Modifier.fillMaxWidth(if (isScoreChange) 0.94f else 0.86f),
                         shape = RoundedCornerShape(9.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = if (isHome) {
+                            containerColor = if (isScoreChange) {
+                                Color(0xFFE5F4E3)
+                            } else if (isHome) {
                                 MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
                             } else {
                                 MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.72f)
@@ -618,15 +645,32 @@ private fun EventsTab(
                                 )
                                 Spacer(modifier = Modifier.width(10.dp))
                             }
-                            Text(
-                                text = displayedText,
-                                modifier = Modifier.weight(1f),
-                                fontSize = if (isScoreChange) 16.sp else 12.sp,
-                                lineHeight = if (isScoreChange) 21.sp else 16.sp,
-                                fontWeight = if (isScoreChange) FontWeight.Bold else FontWeight.Normal,
-                                textAlign = if (isHome) TextAlign.Start else TextAlign.End,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
+                            if (isSubstitution) {
+                                Row(
+                                    modifier = Modifier.weight(1f),
+                                    horizontalArrangement = if (isHome) Arrangement.Start else Arrangement.End,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(substitutionParts[0], color = Color(0xFF43A047),
+                                        fontWeight = FontWeight.Bold, fontSize = 12.sp,
+                                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text("  →  ", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+                                    Text(substitutionParts[1], color = Color(0xFFC62828),
+                                        fontWeight = FontWeight.Bold, fontSize = 12.sp,
+                                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+                            } else {
+                                Text(
+                                    text = displayedText,
+                                    modifier = Modifier.weight(1f),
+                                    fontSize = if (isScoreChange) 16.sp else 12.sp,
+                                    lineHeight = if (isScoreChange) 21.sp else 16.sp,
+                                    fontWeight = if (isScoreChange) FontWeight.Bold else FontWeight.Normal,
+                                    textAlign = if (isHome) TextAlign.Start else TextAlign.End,
+                                    color = if (isScoreChange) Color(0xFF2E7D32)
+                                    else MaterialTheme.colorScheme.onSurface
+                                )
+                            }
                         }
                     }
                 }
@@ -644,6 +688,9 @@ private fun EventsTab(
             contentPadding = PaddingValues(8.dp),
             modifier = Modifier.fillMaxSize()
         ) {
+            item {
+                TeamSidesHeader(homeLabel = "Domicile", awayLabel = "Extérieur")
+            }
             items(events.sortedBy { it.time.elapsed }) { event ->
                 val isHome = event.teamId == homeTeamId
                 Row(
@@ -656,6 +703,31 @@ private fun EventsTab(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun TeamSidesHeader(homeLabel: String, awayLabel: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 3.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        TeamSideLabel(label = homeLabel, color = MaterialTheme.colorScheme.primary)
+        Text("ÉVÉNEMENTS", fontSize = 10.sp, fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        TeamSideLabel(label = awayLabel, color = MaterialTheme.colorScheme.secondary)
+    }
+}
+
+@Composable
+private fun TeamSideLabel(label: String, color: Color) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(8.dp).background(color, CircleShape))
+        Spacer(Modifier.width(5.dp))
+        Text(label, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = color)
     }
 }
 
@@ -772,7 +844,10 @@ private fun snapshotEventLines(
 @Composable
 private fun EventItemContent(event: MatchEvent, isHome: Boolean) {
     val isSubstitution = event.type.equals("subst", ignoreCase = true)
-    val cardColor = if (isHome) {
+    val isGoal = event.type.equals("goal", ignoreCase = true)
+    val cardColor = if (isGoal) {
+        Color(0xFFE5F4E3)
+    } else if (isHome) {
         MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
     } else {
         MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.72f)
@@ -798,7 +873,7 @@ private fun EventItemContent(event: MatchEvent, isHome: Boolean) {
 
             Column(modifier = Modifier.weight(1f)) {
                 val titleColor = when {
-                    event.type.equals("goal", true) -> Color(0xFF1E88E5)
+                    event.type.equals("goal", true) -> Color(0xFF2E7D32)
                     isSubstitution -> Color(0xFF00C853)
                     event.type.equals("card", true) && event.detail.lowercase().contains("red") -> Color(0xFFFF1744)
                     else -> MaterialTheme.colorScheme.onSurface
@@ -808,32 +883,21 @@ private fun EventItemContent(event: MatchEvent, isHome: Boolean) {
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(
-                        text = if (isSubstitution) {
-                            event.assist?.name ?: "Entrant"
-                        } else {
-                            event.player.name ?: "Joueur"
-                        },
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp,
-                        color = titleColor,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    if (isSubstitution) {
+                        Text(event.assist?.name ?: "Joueur non indiqué", color = Color(0xFF43A047),
+                            fontWeight = FontWeight.Bold, fontSize = 12.sp,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text("  →  ", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+                        Text(event.player.name ?: "Joueur non indiqué", color = Color(0xFFC62828),
+                            fontWeight = FontWeight.Bold, fontSize = 12.sp,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    } else {
+                        Text(event.player.name ?: "Joueur", fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp, color = titleColor,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
                     Spacer(modifier = Modifier.weight(1f))
                     EventTimeBadge(time = event.time)
-                }
-
-                if (isSubstitution) {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = event.player.name ?: "Sortant",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFFC62828),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
                 }
 
                 if (!isSubstitution) {
@@ -906,6 +970,13 @@ private fun LineupsTab(lineups: MatchLineups?) {
     } else {
         var selectedTeamTab by remember { mutableIntStateOf(0) } // 0 = Home, 1 = Away
         Column(modifier = Modifier.fillMaxSize()) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                TeamSideLabel("DOMICILE", MaterialTheme.colorScheme.primary)
+                TeamSideLabel("EXTÉRIEUR", MaterialTheme.colorScheme.secondary)
+            }
             PrimaryTabRow(
                 selectedTabIndex = selectedTeamTab,
                 containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
@@ -913,12 +984,14 @@ private fun LineupsTab(lineups: MatchLineups?) {
                 Tab(
                     selected = selectedTeamTab == 0,
                     onClick = { selectedTeamTab = 0 },
-                    text = { Text(lineups.home.teamName, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                    text = { Text("🏠 ${lineups.home.teamName}", maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.primary) }
                 )
                 Tab(
                     selected = selectedTeamTab == 1,
                     onClick = { selectedTeamTab = 1 },
-                    text = { Text(lineups.away.teamName, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                    text = { Text("✈ ${lineups.away.teamName}", maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.secondary) }
                 )
             }
 

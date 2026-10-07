@@ -11,6 +11,8 @@ import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -42,6 +44,8 @@ import androidx.compose.material.icons.rounded.Fullscreen
 import androidx.compose.material.icons.rounded.FullscreenExit
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.LiveTv
+import androidx.compose.material.icons.rounded.Movie
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material.icons.rounded.Refresh
@@ -49,6 +53,9 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -58,10 +65,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -94,6 +103,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import androidx.media3.exoplayer.ExoPlayer
 import com.example.myiptv.data.BrowseMode
+import com.example.myiptv.data.CinemaProgram
+import com.example.myiptv.data.EpgArtworkRepository
 import com.example.myiptv.data.EpgProgram
 import com.example.myiptv.data.SavedChannel
 import com.example.myiptv.ui.theme.LocalTvTextSizes
@@ -125,10 +136,14 @@ fun MainRoute(
     var returnToEpg by rememberSaveable { mutableStateOf(false) }
     var showSearch by rememberSaveable { mutableStateOf(false) }
     var showEpgSearch by rememberSaveable { mutableStateOf(false) }
+    var showEpgResults by rememberSaveable { mutableStateOf(false) }
     var showCinema by rememberSaveable { mutableStateOf(false) }
+    var showCinemaResults by rememberSaveable { mutableStateOf(false) }
     var cinemaPlayback by rememberSaveable { mutableStateOf(false) }
-    var showSports by rememberSaveable { mutableStateOf(false) }
-    var sportsPlayback by rememberSaveable { mutableStateOf(false) }
+    var showFilms by rememberSaveable { mutableStateOf(false) }
+    var cinemaResultQuery by rememberSaveable { mutableStateOf("") }
+    var cinemaResultPrograms by remember { mutableStateOf(emptyList<CinemaProgram>()) }
+    var cinemaResultChannels by remember { mutableStateOf(emptyList<SavedChannel>()) }
     val epgListState = rememberLazyListState()
     var epgQuery by rememberSaveable { mutableStateOf("") }
     var showClearSearchHistoryConfirmation by remember { mutableStateOf(false) }
@@ -141,7 +156,10 @@ fun MainRoute(
         onPlayerModeChanged(state.isFullScreen)
     }
 
-    BackHandler(enabled = !state.initializing) {
+    BackHandler(
+        enabled = !state.initializing &&
+            !showEpgSearch && !showEpgResults && !showCinema && !showCinemaResults && !showFilms,
+    ) {
         showQuitConfirmation = true
     }
 
@@ -154,6 +172,84 @@ fun MainRoute(
 
     when {
         state.initializing -> LoadingScreen()
+        showCinemaResults -> CinemaResultsScreen(
+            state = state,
+            player = player,
+            query = cinemaResultQuery,
+            programs = cinemaResultPrograms,
+            channels = cinemaResultChannels,
+            onPlay = { channel ->
+                viewModel.playEpgChannel(channel)
+                showCinemaResults = false
+                cinemaPlayback = true
+            },
+            onBack = { showCinemaResults = false; showCinema = true },
+        )
+        showEpgResults -> EpgResultsScreen(
+            state = state,
+            player = player,
+            searchState = epgSearchState,
+            playingChannel = state.playingChannel,
+            onPlay = { channel ->
+                viewModel.playEpgChannel(channel)
+                showEpgResults = false
+                returnToEpg = true
+            },
+            onBack = { showEpgResults = false; showEpgSearch = true },
+        )
+        showCinema && !cinemaPlayback -> CinemaScreen(
+            state = state,
+            player = player,
+            visible = true,
+            onResults = { query, programs, channels ->
+                viewModel.showCinemaSearchResults(query, channels)
+                cinemaResultQuery = query
+                cinemaResultPrograms = programs
+                cinemaResultChannels = channels
+                showCinema = false
+                showCinemaResults = true
+            },
+            onPlay = { channel ->
+                viewModel.playEpgChannel(channel)
+                cinemaPlayback = true
+            },
+            onDismiss = { showCinema = false; cinemaPlayback = false },
+        )
+        showFilms -> FilmsScreen(
+            profile = state.profile,
+            player = player,
+            onDismiss = { showFilms = false; stopStreaming() },
+            onPlayerModeChanged = onPlayerModeChanged,
+        )
+        showEpgSearch -> EpgSearchScreen(
+            state = state,
+            player = player,
+            onLoadCountries = viewModel::loadEpgCountries,
+            onLoadGuideChannels = viewModel::loadEpgGuideChannels,
+            onApplyFilters = viewModel::applyEpgFilters,
+            listState = epgListState,
+            searchState = epgSearchState,
+            onSearch = { viewModel.searchEpg(epgQuery) },
+            onRefreshSearch = { viewModel.searchEpg(epgQuery, refresh = true) },
+            onExportDatabase = { epgDatabaseUploadToConfirm = true },
+            onImportDatabase = { epgDatabaseUploadToConfirm = false },
+            onResultsAvailable = {
+                viewModel.showEpgSearchResults()
+                showEpgSearch = false
+                showEpgResults = true
+            },
+            onLoadGuide = { channel, refresh -> viewModel.loadEpgGuide(channel, refresh) },
+            onCancelLoading = viewModel::cancelEpgLoading,
+            playingChannel = state.playingChannel,
+            onPlay = { channel ->
+                viewModel.playEpgChannel(channel)
+                showEpgSearch = false
+                returnToEpg = true
+            },
+            query = epgQuery,
+            onQueryChange = { epgQuery = it },
+            onDismiss = { showEpgSearch = false; returnToEpg = false },
+        )
         configuration.orientation == Configuration.ORIENTATION_PORTRAIT && !state.isFullScreen ->
             MainPortraitScreen(
                 state = state,
@@ -161,7 +257,7 @@ fun MainRoute(
                 onStop = stopStreaming,
                 onEpg = { showEpgSearch = true },
                 onCinema = { showCinema = true; cinemaPlayback = false; returnToEpg = false },
-                onSports = { showSports = true; sportsPlayback = false; returnToEpg = false },
+                onFilms = { showFilms = true },
                 onEpgResults = viewModel::showEpgSearchResults,
                 onCountry = viewModel::selectCountry,
                 onCategory = viewModel::selectCategory,
@@ -195,7 +291,7 @@ fun MainRoute(
             onStop = stopStreaming,
             onEpg = { showEpgSearch = true },
             onCinema = { showCinema = true; cinemaPlayback = false; returnToEpg = false },
-            onSports = { showSports = true; sportsPlayback = false; returnToEpg = false },
+            onFilms = { showFilms = true },
             onEpgResults = viewModel::showEpgSearchResults,
             onCountry = viewModel::selectCountry,
             onCategoryFocused = viewModel::focusCategory,
@@ -223,37 +319,14 @@ fun MainRoute(
             onNextChannel = viewModel::playNextChannel,
             onPreviousChannel = viewModel::playPreviousChannel,
             onClearRecentHistory = { showClearRecentHistoryConfirmation = true },
+            onLoadMoreChannels = viewModel::loadMoreVisibleChannels,
             onExitFullScreen = { viewModel.setFullScreen(false) },
         )
     }
 
-    if (showCinema) {
-        CinemaScreen(
-            visible = !cinemaPlayback,
-            onPlay = { channel ->
-                viewModel.playEpgChannel(channel)
-                cinemaPlayback = true
-            },
-            onDismiss = { showCinema = false; cinemaPlayback = false },
-        )
-    }
     BackHandler(enabled = showCinema && cinemaPlayback) {
         viewModel.setFullScreen(false)
         cinemaPlayback = false
-    }
-    if (showSports) {
-        SportsScreen(
-            visible = !sportsPlayback,
-            onPlay = { channel ->
-                viewModel.playEpgChannel(channel)
-                sportsPlayback = true
-            },
-            onDismiss = { showSports = false; sportsPlayback = false },
-        )
-    }
-    BackHandler(enabled = showSports && sportsPlayback) {
-        viewModel.setFullScreen(false)
-        sportsPlayback = false
     }
 
     val showStartupProfile = state.profiles.isEmpty() && !startupProfileDismissed
@@ -297,9 +370,7 @@ fun MainRoute(
     if (showSearch) {
         SearchDialog(
             query = state.searchQuery,
-            resultCount = state.visibleChannels.size,
             searchHistory = state.searchHistory,
-            onQueryChange = viewModel::search,
             onSubmit = { query ->
                 viewModel.submitSearch(query)
                 showSearch = false
@@ -315,40 +386,7 @@ fun MainRoute(
             onDismiss = { showSearch = false },
         )
     }
-    if (showEpgSearch) {
-        EpgSearchScreen(
-            onLoadCountries = viewModel::loadEpgCountries,
-            onLoadGuideChannels = viewModel::loadEpgGuideChannels,
-            onApplyFilters = viewModel::applyEpgFilters,
-            listState = epgListState,
-            searchState = epgSearchState,
-            onSearch = { viewModel.searchEpg(epgQuery) },
-            onRefreshSearch = {
-                viewModel.searchEpg(epgQuery, refresh = true)
-            },
-            onExportDatabase = { epgDatabaseUploadToConfirm = true },
-            onImportDatabase = { epgDatabaseUploadToConfirm = false },
-            onUseSearchChannels = {
-                viewModel.showEpgSearchResults()
-                showEpgSearch = false
-                returnToEpg = true
-            },
-            onLoadGuide = { channel, refresh ->
-                viewModel.loadEpgGuide(channel, refresh)
-            },
-            onCancelLoading = viewModel::cancelEpgLoading,
-            playingChannel = state.playingChannel,
-            onPlay = { channel ->
-                viewModel.playEpgChannel(channel)
-                showEpgSearch = false
-                returnToEpg = true
-            },
-            query = epgQuery,
-            onQueryChange = { epgQuery = it },
-            onDismiss = { showEpgSearch = false; returnToEpg = false },
-        )
-    }
-    BackHandler(enabled = returnToEpg && !showEpgSearch && !showSearch) {
+    BackHandler(enabled = returnToEpg && !showEpgSearch && !showSearch && !showEpgResults) {
         showEpgSearch = true
         returnToEpg = false
     }
@@ -432,7 +470,7 @@ internal fun rememberCurrentEpgEpochSeconds(): Long {
     var now by remember { mutableLongStateOf(System.currentTimeMillis() / 1_000L) }
     LaunchedEffect(Unit) {
         while (true) {
-            delay(30_000)
+            delay(120_000)
             now = System.currentTimeMillis() / 1_000L
         }
     }
@@ -446,7 +484,7 @@ private fun MainTvScreen(
     onStop: () -> Unit,
     onEpg: () -> Unit,
     onCinema: () -> Unit,
-    onSports: () -> Unit,
+    onFilms: () -> Unit,
     onEpgResults: () -> Unit,
     onCountry: (String) -> Unit,
     onCategoryFocused: (CategoryItem) -> Unit,
@@ -467,6 +505,7 @@ private fun MainTvScreen(
     onNextChannel: () -> Unit,
     onPreviousChannel: () -> Unit,
     onClearRecentHistory: () -> Unit,
+    onLoadMoreChannels: () -> Unit,
     onExitFullScreen: () -> Unit,
 ) {
     val configuration = LocalConfiguration.current
@@ -489,7 +528,7 @@ private fun MainTvScreen(
                     onStop = onStop,
                     onEpg = onEpg,
                     onCinema = onCinema,
-                    onSports = onSports,
+                    onFilms = onFilms,
                     onEpgResults = onEpgResults,
                     onLive = onLive,
                     onRecent = onRecent,
@@ -500,7 +539,6 @@ private fun MainTvScreen(
                     onUpload = onUpload,
                     onDownload = onDownload,
                     onQuit = onQuit,
-                    onFullScreen = onFullScreen,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(gridUnit * 1.5f),
@@ -532,6 +570,7 @@ private fun MainTvScreen(
                         onPlay = onChannelPlay,
                         onLongPress = onChannelLongPress,
                         onClearRecentHistory = onClearRecentHistory,
+                        onLoadMore = onLoadMoreChannels,
                         modifier = Modifier
                             .weight(5f)
                             .fillMaxHeight(),
@@ -623,7 +662,7 @@ private fun AppMenu(
     onStop: () -> Unit,
     onEpg: () -> Unit,
     onCinema: () -> Unit,
-    onSports: () -> Unit,
+    onFilms: () -> Unit,
     onEpgResults: () -> Unit,
     onLive: () -> Unit,
     onRecent: () -> Unit,
@@ -634,7 +673,6 @@ private fun AppMenu(
     onUpload: () -> Unit,
     onDownload: () -> Unit,
     onQuit: () -> Unit,
-    onFullScreen: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -708,7 +746,7 @@ private fun AppMenu(
                 MenuActionButton(
                     label = "EPG",
                     icon = Icons.Rounded.DateRange,
-                    showLabel = !compact,
+                    showLabel = true,
                     onClick = onEpg,
                 )
                 MenuActionButton(
@@ -718,10 +756,10 @@ private fun AppMenu(
                     onClick = onCinema,
                 )
                 MenuActionButton(
-                    label = "Sports",
-                    icon = Icons.Rounded.LiveTv,
+                    label = "Films",
+                    icon = Icons.Rounded.Movie,
                     showLabel = true,
-                    onClick = onSports,
+                    onClick = onFilms,
                 )
                 if (state.epgSearchResultCount > 0) {
                     MenuActionButton(
@@ -732,40 +770,47 @@ private fun AppMenu(
                         onClick = onEpgResults,
                     )
                 }
-                MenuActionButton(
-                    label = "Sync",
-                    icon = Icons.Rounded.Refresh,
-                    showLabel = false,
-                    enabled = state.profile != null && !state.isLoading,
-                    onClick = onRefresh,
-                )
-                MenuActionButton(
-                    label = "Profils",
-                    icon = Icons.Rounded.Person,
-                    showLabel = !compact,
-                    onClick = onProfile,
-                )
-                MenuActionButton(
-                    label = "Envoyer vers GitHub",
-                    icon = Icons.Rounded.CloudUpload,
-                    showLabel = false,
-                    enabled = state.profile != null && !state.isLoading,
-                    onClick = onUpload,
-                )
-                MenuActionButton(
-                    label = "Télécharger depuis GitHub",
-                    icon = Icons.Rounded.CloudDownload,
-                    showLabel = false,
-                    enabled = !state.isLoading,
-                    onClick = onDownload,
-                )
-                MenuActionButton(
-                    label = "Plein écran",
-                    icon = Icons.Rounded.Fullscreen,
-                    showLabel = false,
-                    enabled = state.streamUrl != null,
-                    onClick = onFullScreen,
-                )
+                var showMoreMenu by remember { mutableStateOf(false) }
+                Box {
+                    MenuActionButton(
+                        label = "Plus d’options",
+                        icon = Icons.Rounded.MoreVert,
+                        showLabel = false,
+                        onClick = { showMoreMenu = true },
+                    )
+                    DropdownMenu(
+                        expanded = showMoreMenu,
+                        onDismissRequest = { showMoreMenu = false },
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Actualiser") },
+                            modifier = Modifier.background(MyIptvPalette.ButtonBackground),
+                            leadingIcon = { Icon(Icons.Rounded.Refresh, null) },
+                            enabled = state.profile != null && !state.isLoading,
+                            onClick = { showMoreMenu = false; onRefresh() },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Profils") },
+                            modifier = Modifier.background(MyIptvPalette.ButtonBackground),
+                            leadingIcon = { Icon(Icons.Rounded.Person, null) },
+                            onClick = { showMoreMenu = false; onProfile() },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Envoyer vers GitHub") },
+                            modifier = Modifier.background(MyIptvPalette.ButtonBackground),
+                            leadingIcon = { Icon(Icons.Rounded.CloudUpload, null) },
+                            enabled = state.profile != null && !state.isLoading,
+                            onClick = { showMoreMenu = false; onUpload() },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Télécharger depuis GitHub") },
+                            modifier = Modifier.background(MyIptvPalette.ButtonBackground),
+                            leadingIcon = { Icon(Icons.Rounded.CloudDownload, null) },
+                            enabled = !state.isLoading,
+                            onClick = { showMoreMenu = false; onDownload() },
+                        )
+                    }
+                }
                 if (state.streamUrl != null) {
                     StopStreamButton(onClick = onStop)
                 }
@@ -834,6 +879,7 @@ private fun CategoryPanel(
                 BrowseMode.FAVORITES -> "FAVORIS"
                 BrowseMode.SEARCH -> "RECHERCHE · ${state.searchQuery}"
                 BrowseMode.EPG_SEARCH -> "RÉSULTATS EPG · ${state.epgSearchQuery}"
+                BrowseMode.CINEMA_SEARCH -> "RÉSULTATS CINÉMA · ${state.searchQuery}"
             },
         )
         LazyColumn(
@@ -891,11 +937,32 @@ private fun ChannelPanel(
     onPlay: (SavedChannel) -> Unit,
     onLongPress: (SavedChannel) -> Unit,
     onClearRecentHistory: () -> Unit,
+    onLoadMore: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val firstRecentFocusRequester = remember { FocusRequester() }
+    val playingFocusRequester = remember { FocusRequester() }
+    val channelListState = rememberLazyListState()
     val firstChannelId = state.visibleChannels.firstOrNull()?.streamId
+    val playingChannelId = state.playingChannel?.streamId
     val epgNow = rememberCurrentEpgEpochSeconds()
+    val lastVisibleIndex by remember {
+        derivedStateOf { channelListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1 }
+    }
+    LaunchedEffect(lastVisibleIndex, state.visibleChannels.size) {
+        if (lastVisibleIndex >= state.visibleChannels.size - 4) onLoadMore()
+    }
+    LaunchedEffect(state.isFullScreen, playingChannelId, state.visibleChannels, state.browseMode) {
+        if (state.isFullScreen || playingChannelId == null) return@LaunchedEffect
+        val channelIndex = state.visibleChannels.indexOfFirst { it.streamId == playingChannelId }
+        if (channelIndex < 0) return@LaunchedEffect
+        val recentOffset = if (state.browseMode == BrowseMode.RECENT) 1 else 0
+        channelListState.scrollToItem(channelIndex + recentOffset)
+        repeat(4) {
+            withFrameNanos { }
+            runCatching { playingFocusRequester.requestFocus() }
+        }
+    }
     Panel(modifier) {
         PanelTitle(
             if (state.browseMode == BrowseMode.FAVORITES && state.selectedFavoriteGroup != null) {
@@ -908,6 +975,7 @@ private fun ChannelPanel(
             EmptyPanelText("Aucune chaîne dans cette sélection")
         } else {
             LazyColumn(
+                state = channelListState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(8.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -938,8 +1006,15 @@ private fun ChannelPanel(
                     }
                 }
                 items(state.visibleChannels, key = { it.streamId }) { channel ->
-                    val currentProgram = state.currentEpgProgramFor(channel, epgNow)
+                    val currentProgram = state.cachedEpgByStreamId[channel.streamId]
+                        ?.takeIf { program ->
+                            val start = program.startEpochSeconds
+                            val stop = program.stopEpochSeconds
+                            start != null && stop != null && epgNow >= start && epgNow < stop
+                        }
+                        ?: state.currentEpgProgramFor(channel, epgNow)
                     val hasEpg = channel.epgAvailabilityKey() in state.epgAvailableChannels
+                    val favoriteGroupIds = state.favoriteGroupIdsByChannel[channel.streamId].orEmpty()
                     val isFirstRecent =
                         state.browseMode == BrowseMode.RECENT && channel.streamId == firstChannelId
                     if (isFirstRecent) {
@@ -957,12 +1032,15 @@ private fun ChannelPanel(
                         selected = state.playingChannel?.streamId == channel.streamId,
                         modifier = if (isFirstRecent) {
                             Modifier.focusRequester(firstRecentFocusRequester)
+                        } else if (channel.streamId == playingChannelId) {
+                            Modifier.focusRequester(playingFocusRequester)
                         } else {
                             Modifier
                         },
                         onFocused = { onFocused(channel) },
                         onClick = { onPlay(channel) },
                         onLongClick = { onLongPress(channel) },
+                        accentBorder = favoriteAccentColor(favoriteGroupIds, state.favoriteGroups),
                     ) { _, color ->
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -1007,8 +1085,22 @@ private fun ChannelPanel(
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                     )
+                                    val start = program.startEpochSeconds
+                                    val stop = program.stopEpochSeconds
+                                    if (start != null && stop != null && stop > start) {
+                                        LinearProgressIndicator(
+                                            progress = { ((epgNow - start).toFloat() / (stop - start)).coerceIn(0f, 1f) },
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(top = 4.dp)
+                                                .height(3.dp),
+                                            color = MyIptvPalette.Positive,
+                                            trackColor = MyIptvPalette.Border,
+                                        )
+                                    }
                                 }
                             }
+                            FavoriteBadge(favoriteGroupIds, state.favoriteGroups)
                         }
                     }
                 }
@@ -1057,6 +1149,112 @@ private fun MiniPlayerPanel(
 }
 
 @Composable
+internal fun MenuPlayerPane(
+    state: MainUiState,
+    player: ExoPlayer,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .background(MyIptvPalette.DarkEmerald)
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Box(Modifier.weight(if (state.epg.isNotEmpty()) 1f else 2f).fillMaxWidth()) {
+            TvPlayer(
+                streamUrl = state.streamUrl,
+                player = player,
+                stretchToFill = false,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(10.dp))
+                    .border(1.dp, MyIptvPalette.Emerald, RoundedCornerShape(10.dp)),
+            )
+            state.playingChannel?.let { channel ->
+                Text(
+                    channel.name,
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .fillMaxWidth()
+                        .background(MyIptvPalette.Anthracite.copy(alpha = 0.9f))
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    color = MyIptvPalette.EmeraldLight,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        if (state.playingChannel != null && state.epg.isNotEmpty()) {
+            EpgPanel(
+                channel = state.playingChannel,
+                programs = state.epg,
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+            )
+        }
+    }
+}
+
+@Composable
+internal fun SearchResultsSidePane(
+    state: MainUiState,
+    player: ExoPlayer,
+    artworkTitle: String?,
+    artworkCountry: String = "",
+    movieOnly: Boolean = false,
+    modifier: Modifier = Modifier,
+) {
+    val artwork by produceState<com.example.myiptv.data.EpgArtwork?>(null, artworkTitle, artworkCountry, movieOnly) {
+        value = artworkTitle?.takeIf { it.isNotBlank() }?.let { title ->
+            runCatching {
+                EpgArtworkRepository.findTranslated(title, artworkCountry, movieOnly)
+            }.getOrNull()
+        }
+    }
+    Column(
+        modifier = modifier.background(MyIptvPalette.DarkEmerald).padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            TvPlayer(
+                streamUrl = state.streamUrl,
+                player = player,
+                stretchToFill = false,
+                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(10.dp)),
+            )
+            state.playingChannel?.let { channel ->
+                Text(
+                    channel.name,
+                    Modifier.align(Alignment.BottomStart).fillMaxWidth()
+                        .background(MyIptvPalette.Anthracite.copy(alpha = 0.9f))
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    color = MyIptvPalette.EmeraldLight,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        Box(
+            Modifier.weight(1f).fillMaxWidth().background(MyIptvPalette.Surface, RoundedCornerShape(10.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            val image = artwork?.images?.firstOrNull()?.url
+            if (image != null) {
+                AsyncImage(
+                    model = image,
+                    contentDescription = artwork?.images?.firstOrNull()?.title,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize().padding(16.dp),
+                )
+            } else if (artworkTitle != null) {
+                Text("Recherche de la pochette…", color = MyIptvPalette.TextSecondary)
+            } else {
+                Text("Aucune pochette", color = MyIptvPalette.TextSecondary)
+            }
+        }
+    }
+}
+
+@Composable
 private fun EpgPanel(
     channel: SavedChannel?,
     programs: List<EpgProgram>,
@@ -1069,25 +1267,22 @@ private fun EpgPanel(
         if (programs.isEmpty()) {
             EmptyPanelText("Programme indisponible")
         } else {
-            EpgProgramPager(
-                pageKey = "${channel?.profileId}:${channel?.streamId}",
-                count = programs.size,
-                modifier = Modifier.fillMaxSize().padding(8.dp),
-            ) { index ->
-                val program = programs[index]
-                TvListItem(
-                    selected = selectedProgram == program,
-                    onClick = {
-                        selectedProgram = program
-                        expandedProgram = program
-                    },
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(9.dp),
-                ) { _, _ ->
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(program.timeRange, color = MyIptvPalette.EmeraldAccent, fontWeight = FontWeight.Bold)
-                        Text(program.title, color = MyIptvPalette.EmeraldAccent, fontWeight = FontWeight.SemiBold)
-                        if (program.description.isNotBlank()) {
-                            Text(program.description, color = MyIptvPalette.White)
+            Column(
+                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                programs.forEach { program ->
+                    TvListItem(
+                        selected = selectedProgram == program,
+                        onClick = {
+                            selectedProgram = program
+                            expandedProgram = program
+                        },
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(9.dp),
+                    ) { _, _ ->
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(program.timeRange, color = MyIptvPalette.EmeraldAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            Text(program.title, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                         }
                     }
                 }
@@ -1136,7 +1331,7 @@ private fun PanelTitle(text: String, centered: Boolean = false) {
 }
 
 @Composable
-private fun EmptyPanelText(text: String) {
+internal fun EmptyPanelText(text: String) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text(
             text = text,
@@ -1285,7 +1480,7 @@ private fun FullScreenControls(
                     .align(Alignment.TopEnd)
                     .padding(8.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(MyIptvPalette.Surface.copy(alpha = 0.78f)),
+                    .background(MyIptvPalette.ButtonBackground),
             ) {
                 Icon(
                     Icons.Rounded.FullscreenExit,
@@ -1309,6 +1504,7 @@ private fun FullScreenControls(
                         touchControlInteraction++
                         onPreviousChannel()
                     },
+                    modifier = Modifier.background(MyIptvPalette.ButtonBackground, RoundedCornerShape(12.dp)),
                 ) {
                     Icon(
                         Icons.Rounded.SkipPrevious,
@@ -1322,6 +1518,7 @@ private fun FullScreenControls(
                         touchControlInteraction++
                         showChannelList = !showChannelList
                     },
+                    modifier = Modifier.background(MyIptvPalette.ButtonBackground, RoundedCornerShape(12.dp)),
                 ) {
                     Icon(
                         Icons.AutoMirrored.Rounded.FormatListBulleted,
@@ -1335,6 +1532,7 @@ private fun FullScreenControls(
                         touchControlInteraction++
                         onNextChannel()
                     },
+                    modifier = Modifier.background(MyIptvPalette.ButtonBackground, RoundedCornerShape(12.dp)),
                 ) {
                     Icon(
                         Icons.Rounded.SkipNext,
@@ -1378,7 +1576,7 @@ private fun NativeVolumeButton(
         },
         modifier = modifier
             .clip(RoundedCornerShape(14.dp))
-            .background(MyIptvPalette.Surface.copy(alpha = 0.52f)),
+            .background(MyIptvPalette.ButtonBackground),
     ) {
         Icon(
             imageVector = Icons.AutoMirrored.Rounded.VolumeUp,
@@ -1475,7 +1673,7 @@ private fun FullScreenChannelItem(
         modifier = modifier
             .fillMaxWidth()
             .clip(shape)
-            .background(if (focused) MyIptvPalette.CardHover else Color.Transparent)
+            .background(MyIptvPalette.ButtonBackground)
             .border(
                 if (focused) 3.dp else 0.dp,
                 if (focused) MyIptvPalette.Negative else Color.Transparent,

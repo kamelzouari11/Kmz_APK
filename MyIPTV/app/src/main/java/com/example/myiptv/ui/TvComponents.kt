@@ -35,12 +35,15 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.myiptv.ui.theme.MyIptvPalette
+import com.example.myiptv.data.FavoriteGroup
 
 @Composable
 internal fun isAndroidTv(): Boolean {
@@ -80,19 +83,17 @@ fun TvListItem(
     modifier: Modifier = Modifier,
     onFocused: () -> Unit = {},
     onLongClick: (() -> Unit)? = null,
+    accentBorder: Color? = null,
     contentPadding: PaddingValues = PaddingValues(horizontal = 12.dp, vertical = 9.dp),
     content: @Composable BoxScope.(focused: Boolean, contentColor: Color) -> Unit,
 ) {
     var focused by remember { mutableStateOf(false) }
     var remoteLongClickHandled by remember { mutableStateOf(false) }
-    val background = when {
-        selected -> MyIptvPalette.ActiveSurface
-        focused -> MyIptvPalette.CardHover
-        else -> MyIptvPalette.Card
-    }
+    val background = MyIptvPalette.ButtonBackground
     val border = when {
         focused -> MyIptvPalette.Negative
         selected -> MyIptvPalette.EmeraldAccent
+        accentBorder != null -> accentBorder
         else -> MyIptvPalette.Border
     }
     val borderWidth = when {
@@ -161,6 +162,41 @@ fun TvListItem(
 }
 
 @Composable
+internal fun FavoriteBadge(
+    groupIds: Set<Long>,
+    groups: List<FavoriteGroup>,
+) {
+    if (groupIds.isEmpty()) return
+    val orderedIds = groups.map(FavoriteGroup::id).filter { it in groupIds }
+    val tint = orderedIds.firstOrNull()?.let { id ->
+        MyIptvPalette.FavoritePastels[(id % MyIptvPalette.FavoritePastels.size.toLong()).toInt()]
+    } ?: MyIptvPalette.Primary
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+        Icon(
+            imageVector = Icons.Rounded.Star,
+            contentDescription = "Chaîne favorite",
+            modifier = Modifier.size(20.dp),
+            tint = tint,
+        )
+        if (orderedIds.size > 1) {
+            Text(
+                text = "+${orderedIds.size - 1}",
+                color = MyIptvPalette.TextSecondary,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+    }
+}
+
+internal fun favoriteAccentColor(
+    groupIds: Set<Long>,
+    groups: List<FavoriteGroup>,
+): Color? {
+    val id = groups.map(FavoriteGroup::id).firstOrNull { it in groupIds } ?: return null
+    return MyIptvPalette.FavoritePastels[(id % MyIptvPalette.FavoritePastels.size.toLong()).toInt()]
+}
+
+@Composable
 fun MenuButton(
     text: String,
     active: Boolean = false,
@@ -170,11 +206,7 @@ fun MenuButton(
     maxLines: Int = 1,
 ) {
     var focused by remember { mutableStateOf(false) }
-    val background = when {
-        active -> MyIptvPalette.ActiveSurface
-        focused -> MyIptvPalette.CardHover
-        else -> MyIptvPalette.Card
-    }
+    val background = MyIptvPalette.ButtonBackground
     val foreground = when {
         !enabled -> MyIptvPalette.Disabled
         active -> MyIptvPalette.EmeraldAccent
@@ -224,11 +256,7 @@ fun MenuActionButton(
     modifier: Modifier = Modifier,
 ) {
     var focused by remember { mutableStateOf(false) }
-    val background = when {
-        active -> MyIptvPalette.ActiveSurface
-        focused -> MyIptvPalette.CardHover
-        else -> MyIptvPalette.Card
-    }
+    val background = MyIptvPalette.ButtonBackground
     val foreground = when {
         !enabled -> MyIptvPalette.Disabled
         active -> MyIptvPalette.EmeraldAccent

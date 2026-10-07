@@ -34,11 +34,13 @@ import androidx.compose.material.icons.rounded.Fullscreen
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.LiveTv
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -85,7 +87,7 @@ fun MainPortraitScreen(
     onStop: () -> Unit,
     onEpg: () -> Unit,
     onCinema: () -> Unit,
-    onSports: () -> Unit,
+    onFilms: () -> Unit,
     onEpgResults: () -> Unit,
     onCountry: (String) -> Unit,
     onCategory: (CategoryItem) -> Unit,
@@ -130,7 +132,7 @@ fun MainPortraitScreen(
                 onStop = onStop,
                 onEpg = onEpg,
                 onCinema = onCinema,
-                onSports = onSports,
+                onFilms = onFilms,
                 onSearch = onSearch,
                 onRefresh = onRefresh,
                 onProfile = onProfile,
@@ -226,7 +228,7 @@ private fun PortraitHeader(
     onStop: () -> Unit,
     onEpg: () -> Unit,
     onCinema: () -> Unit,
-    onSports: () -> Unit,
+    onFilms: () -> Unit,
     onSearch: () -> Unit,
     onRefresh: () -> Unit,
     onProfile: () -> Unit,
@@ -260,32 +262,25 @@ private fun PortraitHeader(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            IconButton(onClick = onSearch) {
+            IconButton(onClick = onSearch, modifier = Modifier.background(MyIptvPalette.ButtonBackground, RoundedCornerShape(12.dp))) {
                 Icon(Icons.Rounded.Search, contentDescription = "Rechercher")
             }
-            TextButton(onClick = onCinema) { Text("Cinéma") }
-            IconButton(onClick = onEpg) {
+            TextButton(onClick = onCinema, colors = androidx.compose.material3.ButtonDefaults.textButtonColors(containerColor = MyIptvPalette.ButtonBackground, disabledContainerColor = MyIptvPalette.ButtonBackground)) { Text("Cinéma") }
+            TextButton(onClick = onFilms, colors = androidx.compose.material3.ButtonDefaults.textButtonColors(containerColor = MyIptvPalette.ButtonBackground, disabledContainerColor = MyIptvPalette.ButtonBackground)) { Text("Films") }
+            IconButton(onClick = onEpg, modifier = Modifier.background(MyIptvPalette.ButtonBackground, RoundedCornerShape(12.dp))) {
                 Icon(Icons.Rounded.DateRange, contentDescription = "Guide EPG")
             }
             if (state.streamUrl != null) {
                 StopStreamButton(onClick = onStop)
             }
             Box {
-                IconButton(onClick = { showMore = true }) {
+                IconButton(onClick = { showMore = true }, modifier = Modifier.background(MyIptvPalette.ButtonBackground, RoundedCornerShape(12.dp))) {
                     Icon(Icons.Rounded.MoreVert, contentDescription = "Plus d’actions")
                 }
                 DropdownMenu(
                     expanded = showMore,
                     onDismissRequest = { showMore = false },
                 ) {
-                    PortraitMenuItem(
-                        text = "Sports",
-                        icon = Icons.Rounded.LiveTv,
-                        onClick = {
-                            showMore = false
-                            onSports()
-                        },
-                    )
                     PortraitMenuItem(
                         text = "Synchroniser les chaînes",
                         icon = Icons.Rounded.Refresh,
@@ -344,6 +339,7 @@ private fun PortraitMenuItem(
 ) {
     DropdownMenuItem(
         text = { Text(text) },
+        modifier = Modifier.background(MyIptvPalette.ButtonBackground),
         leadingIcon = { Icon(icon, contentDescription = null) },
         enabled = enabled,
         onClick = onClick,
@@ -404,7 +400,7 @@ private fun PortraitPlayer(
                 .align(Alignment.BottomEnd)
                 .padding(5.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(MyIptvPalette.CardHover.copy(alpha = 0.92f)),
+                .background(MyIptvPalette.ButtonBackground),
         ) {
             Icon(
                 Icons.Rounded.Fullscreen,
@@ -476,7 +472,7 @@ private fun PortraitModeButton(
             .heightIn(min = 48.dp)
             .clip(RoundedCornerShape(12.dp))
             .clickable(onClick = onClick),
-        color = if (selected) MyIptvPalette.ActiveSurface else MyIptvPalette.Card,
+        color = MyIptvPalette.ButtonBackground,
         shape = RoundedCornerShape(12.dp),
         border = BorderStroke(
             1.dp,
@@ -534,7 +530,7 @@ private fun PortraitFilters(
                         .heightIn(min = 44.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .clickable { onCountry(country) },
-                    color = if (selected) MyIptvPalette.ActiveSurface else MyIptvPalette.Card,
+                    color = MyIptvPalette.ButtonBackground,
                     border = BorderStroke(
                         1.dp,
                         if (selected) MyIptvPalette.Primary else MyIptvPalette.Border,
@@ -579,7 +575,7 @@ private fun PortraitFilters(
                             .heightIn(min = 52.dp)
                             .clip(RoundedCornerShape(12.dp))
                             .clickable { onCategory(category) },
-                        color = if (selected) MyIptvPalette.ActiveSurface else MyIptvPalette.Card,
+                        color = MyIptvPalette.ButtonBackground,
                         border = BorderStroke(
                             1.dp,
                             if (selected) MyIptvPalette.Primary else MyIptvPalette.Border,
@@ -638,7 +634,7 @@ private fun PortraitChannels(
                     .padding(horizontal = 10.dp, vertical = 8.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .clickable(onClick = onEditFilters),
-                color = MyIptvPalette.Card,
+                color = MyIptvPalette.ButtonBackground,
                 border = BorderStroke(1.dp, MyIptvPalette.Border),
                 shape = RoundedCornerShape(12.dp),
             ) {
@@ -703,7 +699,7 @@ private fun PortraitChannels(
                                 .heightIn(min = 52.dp)
                                 .clip(RoundedCornerShape(12.dp))
                                 .clickable(onClick = onClearRecentHistory),
-                            color = MyIptvPalette.Card,
+                            color = MyIptvPalette.ButtonBackground,
                             border = BorderStroke(1.dp, MyIptvPalette.Border),
                             shape = RoundedCornerShape(12.dp),
                         ) {
@@ -728,7 +724,13 @@ private fun PortraitChannels(
                 }
                 items(state.visibleChannels, key = { it.streamId }) { channel ->
                     val hasEpg = channel.epgAvailabilityKey() in state.epgAvailableChannels
-                    val currentProgram = state.currentEpgProgramFor(channel, epgNow)
+                    val currentProgram = state.cachedEpgByStreamId[channel.streamId]
+                        ?.takeIf { program ->
+                            val start = program.startEpochSeconds
+                            val stop = program.stopEpochSeconds
+                            start != null && stop != null && epgNow >= start && epgNow < stop
+                        } ?: state.currentEpgProgramFor(channel, epgNow)
+                    val favoriteGroupIds = state.favoriteGroupIdsByChannel[channel.streamId].orEmpty()
                     TvListItem(
                         selected = state.playingChannel?.streamId == channel.streamId,
                         onFocused = { onFocused(channel) },
@@ -737,6 +739,7 @@ private fun PortraitChannels(
                             onPlay(channel)
                         },
                         onLongClick = { onLongPress(channel) },
+                        accentBorder = favoriteAccentColor(favoriteGroupIds, state.favoriteGroups),
                         contentPadding = androidx.compose.foundation.layout.PaddingValues(
                             horizontal = 12.dp,
                             vertical = 8.dp,
@@ -814,8 +817,19 @@ private fun PortraitChannels(
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                     )
+                                    val start = program.startEpochSeconds
+                                    val stop = program.stopEpochSeconds
+                                    if (start != null && stop != null && stop > start) {
+                                        LinearProgressIndicator(
+                                            progress = { ((epgNow - start).toFloat() / (stop - start)).coerceIn(0f, 1f) },
+                                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp).height(3.dp),
+                                            color = MyIptvPalette.Positive,
+                                            trackColor = MyIptvPalette.Border,
+                                        )
+                                    }
                                 }
                             }
+                            FavoriteBadge(favoriteGroupIds, state.favoriteGroups)
                         }
                     }
                 }
@@ -830,4 +844,5 @@ private fun portraitChannelTitle(state: MainUiState): String = when (state.brows
     BrowseMode.FAVORITES -> "${state.selectedFavoriteGroup?.name ?: "FAVORIS"} · ${state.visibleChannels.size}"
     BrowseMode.SEARCH -> "RECHERCHE · ${state.searchQuery} · ${state.visibleChannels.size}"
     BrowseMode.EPG_SEARCH -> "RÉSULTATS EPG · ${state.epgSearchQuery} · ${state.visibleChannels.size}"
+    BrowseMode.CINEMA_SEARCH -> "RÉSULTATS CINÉMA · ${state.searchQuery} · ${state.visibleChannels.size}"
 }

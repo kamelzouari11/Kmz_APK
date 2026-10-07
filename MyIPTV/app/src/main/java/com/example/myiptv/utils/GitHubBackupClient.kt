@@ -37,6 +37,10 @@ class GitHubBackupClient {
         String(downloadBytes(GitHubConfig.FILE_PATH, "sauvegarde MyIPTV"), Charsets.UTF_8)
     }
 
+    suspend fun downloadIfExists(): String? = withContext(Dispatchers.IO) {
+        if (getRemoteSha(GitHubConfig.FILE_PATH) == null) null else download()
+    }
+
     suspend fun downloadEpgDatabase(): ByteArray = withContext(Dispatchers.IO) {
         downloadBytes(GitHubConfig.EPG_FILE_PATH, "base EPG MyIPTV")
     }
